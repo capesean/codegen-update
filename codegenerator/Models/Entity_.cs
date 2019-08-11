@@ -101,7 +101,7 @@ namespace WEB.Models
             {
                 var navEntities = GetNavigationEntities();
                 if (navEntities.Count == 1 && navEntities[0].EntityId == EntityId)
-                    return $"$state.go(\"app.{PluralName.ToCamelCase()}\");";
+                    return $"this.$state.go(\"app.{PluralName.ToCamelCase()}\");";
                 else
                 {
                     var navFields = GetNavigationFields();
@@ -111,7 +111,7 @@ namespace WEB.Models
                         if (field.EntityId == EntityId) continue;
                         url += (url == string.Empty ? string.Empty : ", ") + field.Name.ToCamelCase() + $": $stateParams.{field.Name.ToCamelCase()}";
                     }
-                    url = $"$state.go(\"app.{navEntities[navEntities.Count - 2].Name.ToCamelCase()}\", {{ {url} }});";
+                    url = $"this.$state.go(\"app.{navEntities[navEntities.Count - 2].Name.ToCamelCase()}\", {{ {url} }});";
                     return url;
                 }
             }
@@ -244,8 +244,8 @@ namespace WEB.Models
         {
             get
             {
-                if (EntityType == EntityType.User) return "userResource";
-                return Name.ToCamelCase() + "Resource";
+                if (EntityType == EntityType.User) return "this.userResource";
+                return "this." + Name.ToCamelCase() + "Resource";
             }
         }
 
@@ -277,13 +277,20 @@ namespace WEB.Models
         }
 
         [NotMapped]
+        internal string ClassModelObject
+        {
+            get
+            {
+                return "this." + Name.ToCamelCase();
+            }
+        }
+
+        [NotMapped]
         internal string ViewModelObject
         {
             get
             {
-                //if (Project.ExcludeTypes)
-                    return "vm." + Name.ToCamelCase();
-                return Name.ToCamelCase();
+                return "vm." + Name.ToCamelCase();
             }
         }
 

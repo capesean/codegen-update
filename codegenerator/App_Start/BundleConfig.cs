@@ -10,15 +10,15 @@ namespace WEB
             //BundleTable.EnableOptimizations = false;
 
             bundles.Add(new ScriptBundle("~/scripts/login").Include(
-                "~/scripts/jquery-2.2.3.js",
+                "~/scripts/jquery-{version}.js",
                 "~/scripts/toastr.min.js"
                 ));
 
             var scriptBundle = new ScriptBundle("~/scripts/main").Include(
                 // ----- 3RD PARTY
                 "~/scripts/moment.js",
-                "~/scripts/jquery-2.2.3.js",
-                "~/scripts/jquery-ui-1.11.4.min.js",
+                "~/scripts/jquery-{version}.js",
+                "~/scripts/jquery-ui-{version}.min.js",
                 "~/scripts/angular.js",
                 "~/scripts/angular-ui-router.js",
                 "~/scripts/angular-resource.js",
