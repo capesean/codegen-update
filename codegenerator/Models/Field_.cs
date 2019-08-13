@@ -75,6 +75,39 @@ namespace WEB.Models
         }
 
         [NotMapped]
+        public string JavascriptType
+        {
+            get
+            {
+                switch (FieldType)
+                {
+                    case FieldType.Enum:
+                    case FieldType.VarBinary:
+                    case FieldType.Geometry:
+                        return "TODO!?";
+                    case FieldType.Bit:
+                        return "boolean";
+                    case FieldType.Date:
+                    case FieldType.DateTime:
+                    case FieldType.SmallDateTime:
+                        return "Date";
+                    case FieldType.Int:
+                    case FieldType.TinyInt:
+                    case FieldType.SmallInt:
+                    case FieldType.Decimal:
+                        return "number";
+                    case FieldType.nVarchar:
+                    case FieldType.nText:
+                    case FieldType.Text:
+                    case FieldType.Varchar:
+                    case FieldType.Guid:
+                        return "string";
+                }
+                throw new NotImplementedException("JavascriptType: " + FieldType.ToString());
+            }
+        }
+
+        [NotMapped]
         public string ControllerConstraintType
         {
             get
@@ -185,7 +218,7 @@ namespace WEB.Models
                             return $"{{{{ vm.moment({ Entity.CamelCaseName}.{ Name.ToCamelCase()}).format('DD MMM YYYY{(FieldType == FieldType.Date ? string.Empty : " HH:mm" + (FieldType == FieldType.SmallDateTime ? "" : ":ss"))}') }}}}";
                     }
                     else if (CustomType == CustomType.Enum)
-                        return $"{{{{ vm.appSettings.find(vm.appSettings.{Lookup.Name.ToCamelCase()}, {Entity.CamelCaseName}.{Name.ToCamelCase()}).label }}}}";
+                        return $"{{{{ vm.appSettings.findById(vm.appSettings.{Lookup.Name.ToCamelCase()}, {Entity.CamelCaseName}.{Name.ToCamelCase()}).label }}}}";
                     else if (FieldType == FieldType.Date)
                         return $"{{{{ { Entity.Name.ToCamelCase()}.{ Name.ToCamelCase() } | toLocaleDateString }}}}";
                     else if (FieldType == FieldType.Bit)

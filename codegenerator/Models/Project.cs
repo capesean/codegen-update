@@ -35,9 +35,6 @@ namespace WEB.Models
         [Required]
         public bool Bootstrap3 { get; set; }
 
-        [Required]
-        public bool ExcludeTypes { get; set; }
-
         [MaxLength(50)]
         public string UrlPrefix { get; set; }
 

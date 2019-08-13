@@ -18,7 +18,7 @@ namespace WEB
                 // ----- 3RD PARTY
                 "~/scripts/moment.js",
                 "~/scripts/jquery-{version}.js",
-                "~/scripts/jquery-ui-{version}.min.js",
+                "~/scripts/jquery-ui-{version}.js",
                 "~/scripts/angular.js",
                 "~/scripts/angular-ui-router.js",
                 "~/scripts/angular-resource.js",

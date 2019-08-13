@@ -101,7 +101,7 @@ namespace WEB.Models
             {
                 var navEntities = GetNavigationEntities();
                 if (navEntities.Count == 1 && navEntities[0].EntityId == EntityId)
-                    return $"this.$state.go(\"app.{PluralName.ToCamelCase()}\");";
+                    return $"this.$state.go(\"app.{PluralName.ToCamelCase()}\")";
                 else
                 {
                     var navFields = GetNavigationFields();
@@ -109,9 +109,9 @@ namespace WEB.Models
                     foreach (var field in navFields)
                     {
                         if (field.EntityId == EntityId) continue;
-                        url += (url == string.Empty ? string.Empty : ", ") + field.Name.ToCamelCase() + $": $stateParams.{field.Name.ToCamelCase()}";
+                        url += (url == string.Empty ? string.Empty : ", ") + field.Name.ToCamelCase() + $": this.$stateParams.{field.Name.ToCamelCase()}";
                     }
-                    url = $"this.$state.go(\"app.{navEntities[navEntities.Count - 2].Name.ToCamelCase()}\", {{ {url} }});";
+                    url = $"this.$state.go(\"app.{navEntities[navEntities.Count - 2].Name.ToCamelCase()}\", {{ {url} }})";
                     return url;
                 }
             }
@@ -153,7 +153,7 @@ namespace WEB.Models
                 {
                     var column = new SearchResultColumn { Header = field.Label, IsOnAnotherEntity = false };
                     if (field.FieldType == FieldType.Enum)
-                        column.Value = $"{{{{ vm.appSettings.find(vm.appSettings.{ field.Lookup.Name.ToCamelCase() }, {field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() }).label }}}}";
+                        column.Value = $"{{{{ vm.appSettings.findById(vm.appSettings.{ field.Lookup.Name.ToCamelCase() }, {field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() }).label }}}}";
                     else if (field.FieldType == FieldType.Bit)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } ? \"Yes\" : \"No\" }}}}";
                     else if (field.FieldType == FieldType.Date)
@@ -169,15 +169,28 @@ namespace WEB.Models
 
         internal List<Field> GetNavigationFields()
         {
+            // was: FirstOrDefault
+            var hierarchy = RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy);
+
             var result = new List<Field>();
             foreach (var field in KeyFields.OrderBy(f => f.SortPriority))
-                result.Add(field);
-
-            // todo: if more than one relationship, will this FirstOrDefault randomly choose the wrong one?
-            var relationship = RelationshipsAsChild.FirstOrDefault(r => r.Hierarchy);
-            if (relationship != null)
             {
-                var parentResult = relationship.ParentEntity.GetNavigationFields();
+                // exclude field if hierarchichal parent has field of same name
+                // this is used to ignore/exclude a multi-field primary key on an entity that
+                // is a hierarchical child of the repeated parent key.
+                // example: WRC project: customer is hierarchical parent of consumption. 
+                //          key on consumption = customer + consumptionSet.
+                //          url must NOT be: customer/:customerId/consumption/:customerId/:consumptionSetId
+                //          as that would repeat the :customerId param, which is not allowed.
+                //  because it is hierarchical, just need the parent's :customerId
+
+                if (hierarchy == null || !hierarchy.ParentEntity.KeyFields.Any(f => f.Name == field.Name))
+                    result.Add(field);
+            }
+
+            if (hierarchy != null)
+            {
+                var parentResult = hierarchy.ParentEntity.GetNavigationFields();
                 result.InsertRange(0, parentResult);
             }
 
@@ -194,14 +207,15 @@ namespace WEB.Models
         internal string GetNavigationUrl()
         {
             // builds the string for the app-router.ts, in the format: /parent1Name/:parent1Key1/:parent1Key2/entity1Name/:key1/:key2
-            var result = "/";
+            var result = string.Empty;
 
             var navigationFields = GetNavigationFields();
             Entity lastEntity = null;
             foreach (var field in navigationFields)
             {
-                if (lastEntity != field.Entity) result += field.Entity.PluralName.ToLower() + "/";
-                result += ":" + field.Name.ToCamelCase() + (field == navigationFields.Last() ? string.Empty : "/");
+                if (lastEntity != field.Entity) result += "/" + field.Entity.PluralName.ToLower();
+                var fieldName = field.Name.ToCamelCase();
+                result += "/:" + fieldName;
                 lastEntity = field.Entity;
             }
 
@@ -211,7 +225,27 @@ namespace WEB.Models
         internal string GetGoToEntityCode()
         {
             var navFields = GetNavigationFields();
-            return $"vm.goTo{Name} = ({navFields.Select(o => o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }) => $state.go(\"app.{Name.ToCamelCase()}\", {{ {navFields.Select(o => o.Name.ToCamelCase() + ": " + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) } }});";
+
+            //string result = string.Empty;
+            //Entity lastEntity = null;
+            //var fields = new HashSet<string>();
+            //foreach (var field in navFields)
+            //{
+            //    if (lastEntity != field.Entity) result += "/" + field.Entity.PluralName.ToLower();
+            //    var fieldName = field.Name.ToCamelCase();
+            //    // ideally, we should traverse the hierarchical relationship, but GetNavigationFields doesn't have this, so a simple check:
+            //    if (!fields.Contains(fieldName))
+            //    {
+            //        result += "/:" + fieldName;
+            //        fields.Add(fieldName);
+            //    }
+            //    lastEntity = field.Entity;
+            //}
+
+            string fieldList = $"{navFields.Select(o => o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }";
+            string parameters = $"{{ {navFields.Select(o => o.Name.ToCamelCase() + ": " + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) } }}";
+
+            return $"goTo{Name} = ({fieldList}) => this.$state.go(\"app.{Name.ToCamelCase()}\", {parameters});";
         }
 
         internal string GetNavigationString()
@@ -241,6 +275,16 @@ namespace WEB.Models
 
         [NotMapped]
         internal string ResourceName
+        {
+            get
+            {
+                if (EntityType == EntityType.User) return "userResource";
+                return Name.ToCamelCase() + "Resource";
+            }
+        }
+
+        [NotMapped]
+        internal string ClassResourceName
         {
             get
             {
@@ -282,6 +326,15 @@ namespace WEB.Models
             get
             {
                 return "this." + Name.ToCamelCase();
+            }
+        }
+
+        [NotMapped]
+        internal string ClassModelObjects
+        {
+            get
+            {
+                return "this." + PluralName.ToCamelCase();
             }
         }
 

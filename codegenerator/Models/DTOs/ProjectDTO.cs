@@ -31,9 +31,6 @@ namespace WEB.Models
         [Required]
         public bool Bootstrap3 { get; set; }
 
-        [Required]
-        public bool ExcludeTypes { get; set; }
-
         [MaxLength(50)]
         public string UrlPrefix { get; set; }
 
@@ -66,7 +63,6 @@ namespace WEB.Models
             projectDTO.AngularModuleName = project.AngularModuleName;
             projectDTO.AngularDirectivePrefix = project.AngularDirectivePrefix;
             projectDTO.Bootstrap3 = project.Bootstrap3;
-            projectDTO.ExcludeTypes = project.ExcludeTypes;
             projectDTO.UrlPrefix = project.UrlPrefix;
             projectDTO.UseStringAuthorizeAttributes = project.UseStringAuthorizeAttributes;
             projectDTO.DbContextVariable = project.DbContextVariable;
@@ -84,7 +80,6 @@ namespace WEB.Models
             project.AngularModuleName = projectDTO.AngularModuleName;
             project.AngularDirectivePrefix = projectDTO.AngularDirectivePrefix;
             project.Bootstrap3 = projectDTO.Bootstrap3;
-            project.ExcludeTypes = projectDTO.ExcludeTypes;
             project.UrlPrefix = projectDTO.UrlPrefix;
             project.UseStringAuthorizeAttributes = projectDTO.UseStringAuthorizeAttributes;
             project.DbContextVariable = projectDTO.DbContextVariable;
