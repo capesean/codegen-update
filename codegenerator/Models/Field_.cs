@@ -81,7 +81,6 @@ namespace WEB.Models
             {
                 switch (FieldType)
                 {
-                    case FieldType.Enum:
                     case FieldType.VarBinary:
                     case FieldType.Geometry:
                         return "TODO!?";
@@ -95,6 +94,7 @@ namespace WEB.Models
                     case FieldType.TinyInt:
                     case FieldType.SmallInt:
                     case FieldType.Decimal:
+                    case FieldType.Enum:
                         return "number";
                     case FieldType.nVarchar:
                     case FieldType.nText:

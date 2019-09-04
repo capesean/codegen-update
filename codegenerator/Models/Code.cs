@@ -221,6 +221,57 @@ namespace WEB.Models
             return RunCodeReplacements(s.ToString(), CodeType.Model);
         }
 
+        public string GenerateTypeScriptModel()
+        {
+            //if (CurrentEntity.EntityType == EntityType.User) throw new NotImplementedException("Not Implemented: GenerateModel for User entity");
+
+            var s = new StringBuilder();
+            s.Add($"import {{ SearchOptions, PagingOptions }} from './http.model';");
+            s.Add($"");
+
+            s.Add($"export class {CurrentEntity.Name} {{");
+
+            // fields
+            foreach (var field in CurrentEntity.Fields.OrderBy(f => f.FieldOrder))
+            {
+                s.Add($"   {field.Name.ToCamelCase()}: {field.JavascriptType};");
+            }
+            s.Add($"");
+
+            s.Add($"   constructor() {{");
+            foreach (var field in CurrentEntity.KeyFields.OrderBy(f => f.FieldOrder))
+            {
+                if (field.CustomType == CustomType.Guid)
+                    s.Add($"      this.{field.Name.ToCamelCase()} = \"00000000-0000-0000-0000-000000000000\";");
+            }
+            s.Add($"   }}");
+            s.Add($"}}");
+            s.Add($"");
+
+            s.Add($"export class {CurrentEntity.Name}SearchOptions extends SearchOptions {{");
+
+            if (CurrentEntity.Fields.Any(f => f.SearchType == SearchType.Text))
+            {
+                s.Add($"   q: string;");// = undefined
+            }
+            foreach (var field in CurrentEntity.Fields.Where(f => f.SearchType == SearchType.Exact).OrderBy(f => f.FieldOrder))
+            {
+                s.Add($"   {field.Name.ToCamelCase()}: {field.JavascriptType};");
+            }
+
+            s.Add($"}}");
+            s.Add($"");
+
+            s.Add($"export class {CurrentEntity.Name}SearchResponse {{");
+            s.Add($"   {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.Name}[];");
+            s.Add($"   headers: PagingOptions;");
+            s.Add($"}}");
+
+
+
+            return RunCodeReplacements(s.ToString(), CodeType.Model);
+        }
+
         public string GenerateEnums()
         {
             var s = new StringBuilder();
@@ -995,7 +1046,7 @@ namespace WEB.Models
             s.Add($"import {{ HttpClient, HttpParams }} from '@angular/common/http';");
             s.Add($"import {{ Observable }} from 'rxjs';");
             s.Add($"import {{ map }} from 'rxjs/operators';");
-            s.Add($"import {{ {CurrentEntity.Name}, {CurrentEntity.Name}SearchOptions, {CurrentEntity.Name}SearchResponse }} from '../models/municipality.model';");
+            s.Add($"import {{ {CurrentEntity.Name}, {CurrentEntity.Name}SearchOptions, {CurrentEntity.Name}SearchResponse }} from '../models/{CurrentEntity.Name.ToLower()}.model';");
             s.Add($"import {{ SearchQuery, PagingOptions }} from '../models/http.model';");
             s.Add($"");
             s.Add($"@Injectable({{ providedIn: 'root' }})");
@@ -1007,7 +1058,7 @@ namespace WEB.Models
             s.Add($"   }}");
             s.Add($"");
 
-            s.Add($"   search(params: MunicipalitySearchOptions): Observable<MunicipalitySearchResponse> {{");
+            s.Add($"   search(params: {CurrentEntity.Name}SearchOptions): Observable<{CurrentEntity.Name}SearchResponse> {{");
             s.Add($"      const queryParams: HttpParams = this.buildQueryParams(params);");
             s.Add($"      return this.http.get(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}`, {{ params: queryParams, observe: 'response' }})");
             s.Add($"         .pipe(");
@@ -2669,10 +2720,12 @@ namespace WEB.Models
                 if (!Directory.Exists(path))
                     return ("Models path does not exist");
 
-                // todo: backup file
-
                 var code = codeGenerator.GenerateModel();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, entity.Name + ".cs"), code);
+
+                // todo: move this to own deployment option
+                if (!CreateAppDirectory(entity.Project, "common\\models", codeGenerator.GenerateTypeScriptModel(), entity.Name.ToLower() + ".model.ts"))
+                    return ("App path does not exist");
             }
             #endregion
 
@@ -2682,8 +2735,6 @@ namespace WEB.Models
                 var path = Path.Combine(entity.Project.RootPath, "Models");
                 if (!Directory.Exists(path))
                     return ("Models path does not exist");
-
-                // todo: backup file
 
                 var code = codeGenerator.GenerateDbContext();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, "ApplicationDBContext_.cs"), code);
@@ -2697,8 +2748,6 @@ namespace WEB.Models
                 if (!Directory.Exists(path))
                     return ("DTOs path does not exist");
 
-                // todo: backup file
-
                 var code = codeGenerator.GenerateDTO();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, entity.Name + "DTO.cs"), code);
             }
@@ -2710,8 +2759,6 @@ namespace WEB.Models
                 var path = Path.Combine(entity.Project.RootPath, "Models");
                 if (!Directory.Exists(path))
                     return ("Models path does not exist");
-
-                // todo: backup file
 
                 var code = codeGenerator.GenerateEnums();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, "Enums.cs"), code);
@@ -2725,8 +2772,6 @@ namespace WEB.Models
                 if (!Directory.Exists(path))
                     return ("DTOs path does not exist");
 
-                // todo: backup file
-
                 var code = codeGenerator.GenerateSettingsDTO();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, "SettingsDTO_.cs"), code);
             }
@@ -2739,8 +2784,6 @@ namespace WEB.Models
                 if (!Directory.Exists(path))
                     return ("DTOs path does not exist");
 
-                // todo: backup file
-
                 var code = codeGenerator.GenerateSettingsDTO();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, "SettingsDTO_.cs"), code);
             }
@@ -2752,8 +2795,6 @@ namespace WEB.Models
                 var path = Path.Combine(entity.Project.RootPath, "Controllers");
                 if (!Directory.Exists(path))
                     return ("Controllers path does not exist");
-
-                // todo: backup file
 
                 var code = codeGenerator.GenerateController();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, entity.PluralName + "Controller.cs"), code);
@@ -2794,8 +2835,6 @@ namespace WEB.Models
             //    if (!Directory.Exists(path))
             //        return ("App_Start path does not exist");
 
-            //    // todo: backup file
-
             //    var code = codeGenerator.GenerateBundleConfig();
             //    if (code != string.Empty) File.WriteAllText(Path.Combine(path, "BundleConfig_.cs"), code);
             //}
@@ -2807,8 +2846,6 @@ namespace WEB.Models
             //    var path = Path.Combine(entity.Project.RootPath, "app\\common");
             //    if (!Directory.Exists(path))
             //        return ("App\\Common path does not exist");
-
-            //    // todo: backup file
 
             //    var code = codeGenerator.GenerateAppRouter();
             //    if (code != string.Empty) File.WriteAllText(Path.Combine(path, "routes-entity.ts"), code);
@@ -2890,8 +2927,6 @@ namespace WEB.Models
             path = Path.Combine(path, directoryName.ToLower());
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
-
-            // todo: backup file
 
             File.WriteAllText(Path.Combine(path, fileName), code);
             return true;
