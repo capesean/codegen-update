@@ -990,65 +990,57 @@ namespace WEB.Models
             if (noKeysEntity != null)
                 throw new InvalidOperationException(noKeysEntity.FriendlyName + " has no keys defined");
 
-            s.Add($"/// <reference path=\"../../scripts/typings/angularjs/angular.d.ts\" />");
-            s.Add($"(function () {{");
-            s.Add($"    \"use strict\";");
+            s.Add($"import {{ environment }} from '../../../environments/environment.prod';");
+            s.Add($"import {{ Injectable }} from '@angular/core';");
+            s.Add($"import {{ HttpClient, HttpParams }} from '@angular/common/http';");
+            s.Add($"import {{ Observable }} from 'rxjs';");
+            s.Add($"import {{ map }} from 'rxjs/operators';");
+            s.Add($"import {{ {CurrentEntity.Name}, {CurrentEntity.Name}SearchOptions, {CurrentEntity.Name}SearchResponse }} from '../models/municipality.model';");
+            s.Add($"import {{ SearchQuery, PagingOptions }} from '../models/http.model';");
             s.Add($"");
-            s.Add($"    angular");
-            s.Add($"        .module(\"{CurrentEntity.Project.AngularModuleName}\")");
-            foreach (var e in NormalEntities)
-                s.Add($"        .factory(\"{e.ResourceName}\", {e.ResourceName})" + (e == NormalEntities.LastOrDefault() ? ";" : ""));
+            s.Add($"@Injectable({{ providedIn: 'root' }})");
+            s.Add($"export class {CurrentEntity.Name}Service extends SearchQuery {{");
             s.Add($"");
-            foreach (var e in NormalEntities)
-            {
-                var multiSelectRelationships = e.RelationshipsAsParent.Where(o => o.UseMultiSelect).OrderBy(o => o.SortOrder);
-                var hasOtherRoutes = e.HasCompositePrimaryKey || e.HasASortField || multiSelectRelationships.Any();
 
-                s.Add($"    //#region {e.Name.ToLower()} resource");
-                s.Add($"    {e.ResourceName}.$inject = [\"$resource\", \"appSettings\"];");
-                s.Add($"    function {e.ResourceName}($resource, appSettings) {{");
-                s.Add($"        return $resource(appSettings.apiServiceBaseUri + appSettings.apiPrefix + \"{e.PluralName.ToLower()}/{e.KeyFields.Select(o => ":" + o.Name.ToCamelCase()).Aggregate((current, next) => current + "/" + next) }\",");
-                s.Add($"            {{");
-                foreach (var field in e.KeyFields)
-                    s.Add($"                {field.Name.ToCamelCase()}: \"@{field.Name.ToCamelCase()}\"{(field == e.KeyFields.Last() ? "" : ",")}");
-                s.Add($"            }}" + (hasOtherRoutes ? "," : string.Empty));
-                if (hasOtherRoutes)
-                {
-                    s.Add($"            {{");
-                }
-                if (e.HasCompositePrimaryKey)
-                {
-                    // composite primary keys can't use the .query method because: http://stackoverflow.com/questions/39405452/ngresource-query-with-composite-key-parameter/40087371#40087371
-                    s.Add($"                search: {{");
-                    s.Add($"                    method: \"GET\",");
-                    s.Add($"                    url: appSettings.apiServiceBaseUri + appSettings.apiPrefix + \"{e.PluralName.ToLower()}\",");
-                    s.Add($"                    isArray: true");
-                    s.Add($"                }}" + (e.HasASortField || multiSelectRelationships.Any() ? "," : string.Empty));
-                }
-                foreach (var rel in multiSelectRelationships)
-                {
-                    s.Add($"                save{rel.ChildEntity.PluralName}: {{");
-                    s.Add($"                    method: \"POST\",");
-                    s.Add($"                    url: appSettings.apiServiceBaseUri + appSettings.apiPrefix + \"{e.PluralName.ToLower()}/{e.KeyFields.Select(o => ":" + o.Name.ToCamelCase()).Aggregate((current, next) => current + "/" + next) }/{rel.ChildEntity.PluralName.ToLower()}\"");
-                    s.Add($"                }}" + (e.HasASortField || rel != multiSelectRelationships.Last() ? "," : string.Empty));
-                }
-                if (e.HasASortField)
-                {
-                    s.Add($"                sort: {{");
-                    s.Add($"                    method: \"POST\",");
-                    s.Add($"                    url: appSettings.apiServiceBaseUri + appSettings.apiPrefix + \"{e.PluralName.ToLower()}/sort\"");
-                    s.Add($"                }}");
-                }
-                if (hasOtherRoutes)
-                {
-                    s.Add($"            }}");
-                }
-                s.Add($"        );");
-                s.Add($"    }}");
-                s.Add($"    //#endregion");
-                s.Add($"");
-            }
-            s.Add($"}}());");
+            s.Add($"   constructor(private http: HttpClient) {{");
+            s.Add($"      super();");
+            s.Add($"   }}");
+            s.Add($"");
+
+            s.Add($"   search(params: MunicipalitySearchOptions): Observable<MunicipalitySearchResponse> {{");
+            s.Add($"      const queryParams: HttpParams = this.buildQueryParams(params);");
+            s.Add($"      return this.http.get(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}`, {{ params: queryParams, observe: 'response' }})");
+            s.Add($"         .pipe(");
+            s.Add($"            map(response => {{");
+            s.Add($"               const headers = <PagingOptions>JSON.parse(response.headers.get(\"x-pagination\"))");
+            s.Add($"               const {CurrentEntity.PluralName.ToCamelCase()} = <{CurrentEntity.Name}[]>response.body;");
+            s.Add($"               return {{ {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.PluralName.ToCamelCase()}, headers: headers }};");
+            s.Add($"            }})");
+            s.Add($"         );");
+            s.Add($"   }}");
+            s.Add($"");
+
+            var getParams = CurrentEntity.KeyFields.Select(o => o.Name.ToCamelCase() + ": " + o.JavascriptType).Aggregate((current, next) => current + ", " + next);
+            var saveParams = CurrentEntity.Name.ToCamelCase() + ": " + CurrentEntity.Name;
+            var getUrl = CurrentEntity.KeyFields.Select(o => " + " + o.Name.ToCamelCase()).Aggregate((current, next) => current + " + " + next);
+            var saveUrl = CurrentEntity.KeyFields.Select(o => " + " + CurrentEntity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + " + " + next);
+
+            s.Add($"   get({getParams}): Observable<{CurrentEntity.Name}> {{");
+            s.Add($"      return this.http.get<{CurrentEntity.Name}>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/`{getUrl});");
+            s.Add($"   }}");
+            s.Add($"");
+
+            s.Add($"   save({saveParams}): Observable<{CurrentEntity.Name}> {{");
+            s.Add($"      return this.http.post<{CurrentEntity.Name}>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/`{saveUrl}, {CurrentEntity.Name.ToCamelCase()});");
+            s.Add($"   }}");
+            s.Add($"");
+
+            s.Add($"   delete({getParams}): Observable<void> {{");
+            s.Add($"      return this.http.delete<void>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/`{getUrl});");
+            s.Add($"   }}");
+            s.Add($"");
+
+            s.Add($"}}");
 
             return RunCodeReplacements(s.ToString(), CodeType.ApiResource);
 
@@ -2784,7 +2776,13 @@ namespace WEB.Models
             }
             #endregion
 
-
+            #region api resource
+            if (deploymentOptions.ApiResource)
+            {
+                if (!CreateAppDirectory(entity.Project, "common\\services", codeGenerator.GenerateApiResource(), entity.Name.ToLower() + ".service.ts"))
+                    return ("App path does not exist");
+            }
+            #endregion
 
             #region todo
 
@@ -2814,20 +2812,6 @@ namespace WEB.Models
 
             //    var code = codeGenerator.GenerateAppRouter();
             //    if (code != string.Empty) File.WriteAllText(Path.Combine(path, "routes-entity.ts"), code);
-            //}
-            //#endregion
-
-            //#region api resource
-            //if (deploymentOptions.ApiResource)
-            //{
-            //    var path = Path.Combine(entity.Project.RootPath, "app\\common");
-            //    if (!Directory.Exists(path))
-            //        return ("App\\Common path does not exist");
-
-            //    // todo: backup file
-
-            //    var code = codeGenerator.GenerateApiResource();
-            //    if (code != string.Empty) File.WriteAllText(Path.Combine(path, "api-entity.ts"), code);
             //}
             //#endregion
 
