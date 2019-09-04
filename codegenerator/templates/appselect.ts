@@ -35,7 +35,7 @@
         $scope.getValue = () => {
             if (!$scope.CAMELCASENAME) return undefined;
             if ($scope.multiple) {
-                if ($scope.CAMELCASENAME.length == 0)
+                if ($scope.CAMELCASENAME.length === 0)
                     return undefined;
                 var value = "";
                 angular.forEach($scope.CAMELCASENAME, CAMELCASENAME => {

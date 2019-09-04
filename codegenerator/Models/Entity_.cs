@@ -343,7 +343,7 @@ namespace WEB.Models
         {
             get
             {
-                return "vm." + Name.ToCamelCase();
+                return Name.ToCamelCase();
             }
         }
 

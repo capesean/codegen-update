@@ -192,9 +192,9 @@ namespace WEB.Models
             {
                 var netType = (new Field { Name = Name, Lookup = Lookup, FieldType = FieldType, IsNullable = true }).NetType;
                 if (SearchType == SearchType.Range)
-                    return "[FromUri]" + netType + " from" + Name + " = null, [FromUri]" + netType + " to" + Name + " = null";
+                    return "[FromQuery]" + netType + " from" + Name + " = null, [FromQuery]" + netType + " to" + Name + " = null";
                 else
-                    return "[FromUri]" + netType + " " + Name.ToCamelCase() + " = null";
+                    return "[FromQuery]" + netType + " " + Name.ToCamelCase() + " = null";
             }
         }
 

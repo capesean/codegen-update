@@ -140,8 +140,7 @@
 
         <div class="form-group error-messages has-error alert alert-danger" ng-if="mainForm.$submitted && mainForm.$invalid">
 
-            <span class="help-block has-error"
-                  ng-if="mainForm.$submitted">
+            <span class="help-block has-error">
                 <span>
                     Please correct the following errors:
                 </span>
@@ -150,7 +149,6 @@
             <ul>
 
                 <li class="help-block has-error"
-                    ng-if="mainForm.$submitted"
                     ng-messages="mainForm.name.$error">
                     <span ng-message="required">
                         Name is required.
