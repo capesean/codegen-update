@@ -1123,7 +1123,7 @@ namespace WEB.Models
             if (noKeysEntity != null)
                 throw new InvalidOperationException(noKeysEntity.FriendlyName + " has no keys defined");
 
-            s.Add($"import {{ environment }} from '../../../environments/environment.prod';");
+            s.Add($"import {{ environment }} from '../../../environments/environment';");
             s.Add($"import {{ Injectable }} from '@angular/core';");
             s.Add($"import {{ HttpClient, HttpParams }} from '@angular/common/http';");
             s.Add($"import {{ Observable }} from 'rxjs';");
