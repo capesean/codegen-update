@@ -1123,16 +1123,16 @@ namespace WEB.Models
                 {
                     if (field.CustomType == CustomType.Enum)
                     {
-                        s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
-                        s.Add($"                <div class=\"form-group\">");
-                        s.Add($"                    <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{field.Label}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">");
-                        s.Add($"                        <li nya-bs-option=\"item in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"item.id\">");
-                        s.Add($"                            <a>{{{{item.label}}}}<span class=\"fas fa-check check-mark\"></span></a>");
-                        s.Add($"                        </li>");
-                        s.Add($"                    </ol>");
-                        s.Add($"                </div>");
-                        s.Add($"            </div>");
-                        s.Add($"");
+                        //s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
+                        //s.Add($"                <div class=\"form-group\">");
+                        //s.Add($"                    <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{field.Label}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">");
+                        //s.Add($"                        <li nya-bs-option=\"item in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"item.id\">");
+                        //s.Add($"                            <a>{{{{item.label}}}}<span class=\"fas fa-check check-mark\"></span></a>");
+                        //s.Add($"                        </li>");
+                        //s.Add($"                    </ol>");
+                        //s.Add($"                </div>");
+                        //s.Add($"            </div>");
+                        //s.Add($"");
                     }
                     else if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
                     {
@@ -1141,25 +1141,25 @@ namespace WEB.Models
                         var relField = relationship.RelationshipFields.Single();
                         if (relationship.UseSelectorDirective)
                         {
-                            s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
-                            s.Add($"                <div class=\"form-group\">");
-                            s.Add($"                    {relationship.AppSelector}");
-                            s.Add($"                </div>");
-                            s.Add($"            </div>");
-                            s.Add($"");
+                            //s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
+                            //s.Add($"                <div class=\"form-group\">");
+                            //s.Add($"                    {relationship.AppSelector}");
+                            //s.Add($"                </div>");
+                            //s.Add($"            </div>");
+                            //s.Add($"");
                         }
                         else
                         {
-                            s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
-                            s.Add($"                <div class=\"form-group\">");
-                            s.Add($"                    <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{parentEntity.PluralFriendlyName}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">");
-                            s.Add($"                        <li nya-bs-option=\"{parentEntity.Name.ToCamelCase()} in vm.{parentEntity.PluralName.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"{parentEntity.Name.ToCamelCase()}.{relField.ParentField.Name.ToCamelCase()}\">");
-                            s.Add($"                            <a>{{{{{parentEntity.Name.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}<span class=\"fas fa-check check-mark\"></span></a>");
-                            s.Add($"                        </li>");
-                            s.Add($"                    </ol>");
-                            s.Add($"                </div>");
-                            s.Add($"            </div>");
-                            s.Add($"");
+                            //s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
+                            //s.Add($"                <div class=\"form-group\">");
+                            //s.Add($"                    <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{parentEntity.PluralFriendlyName}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">");
+                            //s.Add($"                        <li nya-bs-option=\"{parentEntity.Name.ToCamelCase()} in vm.{parentEntity.PluralName.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"{parentEntity.Name.ToCamelCase()}.{relField.ParentField.Name.ToCamelCase()}\">");
+                            //s.Add($"                            <a>{{{{{parentEntity.Name.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}<span class=\"fas fa-check check-mark\"></span></a>");
+                            //s.Add($"                        </li>");
+                            //s.Add($"                    </ol>");
+                            //s.Add($"                </div>");
+                            //s.Add($"            </div>");
+                            //s.Add($"");
                         }
                     }
                 }
@@ -1251,114 +1251,69 @@ namespace WEB.Models
 
             var s = new StringBuilder();
 
-            s.Add($"module WEB {{");
+            s.Add($"import {{ Component, OnInit }} from '@angular/core';");
+            s.Add($"import {{ ActivatedRoute, Router }} from '@angular/router';");
+            s.Add($"import {{ Observable }} from 'rxjs';");
+            s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
+            s.Add($"import {{ ErrorService }} from '../common/services/error.service';");
+            s.Add($"import {{ {CurrentEntity.Name}SearchOptions, {CurrentEntity.Name}SearchResponse, {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
+            s.Add($"import {{ {CurrentEntity.Name}Service }} from '../common/services/{CurrentEntity.Name.ToLower()}.service';");
             s.Add($"");
-            s.Add($"    export class {CurrentEntity.PluralName}Component implements WEB.IController {{");
+            s.Add($"@Component({{");
+            s.Add($"   selector: '{CurrentEntity.Name.ToLower()}-list',");
+            s.Add($"   templateUrl: './{CurrentEntity.Name.ToLower()}.list.component.html'");
+            s.Add($"}})");
+            s.Add($"export class {CurrentEntity.Name}ListComponent implements OnInit {{");
             s.Add($"");
-            s.Add($"        public loading: boolean = true;");
-            s.Add($"        public search = {{ pageIndex: 0, includeEntities: {includeEntities.ToString().ToLower()} }};");
-            s.Add($"        public headers: any;");
-            s.Add($"        public {CurrentEntity.PluralName.ToCamelCase()}: WEB.I{CurrentEntity.Name}[];");
-            if (CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy))
-            {
-                s.Add($"        vm.sortOptions = {{ stop: sortItems, handle: \"i.sortable-handle\", axis: \"y\" }};");
-            }
+            s.Add($"   private {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.Name}[];");
+            s.Add($"   public searchOptions = new {CurrentEntity.Name}SearchOptions();");
+            s.Add($"   public headers = new PagingOptions();");
             s.Add($"");
-
-            s.Add($"        constructor(");
-            s.Add($"            private $state: ng.ui.IStateService,");
-            s.Add($"            private {CurrentEntity.Name.ToCamelCase()}Resource: WEB.I{CurrentEntity.Name}Resource,");
-            s.Add($"            private notifications: WEB.INotificationFactory,");
-            s.Add($"            private appSettings: WEB.IAppSettings");
-            s.Add($"        ) {{ }}");
+            s.Add($"   constructor(");
+            s.Add($"      public route: ActivatedRoute,");
+            s.Add($"      private router: Router,");
+            s.Add($"      private errorService: ErrorService,");
+            s.Add($"      private {CurrentEntity.Name.ToCamelCase()}Service: {CurrentEntity.Name}Service");
+            s.Add($"   ) {{");
+            s.Add($"   }}");
             s.Add($"");
-
-            #region init
-            s.Add($"        $onInit(): void {{");
+            s.Add($"   ngOnInit(): void {{");
+            // todo: this should only be when required, e.g. hierarchies?
+            var hasParentHierarchy = CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy);
+            if (hasParentHierarchy)
+                s.Add($"      this.searchOptions.includeEntities = true;");
+            s.Add($"      this.runSearch();");
+            s.Add($"   }}");
             s.Add($"");
-            s.Add($"            this.runSearch(0);");
+            s.Add($"   runSearch(pageIndex: number = 0): Observable<{CurrentEntity.Name}SearchResponse> {{");
             s.Add($"");
-            s.Add($"        }}");
+            s.Add($"      this.searchOptions.pageIndex = pageIndex;");
             s.Add($"");
-            #endregion
-
-            #region runSearch
-            s.Add($"        runSearch(pageIndex: number, setLoading: boolean = true): ng.resource.IResourceArray<WEB.I{CurrentEntity.Name }> {{");
+            s.Add($"      var observable = this.{CurrentEntity.Name.ToCamelCase()}Service");
+            s.Add($"         .search(this.searchOptions);");
             s.Add($"");
-            s.Add($"            if (setLoading) this.loading = true;");
+            s.Add($"      observable.subscribe(");
+            s.Add($"         response => {{");
+            s.Add($"            this.{CurrentEntity.PluralName.ToCamelCase()} = response.{CurrentEntity.PluralName.ToCamelCase()};");
+            s.Add($"            this.headers = response.headers;");
+            s.Add($"         }},");
+            s.Add($"         err => {{");
             s.Add($"");
-            if (CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy))
-                s.Add($"            this.search.pageSize = 0;");
-            else
-                s.Add($"            this.search.pageIndex = pageIndex;");
+            s.Add($"            this.errorService.handleError(err, \"{CurrentEntity.PluralName}\", \"Load\");");
             s.Add($"");
-            s.Add($"            var promise =");
-            // composite primary keys can't use the .query method because: http://stackoverflow.com/questions/39405452/ngresource-query-with-composite-key-parameter/40087371#40087371
-            s.Add($"                {CurrentEntity.ClassResourceName}.{(!CurrentEntity.HasCompositePrimaryKey ? "query" : "search")}(");
-            s.Add($"                    this.search,");
-            // can't put this after the .$promise, as the headers need to be in the inital ngResource call ($promise can only return 1 param, see: https://stackoverflow.com/a/31127648/214980)
-            s.Add($"                    (data, getHeaders) => {{");
+            s.Add($"         }}");
+            s.Add($"      );");
             s.Add($"");
-            s.Add($"                        this.{CurrentEntity.PluralName.ToCamelCase()} = data;");
-            if (!(CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy)))
-                s.Add($"                        this.headers = JSON.parse(getHeaders(\"X-Pagination\"));");
-            s.Add($"                        if (setLoading) this.loading = false;");
+            s.Add($"      return observable;");
             s.Add($"");
-            s.Add($"                    }},");
-            s.Add($"                    err => {{");
+            s.Add($"   }}");
             s.Add($"");
-            s.Add($"                        this.notifications.error(\"Failed to load the {CurrentEntity.PluralFriendlyName.ToLower()}.\", \"Error\", err);");
-            s.Add($"                        this.$state.go(\"app.home\");");
-            s.Add($"");
-            s.Add($"                    }}");
-            s.Add($"                );");
-            s.Add($"");
-            s.Add($"            return promise;");
-            s.Add($"");
-            s.Add($"        }}");
-            s.Add($"");
-            #endregion
-
+            s.Add($"   goTo{CurrentEntity.Name}({CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name}): void {{");
             var navFields = CurrentEntity.GetNavigationFields();
-            s.Add($"        goTo{CurrentEntity.Name}({ navFields.Select(o => o.Name.ToCamelCase() + ": " + o.JavascriptType).Aggregate((current, next) => current + ", " + next) }): void {{");
-            s.Add($"            this.$state.go(\"app.{CurrentEntity.Name.ToCamelCase()}\", {{ {navFields.Select(o => o.Name.ToCamelCase() + ": " + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) } }});");
-            s.Add($"        }}");
-
-            if (CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy))
-            {
-                s.Add($"        function sortItems() {{");
-                s.Add($"");
-                s.Add($"            vm.loading = true;");
-                s.Add($"");
-                s.Add($"            var ids = [];");
-                s.Add($"            angular.forEach(vm.{CurrentEntity.PluralName.ToCamelCase()}, function (item, index) {{");
-                s.Add($"                ids.push(item.{CurrentEntity.KeyFields[0].Name.ToCamelCase()});");
-                s.Add($"            }});");
-                s.Add($"");
-                s.Add($"            {CurrentEntity.ClassResourceName}.sort(");
-                s.Add($"                ids");
-                s.Add($"            ).$promise.then(");
-                s.Add($"                () => {{");
-                s.Add($"");
-                s.Add($"                    notifications.success(\"The sort order has been updated\", \"{CurrentEntity.FriendlyName} Ordering\");");
-                s.Add($"");
-                s.Add($"                }},");
-                s.Add($"                err => {{");
-                s.Add($"");
-                s.Add($"                    notifications.error(\"Failed to sort the {CurrentEntity.PluralFriendlyName.ToLower()}. \" + (err.data && err.data.message ? err.data.message : \"\"), \"Error\", err);");
-                s.Add($"");
-                s.Add($"                }}");
-                s.Add($"            ).finally(() => vm.loading = false);");
-                s.Add($"");
-                s.Add($"        }}");
-                s.Add($"");
-            }
-
-
-
-            s.Add($"    }}");
-            s.Add($"");
+            s.Add($"      this.router.navigate(['/{CurrentEntity.PluralName.ToLower()}', { navFields.Select(o => CurrentEntity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }]);");
+            s.Add($"   }}");
             s.Add($"}}");
+            s.Add($"");
 
             return RunCodeReplacements(s.ToString(), CodeType.ListTypeScript);
         }
@@ -2809,6 +2764,14 @@ namespace WEB.Models
             }
             #endregion
 
+            #region list typescript
+            if (deploymentOptions.ListTypeScript)
+            {
+                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateListTypeScript(), entity.Name.ToLower() + ".list.component.ts"))
+                    return ("App path does not exist");
+            }
+            #endregion
+
             #region edit html
             if (deploymentOptions.EditHtml)
             {
@@ -2849,14 +2812,6 @@ namespace WEB.Models
 
             //    var code = codeGenerator.GenerateAppRouter();
             //    if (code != string.Empty) File.WriteAllText(Path.Combine(path, "routes-entity.ts"), code);
-            //}
-            //#endregion
-
-            //#region list typescript
-            //if (deploymentOptions.ListTypeScript)
-            //{
-            //    if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateListTypeScript(), entity.PluralName.ToLower() + ".ts"))
-            //        return ("App path does not exist");
             //}
             //#endregion
 
