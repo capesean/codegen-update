@@ -1490,12 +1490,18 @@ namespace WEB.Models
                 attributes.Add("class", "form-control");
                 if (!field.IsNullable)
                     attributes.Add("required", null);
+                if(field.FieldId == CurrentEntity.PrimaryFieldId)
+                    attributes.Add("(ngModelChange)", $"changeBreadcrumb({fieldName}.value)");
 
                 if (field.CustomType == CustomType.Boolean)
                 {
                     attributes["type"] = "checkbox";
                     attributes.Remove("required");
                     attributes["class"] = "form-check-input";
+                }
+                else if (field.CustomType == CustomType.Number)
+                {
+                    attributes["type"] = "number";
                 }
 
                 if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
@@ -2075,7 +2081,7 @@ namespace WEB.Models
             s.Add($"         .subscribe(");
             s.Add($"            {CurrentEntity.Name.ToCamelCase()} => {{");
             s.Add($"               this.{CurrentEntity.Name.ToCamelCase()} = {CurrentEntity.Name.ToCamelCase()};");
-            s.Add($"               this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")});");
+            s.Add($"               this.changeBreadcrumb(this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")});");
             s.Add($"            }},");
             s.Add($"            err => {{");
             s.Add($"               this.errorService.handleError(err, \"{CurrentEntity.Name}\", \"Load\");");
@@ -2129,9 +2135,8 @@ namespace WEB.Models
             s.Add($"   }}");
             s.Add($"");
 
-            // todo: might not be 'name' field
-            s.Add($"   nameChange(): void {{");
-            s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")} || \"(no {CurrentEntity.PrimaryField.Label.ToLower()})\");");
+            s.Add($"   changeBreadcrumb(label: string): void {{");
+            s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, label || \"(no {CurrentEntity.PrimaryField.Label.ToLower()})\");");
             s.Add($"   }}");
             s.Add($"");
 
