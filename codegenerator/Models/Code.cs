@@ -1505,7 +1505,7 @@ namespace WEB.Models
                 s.Add(t + $"                <div class=\"{controlSize}\">");
                 s.Add(t + $"                    <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': {fieldName}.invalid }}\">");
                 s.Add(t + $"");
-                s.Add(t + $"                        <label for=\"{fieldName.ToLower()}\">");
+                s.Add(t + $"                        <label for=\"{fieldName.ToCamelCase()}\">");
                 s.Add(t + $"                            {field.Label}:");
                 s.Add(t + $"                        </label>");
                 s.Add(t + $"");
@@ -2039,6 +2039,7 @@ namespace WEB.Models
             }
             s.Add($"");
             s.Add($"         if (!this.isNew) {{");
+            s.Add($"");
             foreach (var keyField in CurrentEntity.KeyFields)
             {
                 s.Add($"            this.{CurrentEntity.Name.ToCamelCase()}.{keyField.Name.ToCamelCase()} = {keyField.Name.ToCamelCase()};");
@@ -2055,6 +2056,13 @@ namespace WEB.Models
             }
 
             s.Add($"         }}");
+            if (relationshipsAsChildHierarchy != null)
+            {
+                s.Add($"         else {{");
+                foreach (var field in relationshipsAsChildHierarchy.RelationshipFields)
+                    s.Add($"            this.{CurrentEntity.Name.ToCamelCase()}.{field.ChildField.Name.ToCamelCase()} = this.route.snapshot.parent.params.{field.ParentField.Name.ToCamelCase()};");
+                s.Add($"         }}");
+            }
             s.Add($"");
             s.Add($"      }});");
             s.Add($"");
