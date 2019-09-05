@@ -1481,15 +1481,23 @@ namespace WEB.Models
                 var controlSize = "col-sm-6 col-md-4";
                 var tagType = "input";
                 var attributes = new Dictionary<string, string>();
+
                 attributes.Add("type", "text");
-                if (field.CustomType == CustomType.Boolean)
-                    attributes["type"] = "checkbox";
                 attributes.Add("id", fieldName);
                 attributes.Add("name", fieldName);
                 attributes.Add("[(ngModel)]", CurrentEntity.Name.ToCamelCase() + "." + fieldName);
                 attributes.Add("#" + fieldName, "ngModel");
                 attributes.Add("class", "form-control");
-                if (!field.IsNullable) attributes.Add("required", null);
+                if (!field.IsNullable)
+                    attributes.Add("required", null);
+
+                if (field.CustomType == CustomType.Boolean)
+                {
+                    attributes["type"] = "checkbox";
+                    attributes.Remove("required");
+                    attributes["class"] = "form-check-input";
+                }
+
                 if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
                 if (field.MinLength > 0) attributes.Add("minlength", field.MinLength.ToString());
                 //(field.RegexValidation != null ? " ng-pattern=\"/" + field.RegexValidation + "/\"" : "") + " 
@@ -1497,7 +1505,7 @@ namespace WEB.Models
                 s.Add(t + $"                <div class=\"{controlSize}\">");
                 s.Add(t + $"                    <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': {fieldName}.invalid }}\">");
                 s.Add(t + $"");
-                s.Add(t + $"                        <label for=\"{fieldName}\">");
+                s.Add(t + $"                        <label for=\"{fieldName.ToLower()}\">");
                 s.Add(t + $"                            {field.Label}:");
                 s.Add(t + $"                        </label>");
                 s.Add(t + $"");
@@ -1509,11 +1517,24 @@ namespace WEB.Models
                     if (attribute.Value != null) controlHtml += $"=\"{attribute.Value}\"";
                 }
                 controlHtml += " />";
-                s.Add(t + $"                        {controlHtml}");
+
+                if (attributes["type"] == "checkbox")
+                {
+                    s.Add(t + $"                  <div class=\"form-check\">");
+                    s.Add(t + $"                     {controlHtml}");
+                    s.Add(t + $"                     <label class=\"form-check-label\" for=\"{field.Name}\">");
+                    s.Add(t + $"                        {field.Label}");
+                    s.Add(t + $"                     </label>");
+                    s.Add(t + $"                  </div>");
+                }
+                else
+                    s.Add(t + $"                        {controlHtml}");
+
+
                 s.Add(t + $"");
 
                 var validationErrors = new Dictionary<string, string>();
-                if (!field.IsNullable) validationErrors.Add("required", $"{field.Label} is required");
+                if (!field.IsNullable && field.CustomType != CustomType.Boolean) validationErrors.Add("required", $"{field.Label} is required");
                 if (field.MinLength > 0) validationErrors.Add("minlength", $"{field.Label} must be at least {field.MinLength} characters long");
                 if (field.Length > 0) validationErrors.Add("maxlength", $"{field.Label} must be at most {field.Length} characters long");
 
