@@ -607,7 +607,7 @@ namespace WEB.Models
             {
                 s.Add($"");
                 s.Add($"            if (!string.IsNullOrWhiteSpace(q))");
-                s.Add($"                results = results.Where(o => {CurrentEntity.TextSearchFields.Select(o => $"o.{o.Name + (o.CustomType == CustomType.String ? string.Empty : ".ToString()")}.Contains(q)").Aggregate((current, next) => current + " || " + next) });");
+                s.Add($"                results = results.Where(o => {CurrentEntity.TextSearchFields.Select(o => $"o.{o.Name + (o.CustomType == CustomType.String ? string.Empty : ".toString()")}.Contains(q)").Aggregate((current, next) => current + " || " + next) });");
             }
 
             if (fieldsToSearch.Count > 0)
@@ -899,32 +899,36 @@ namespace WEB.Models
         {
             var s = new StringBuilder();
 
-            s.Add($"using System.Web.Optimization;");
-            s.Add($"");
-            s.Add($"namespace {CurrentEntity.Project.Namespace}");
-            s.Add($"{{");
-            s.Add($"    public partial class BundleConfig");
-            s.Add($"    {{");
-            s.Add($"        public static void AddGeneratedBundles(Bundle bundle)");
-            s.Add($"        {{");
-            s.Add($"            bundle.Include(");
+            s.Add($"import {{ NgModule }} from '@angular/core';");
+            s.Add($"import {{ CommonModule }} from '@angular/common';");
+            s.Add($"import {{ FormsModule }} from '@angular/forms';");
+            s.Add($"import {{ RouterModule }} from '@angular/router';");
+            s.Add($"import {{ PagerComponent }} from './common/pager.component';");
+            s.Add($"import {{ NgbModule }} from '@ng-bootstrap/ng-bootstrap';");
+
             var entitiesToBundle = AllEntities.Where(e => !e.Exclude);
+            var componentList = "";
             foreach (var e in entitiesToBundle)
             {
-                var isLastEntity = entitiesToBundle.Last();
-                var hasAppSelects = e.HasAppSelects(DbContext);
-                s.Add($"                \"~/app/{e.PluralName.ToLower()}/{e.Name.ToLower()}.js\",");
-                s.Add($"                \"~/app/{e.PluralName.ToLower()}/{e.PluralName.ToLower()}.js\"" + (e == isLastEntity && !hasAppSelects ? string.Empty : ","));
-                if (hasAppSelects)
-                {
-                    s.Add($"                \"~/app/directives/appselect{e.Name.ToLower()}.js\",");
-                    s.Add($"                \"~/app/directives/select{e.Name.ToLower()}modal.js\"" + (e == isLastEntity ? string.Empty : ","));
-                }
+                s.Add($"import {{ {e.Name}ListComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.list.component';");
+                s.Add($"import {{ {e.Name}EditComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.edit.component';");
+                //s.Add($"import {{ {e.Name}SelectComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.select.component';");
+                componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ListComponent, {e.Name}EditComponent";//, {e.Name}SelectComponent";
             }
-            s.Add($"                );");
-            s.Add($"        }}");
-            s.Add($"    }}");
-            s.Add($"}}");
+            s.Add($"import {{ GeneratedRoutes }} from './generated.routes';");
+            s.Add($"");
+
+
+            s.Add($"@NgModule({{");
+            s.Add($"   declarations: [PagerComponent, {componentList}],");
+            s.Add($"   imports: [");
+            s.Add($"      CommonModule,");
+            s.Add($"      FormsModule,");
+            s.Add($"      RouterModule.forChild(GeneratedRoutes),");
+            s.Add($"      NgbModule");
+            s.Add($"   ]");
+            s.Add($"}})");
+            s.Add($"export class GeneratedModule {{ }}");
 
             return RunCodeReplacements(s.ToString(), CodeType.BundleConfig);
 
@@ -934,103 +938,86 @@ namespace WEB.Models
         {
             var s = new StringBuilder();
 
-            var noKeysEntity = NormalEntities.FirstOrDefault(e => e.KeyFields.Count == 0);
-            if (noKeysEntity != null)
-                throw new InvalidOperationException(noKeysEntity.FriendlyName + " has no keys defined");
+            s.Add($"import {{ Route }} from '@angular/router';");
+            s.Add($"import {{ HomeComponent }} from './home/home.component';");
+            s.Add($"import {{ AccessGuard }} from './common/auth/accessguard';");
+            s.Add($"import {{ MainComponent }} from './main.component';");
 
-            s.Add($"module WEB {{");
-            s.Add($"    export class Routes {{");
-            s.Add($"");
-            s.Add($"        private version: string = \"?v={string.Format("{0:yyyyMMddHHmmss}", DateTime.Now)}\";");
-            s.Add($"");
-            s.Add($"        constructor($stateProvider) {{");
-            s.Add($"");
-
-            s.Add($"            $stateProvider");
-            foreach (var e in NormalEntities)
+            var allEntities = AllEntities.Where(e => !e.Exclude).OrderBy(o => o.Name);
+            foreach (var e in allEntities)
             {
-                #region list
-                if (e != NormalEntities.First())
-                {
-                    s.Add($"                }})");
-                }
-                s.Add($"                .state({{");
-                s.Add($"                    name: \"app.{e.PluralName.ToCamelCase()}\",");
-                s.Add($"                    url: \"{CurrentEntity.Project.UrlPrefix}/{e.PluralName.ToLower()}\",");
-                if (String.IsNullOrWhiteSpace(CurrentEntity.Project.RouteViewName))
-                {
-                    s.Add($"                    templateUrl: \"/app/{e.PluralName.ToLower()}/{e.PluralName.ToLower()}.html\" + this.version,");
-                    s.Add($"                    controller: WEB.{e.PluralName}Component,");
-                    s.Add($"                    controllerAs: \"vm\",");
-                }
-                else
-                {
-                    s.Add($"                    views: {{");
-                    s.Add($"                        \"{CurrentEntity.Project.RouteViewName}\": {{");
-                    s.Add($"                            templateUrl: \"/app/{e.PluralName.ToLower()}/{e.PluralName.ToLower()}.html\" + this.version,");
-                    s.Add($"                            controller: WEB.{e.Name}Component,");
-                    s.Add($"                            controllerAs: \"vm\"");
-                    s.Add($"                        }}");
-                    s.Add($"                    }},");
-                }
-                //s.Add($"                data: {{");
-                //s.Add($"                    roles: [\"Administrator\"]");
-                //s.Add($"                }},");
-                s.Add($"                    ncyBreadcrumb: {{");
-                s.Add($"                        label: \"{e.PluralFriendlyName}\"");
-                s.Add($"                    }}");
-                s.Add($"                }})");
-                #endregion
-
-                #region edit
-                s.Add($"                .state({{");
-                s.Add($"                    name: \"app.{e.Name.ToCamelCase()}\",");
-                s.Add($"                    url: \"{CurrentEntity.Project.UrlPrefix}{e.GetNavigationUrl()}\",");
-                if (String.IsNullOrWhiteSpace(CurrentEntity.Project.RouteViewName))
-                {
-                    s.Add($"                    templateUrl: \"/app/{e.PluralName.ToLower()}/{e.Name.ToLower()}.html\" + this.version,");
-                    s.Add($"                    controller: WEB.{e.Name}Component,");
-                    s.Add($"                    controllerAs: \"vm\",");
-                }
-                else
-                {
-                    s.Add($"                    views: {{");
-                    s.Add($"                        \"{CurrentEntity.Project.RouteViewName}\": {{");
-                    s.Add($"                            templateUrl: \"/app/{e.PluralName.ToLower()}/{e.Name.ToLower()}.html\" + version,");
-                    s.Add($"                            controller: WEB.{e.Name}Component,");
-                    s.Add($"                            controllerAs: \"vm\"");
-                    s.Add($"                        }}");
-                    s.Add($"                    }},");
-                }
-                s.Add($"                    ncyBreadcrumb: {{");
-                s.Add($"                        parent: \"app.{(e.RelationshipsAsChild.Any(r => r.Hierarchy) ? e.RelationshipsAsChild.First(r => r.Hierarchy).ParentEntity.Name : e.PluralName).ToCamelCase()}\",");
-                var labelField = e.PrimaryField;
-                if (labelField == null) labelField = e.Fields.Where(f => f.ShowInSearchResults && !RelationshipFields.Any(rf => rf.ChildFieldId == f.FieldId)).OrderBy(f => f.FieldOrder).FirstOrDefault();
-                if (!string.IsNullOrWhiteSpace(e.Breadcrumb))
-                    s.Add($"                        label: \"{{{{{e.Breadcrumb}}}}}\"");
-                else if (labelField != null)
-                {
-                    if (labelField.CustomType == CustomType.Date)
-                        s.Add($"                        label: \"{{{{vm.moment(vm.{e.Name.ToCamelCase()}.{labelField.Name.ToCamelCase()}).format('DD MMMM YYYY')}}}}\"");
-                    else
-                        s.Add($"                        label: \"{{{{vm.{e.Name.ToCamelCase()}.{labelField.Name.ToCamelCase()}}}}}\"");
-                }
-                else
-                    s.Add($"                        label: \"{e.FriendlyName}\"");
-                s.Add($"                    }}");
-                if (e == NormalEntities.Last())
-                {
-                    s.Add($"                }});");
-                }
-                #endregion
+                s.Add($"import {{ {e.Name}ListComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.list.component';");
+                s.Add($"import {{ {e.Name}EditComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.edit.component';");
             }
-            s.Add($"        }}");
-            s.Add($"    }}");
-            s.Add($"}}");
+            s.Add($"");
 
+            s.Add($"export const GeneratedRoutes: Route[] = [");
+            s.Add($"   {{");
+            s.Add($"      path: '',");
+            s.Add($"      component: MainComponent,");
+            s.Add($"      data: {{}},");
+            s.Add($"      children: [");
+            s.Add($"         {{");
+            s.Add($"            path: '',");
+            s.Add($"            canActivate: [AccessGuard],");
+            s.Add($"            canActivateChild: [AccessGuard],");
+            s.Add($"            component: HomeComponent,");
+            s.Add($"            pathMatch: 'full',");
+            s.Add($"            data: {{ breadcrumb: 'Home' }},");
+            s.Add($"         }},");
+
+            foreach (var e in allEntities)
+            {
+                var hasChildren = !e.RelationshipsAsChild.Any(r => r.Hierarchy);
+
+                s.Add($"         {{");
+                s.Add($"            path: '{e.PluralName.ToLower()}',");
+                s.Add($"            canActivate: [AccessGuard],");
+                s.Add($"            canActivateChild: [AccessGuard],");
+                s.Add($"            component: {e.Name}ListComponent,");
+                s.Add($"            data: {{ breadcrumb: '{e.PluralFriendlyName}' }}" + (hasChildren ? "," : ""));
+                if (hasChildren)
+                {
+                    s.Add($"            children: [");
+                    WriteEditRoute(new List<Entity> { e }, s, 0);
+                    s.Add($"            ]");
+                }
+                s.Add($"         }}" + (e == allEntities.Last() ? "" : ","));
+            }
+
+            s.Add($"      ]");
+            s.Add($"   }}");
+            s.Add($"];");
 
             return RunCodeReplacements(s.ToString(), CodeType.AppRouter);
 
+        }
+
+        private void WriteEditRoute(IEnumerable<Entity> entities, StringBuilder s, int level)
+        {
+            var tabs = String.Concat(Enumerable.Repeat("      ", level));
+
+            foreach (var entity in entities)
+            {
+                var childEntities = entity.RelationshipsAsParent.Where(r => r.Hierarchy).Select(o => o.ChildEntity);
+
+                s.Add(tabs + $"               {{");
+                s.Add(tabs + $"                  path: '{(level == 0 ? "" : entity.PluralName.ToLower() + "/")}{entity.KeyFields.Select(o => ":" + o.Name.ToCamelCase()).Aggregate((current, next) => { return current + "/" + next; })}',");
+                s.Add(tabs + $"                  component: {entity.Name}EditComponent,");
+                s.Add(tabs + $"                  canActivate: [AccessGuard],");
+                s.Add(tabs + $"                  canActivateChild: [AccessGuard],");
+                s.Add(tabs + $"                  data: {{");
+                s.Add(tabs + $"                     breadcrumb: '(no name)'");
+                s.Add(tabs + $"                  }}" + (childEntities.Any() ? "," : ""));
+                if (childEntities.Any())
+                {
+                    s.Add(tabs + $"                  children: [");
+                    WriteEditRoute(childEntities, s, level + 1);
+                    s.Add(tabs + $"                  ]");
+                }
+
+                s.Add(tabs + $"               }}" + (entity == entities.Last() ? "" : ","));
+            }
         }
 
         public string GenerateApiResource()
@@ -1099,8 +1086,6 @@ namespace WEB.Models
 
         public string GenerateListHtml()
         {
-            if (CurrentEntity.EntityType == EntityType.User) return string.Empty;
-
             var s = new StringBuilder();
             s.Add($"<div *ngIf=\"route.children.length === 0\">");
             if (CurrentEntity.Fields.Any(f => f.SearchType != SearchType.None))
@@ -1239,8 +1224,6 @@ namespace WEB.Models
 
         public string GenerateListTypeScript()
         {
-            if (CurrentEntity.EntityType == EntityType.User) return string.Empty;
-
             bool includeEntities = false;
             foreach (var field in CurrentEntity.Fields.Where(f => f.ShowInSearchResults).OrderBy(f => f.FieldOrder))
                 if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
@@ -1309,8 +1292,10 @@ namespace WEB.Models
             s.Add($"   }}");
             s.Add($"");
             s.Add($"   goTo{CurrentEntity.Name}({CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name}): void {{");
-            var navFields = CurrentEntity.GetNavigationFields();
-            s.Add($"      this.router.navigate(['/{CurrentEntity.PluralName.ToLower()}', { navFields.Select(o => CurrentEntity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }]);");
+            //var navFields = CurrentEntity.GetNavigationFields();
+            //s.Add($"      this.router.navigate(['/{CurrentEntity.PluralName.ToLower()}', { navFields.Select(o => CurrentEntity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }]);");
+            var keyFields = CurrentEntity.KeyFields;
+            s.Add($"      this.router.navigate(['/{CurrentEntity.PluralName.ToLower()}', { keyFields.Select(o => CurrentEntity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }]);");
             s.Add($"   }}");
             s.Add($"}}");
             s.Add($"");
@@ -1843,11 +1828,13 @@ namespace WEB.Models
             s.Add($"import {{ Router, ActivatedRoute }} from '@angular/router';");
             s.Add($"import {{ ToastrService }} from 'ngx-toastr';");
             s.Add($"import {{ NgForm }} from '@angular/forms';");
+            // only needed if children?
             s.Add($"import {{ Observable }} from 'rxjs';");
             s.Add($"import {{ HttpErrorResponse }} from '@angular/common/http';");
             s.Add($"import {{ BreadcrumbService }} from 'angular-crumbs';");
             s.Add($"import {{ ErrorService }} from '../common/services/error.service';");
-            s.Add($"import {{ PagingOptions }} from '../common/models//http.model';");
+            // only needed if children?
+            s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             s.Add($"import {{ {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
             s.Add($"import {{ {CurrentEntity.Name}Service }} from '../common/services/{CurrentEntity.Name.ToLower()}.service';");
             foreach (var rel in relationshipsAsParent)
@@ -1864,14 +1851,14 @@ namespace WEB.Models
 
             s.Add($"export class {CurrentEntity.Name}EditComponent implements OnInit {{");
             s.Add($"");
-            s.Add($"    public {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
-            s.Add($"    public isNew: boolean = true;");
+            s.Add($"   public {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
+            s.Add($"   public isNew: boolean = true;");
             s.Add($"");
             foreach (var rel in relationshipsAsParent)
             {
-                s.Add($"   public {rel.ChildEntity.PluralName.ToCamelCase()}SearchOptions = new {rel.ChildEntity.Name}SearchOptions();");
-                s.Add($"   public {rel.ChildEntity.PluralName.ToCamelCase()}Headers = new PagingOptions();");
-                s.Add($"   public {rel.ChildEntity.PluralName.ToCamelCase()}: {rel.ChildEntity.Name}[];");
+                s.Add($"   public {rel.CollectionName.ToCamelCase()}SearchOptions = new {rel.ChildEntity.Name}SearchOptions();");
+                s.Add($"   public {rel.CollectionName.ToCamelCase()}Headers = new PagingOptions();");
+                s.Add($"   public {rel.CollectionName.ToCamelCase()}: {rel.ChildEntity.Name}[];");
                 s.Add($"");
             }
 
@@ -1911,7 +1898,7 @@ namespace WEB.Models
             foreach (var rel in relationshipsAsParent)
             {
                 foreach (var relField in rel.RelationshipFields)
-                    s.Add($"            this.{rel.ChildEntity.PluralName.ToCamelCase()}SearchOptions.{relField.ChildField.Name.ToCamelCase()} = {relField.ParentField.Name.ToCamelCase()};");
+                    s.Add($"            this.{rel.CollectionName.ToCamelCase()}SearchOptions.{relField.ChildField.Name.ToCamelCase()} = {relField.ParentField.Name.ToCamelCase()};");
                 s.Add($"            this.load{rel.CollectionName}();");
                 s.Add($"");
             }
@@ -1929,7 +1916,7 @@ namespace WEB.Models
             s.Add($"         .subscribe(");
             s.Add($"            {CurrentEntity.Name.ToCamelCase()} => {{");
             s.Add($"               this.{CurrentEntity.Name.ToCamelCase()} = {CurrentEntity.Name.ToCamelCase()};");
-            s.Add($"               this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()});");
+            s.Add($"               this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")});");
             s.Add($"            }},");
             s.Add($"            err => {{");
             s.Add($"               this.errorService.handleError(err, \"{CurrentEntity.Name}\", \"Load\");");
@@ -1985,10 +1972,11 @@ namespace WEB.Models
 
             // todo: might not be 'name' field
             s.Add($"   nameChange(): void {{");
-            s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()} || \"(no {CurrentEntity.PrimaryField.Label.ToLower()})\");");
+            s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")} || \"(no {CurrentEntity.PrimaryField.Label.ToLower()})\");");
             s.Add($"   }}");
+            s.Add($"");
 
-            foreach(var rel in relationshipsAsParent)
+            foreach (var rel in relationshipsAsParent)
             {
                 if (!rel.DisplayListOnParent && !rel.Hierarchy) continue;
 
@@ -2559,32 +2547,31 @@ namespace WEB.Models
             }
             #endregion
 
+            // todo: rename
+            #region bundleconfig
+            if (deploymentOptions.BundleConfig)
+            {
+                var path = entity.Project.RootPath + @"ClientApp\src\app\";
+
+                var code = codeGenerator.GenerateBundleConfig();
+                if (code != string.Empty) File.WriteAllText(Path.Combine(path, "generated.module.ts"), code);
+            }
+            #endregion
+
+            #region app router
+            if (deploymentOptions.AppRouter)
+            {
+                var path = entity.Project.RootPath + @"ClientApp\src\app\";
+
+                var code = codeGenerator.GenerateAppRouter();
+                if (code != string.Empty) File.WriteAllText(Path.Combine(path, "generated.routes.ts"), code);
+            }
+            #endregion
+
             #region todo
 
 
-            //#region bundleconfig
-            //if (deploymentOptions.BundleConfig)
-            //{
-            //    var path = Path.Combine(entity.Project.RootPath, "App_Start");
-            //    if (!Directory.Exists(path))
-            //        return ("App_Start path does not exist");
 
-            //    var code = codeGenerator.GenerateBundleConfig();
-            //    if (code != string.Empty) File.WriteAllText(Path.Combine(path, "BundleConfig_.cs"), code);
-            //}
-            //#endregion
-
-            //#region app router
-            //if (deploymentOptions.AppRouter)
-            //{
-            //    var path = Path.Combine(entity.Project.RootPath, "app\\common");
-            //    if (!Directory.Exists(path))
-            //        return ("App\\Common path does not exist");
-
-            //    var code = codeGenerator.GenerateAppRouter();
-            //    if (code != string.Empty) File.WriteAllText(Path.Combine(path, "routes-entity.ts"), code);
-            //}
-            //#endregion
 
             //#region app-select html
             //if (deploymentOptions.AppSelectHtml)
