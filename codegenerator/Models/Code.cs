@@ -227,6 +227,10 @@ namespace WEB.Models
 
             var s = new StringBuilder();
             s.Add($"import {{ SearchOptions, PagingOptions }} from './http.model';");
+            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(r => !r.ParentEntity.Exclude).OrderBy(o => o.ParentEntity.Name))
+            {
+                s.Add($"import {{ {relationship.ParentEntity.Name} }} from './{ relationship.ParentEntity.Name.ToLower() }.model';");
+            }
             s.Add($"");
 
             s.Add($"export class {CurrentEntity.Name} {{");
@@ -235,6 +239,10 @@ namespace WEB.Models
             foreach (var field in CurrentEntity.Fields.OrderBy(f => f.FieldOrder))
             {
                 s.Add($"   {field.Name.ToCamelCase()}: {field.JavascriptType};");
+            }
+            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(r => !r.ParentEntity.Exclude).OrderBy(o => o.ParentEntity.Name))
+            {
+                s.Add($"   {relationship.ParentName.ToCamelCase()}: {relationship.ParentEntity.Name};");
             }
             s.Add($"");
 
@@ -1292,15 +1300,38 @@ namespace WEB.Models
             s.Add($"   }}");
             s.Add($"");
             s.Add($"   goTo{CurrentEntity.Name}({CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name}): void {{");
-            //var navFields = CurrentEntity.GetNavigationFields();
-            //s.Add($"      this.router.navigate(['/{CurrentEntity.PluralName.ToLower()}', { navFields.Select(o => CurrentEntity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }]);");
-            var keyFields = CurrentEntity.KeyFields;
-            s.Add($"      this.router.navigate(['/{CurrentEntity.PluralName.ToLower()}', { keyFields.Select(o => CurrentEntity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }]);");
+            s.Add($"      this.router.navigate([{GetRouterLink(CurrentEntity)}]);");
             s.Add($"   }}");
             s.Add($"}}");
             s.Add($"");
 
             return RunCodeReplacements(s.ToString(), CodeType.ListTypeScript);
+        }
+
+        private string GetRouterLink(Entity entity)
+        {
+            string routerLink = string.Empty;
+
+            if (entity.RelationshipsAsChild.Any(r => r.Hierarchy))
+            {
+                var prefix = string.Empty;
+                while (entity != null)
+                {
+                    var nextEntity = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy)?.ParentEntity;
+
+                    routerLink = $"'{(nextEntity == null ? "/" : "")}{entity.PluralName.ToLower()}', {entity.KeyFields.Select(o => $"{prefix + entity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}" + (routerLink == "" ? "" : ", ") + routerLink;
+
+                    prefix += entity.Name.ToCamelCase() + ".";
+
+                    entity = nextEntity;
+                }
+            }
+            else
+            {
+                routerLink = $"'/{entity.PluralName.ToLower()}', { entity.KeyFields.Select(o => entity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }";
+            }
+
+            return routerLink;
         }
 
         public string GenerateEditHtml()
@@ -1767,7 +1798,7 @@ namespace WEB.Models
                     s.Add($"                        </thead>");
                     s.Add($"                        <tbody" + (relationship.Hierarchy && childEntity.HasASortField ? $" ui-sortable=\"{childEntity.PluralName.ToCamelCase()}SortOptions\" [(ngModel)]=\"{childEntity.PluralName.ToCamelCase()}\"" : string.Empty) + ">");
                     // todo: click
-                    s.Add($"                            <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\">");
+                    s.Add($"                            <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\" (click)=\"goTo{childEntity.Name}({childEntity.Name.ToCamelCase()})\">");
                     if (relationship.Hierarchy && childEntity.HasASortField)
                         s.Add($"                                <td ng-if=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" ng-click=\"$event.stopPropagation();\"></i></td>");
                     foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
@@ -1899,6 +1930,7 @@ namespace WEB.Models
             {
                 foreach (var relField in rel.RelationshipFields)
                     s.Add($"            this.{rel.CollectionName.ToCamelCase()}SearchOptions.{relField.ChildField.Name.ToCamelCase()} = {relField.ParentField.Name.ToCamelCase()};");
+                s.Add($"            this.{rel.CollectionName.ToCamelCase()}SearchOptions.includeEntities = true; // can remove if using relative routerLink");
                 s.Add($"            this.load{rel.CollectionName}();");
                 s.Add($"");
             }
@@ -2003,9 +2035,10 @@ namespace WEB.Models
                 s.Add($"");
                 s.Add($"   }}");
                 s.Add($"");
-                s.Add($"   //goTo{rel.ChildEntity.Name}({rel.ChildEntity.Name.ToCamelCase()}: {rel.ChildEntity.Name}) {{");
-                s.Add($"   //   this.router.navigate(['/{CurrentEntity.Name.ToLower()}', region.municipalityId, 'regions', region.regionId], {{ relativeTo: this.route }});");
-                s.Add($"   //}}");
+                // todo: use relative links? can then disable 'includeEntities' on these entities
+                s.Add($"   goTo{rel.ChildEntity.Name}({rel.ChildEntity.Name.ToCamelCase()}: {rel.ChildEntity.Name}) {{");
+                s.Add($"      this.router.navigate([{GetRouterLink(rel.ChildEntity)}]);");
+                s.Add($"   }}");
                 s.Add($"");
             }
 
