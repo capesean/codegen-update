@@ -555,7 +555,7 @@ namespace WEB.Models
 
         public string GenerateController()
         {
-            if (CurrentEntity.EntityType == EntityType.User) return string.Empty;
+            //if (CurrentEntity.EntityType == EntityType.User) return string.Empty;
 
             var s = new StringBuilder();
 
@@ -563,19 +563,28 @@ namespace WEB.Models
             s.Add($"using System.Linq;");
             s.Add($"using System.Threading.Tasks;");
             s.Add($"using Microsoft.AspNetCore.Mvc;");
-            s.Add($"using Microsoft.AspNetCore.Authorization;");
-            s.Add($"using Microsoft.AspNetCore.Authentication.JwtBearer;");
             s.Add($"using Microsoft.AspNetCore.Identity;");
             s.Add($"using Microsoft.EntityFrameworkCore;");
             s.Add($"using {CurrentEntity.Project.Namespace}.Models;");
+            s.Add($"using Microsoft.Extensions.Options;");
             s.Add($"");
             s.Add($"namespace {CurrentEntity.Project.Namespace}.Controllers");
             s.Add($"{{");
             // todo: add back roles!
-            s.Add($"    [Route(\"api/[Controller]\"), Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]");
+            s.Add($"    [Route(\"api/[Controller]\")]");
             s.Add($"    public {(CurrentEntity.PartialControllerClass ? "partial " : string.Empty)}class {CurrentEntity.PluralName}Controller : BaseApiController");
             s.Add($"    {{");
-            s.Add($"        public {CurrentEntity.PluralName}Controller(ApplicationDbContext _db, UserManager<User> um) : base(_db, um) {{ }}");
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                s.Add($"        private RoleManager<AppRole> rm;");
+                s.Add($"        private IOptions<PasswordOptions> opts;");
+                s.Add($"        public UsersController(ApplicationDbContext _db, UserManager<User> _um, RoleManager<AppRole> _rm, IOptions<PasswordOptions> _opts) ");
+                s.Add($"            : base(_db, _um) {{ rm = _rm; opts = _opts; }}");
+            }
+            else
+            {
+                s.Add($"        public {CurrentEntity.PluralName}Controller(ApplicationDbContext _db, UserManager<User> um) : base(_db, um) {{ }}");
+            }
             s.Add($"");
 
             #region search
@@ -591,11 +600,23 @@ namespace WEB.Models
             foreach (var field in CurrentEntity.RangeSearchFields)
                 fieldsToSearch.Add(field);
 
-            s.Add($"        public async Task<IActionResult> Search([FromQuery]PagingOptions pagingOptions{(CurrentEntity.TextSearchFields.Count > 0 ? ", [FromQuery]string q = null" : "")}{(fieldsToSearch.Count > 0 ? $", {fieldsToSearch.Select(f => f.ControllerSearchParams).Aggregate((current, next) => current + ", " + next)}" : "")})");
+            s.Add($"        public async Task<IActionResult> Search([FromQuery]PagingOptions pagingOptions{(CurrentEntity.TextSearchFields.Count > 0 ? ", [FromQuery]string q = null" : "")}{(fieldsToSearch.Count > 0 ? $", {fieldsToSearch.Select(f => f.ControllerSearchParams).Aggregate((current, next) => current + ", " + next)}" : "") + (CurrentEntity.EntityType == EntityType.User ? ", Guid? roleId = null" : "")})");
             s.Add($"        {{");
             s.Add($"            if (pagingOptions == null) pagingOptions = new PagingOptions();");
             s.Add($"");
-            s.Add($"            IQueryable<{CurrentEntity.Name}> results = {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName};");
+
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                s.Add($"            IQueryable<User> results = userManager.Users;");
+                s.Add($"            results = results.Include(o => o.Roles);");
+                s.Add($"");
+                s.Add($"            if (roleId != null) results = results.Where(o => o.Roles.Any(r => r.RoleId == roleId));");
+                s.Add($"");
+            }
+            else
+            {
+                s.Add($"            IQueryable<{CurrentEntity.Name}> results = {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName};");
+            }
 
             if (CurrentEntity.RelationshipsAsChild.Where(r => r.RelationshipAncestorLimit != RelationshipAncestorLimits.Exclude).Any())
             {
@@ -655,7 +676,15 @@ namespace WEB.Models
             s.Add($"        [HttpGet(\"{CurrentEntity.RoutePath}\")]");
             s.Add($"        public async Task<IActionResult> Get({CurrentEntity.ControllerParameters})");
             s.Add($"        {{");
-            s.Add($"            var {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}");
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                s.Add($"            var user = await userManager.Users");
+                s.Add($"                .Include(o => o.Roles)");
+            }
+            else
+            {
+                s.Add($"            var {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}");
+            }
             foreach (var relationship in CurrentEntity.RelationshipsAsChild.OrderBy(r => r.SortOrder).ThenBy(o => o.ParentName))
             {
                 if (relationship.RelationshipAncestorLimit == RelationshipAncestorLimits.Exclude) continue;
@@ -744,12 +773,21 @@ namespace WEB.Models
             }
             else
             {
+                if (CurrentEntity.EntityType == EntityType.User)
+                {
+                    s.Add($"            var password = string.Empty;");
+                    s.Add($"            if (await db.Users.AnyAsync(o => o.Email == userDTO.Email && o.Id != userDTO.Id))");
+                    s.Add($"                return BadRequest(\"Email already exists.\");");
+                    s.Add($"");
+                }
                 s.Add($"            var isNew = {CurrentEntity.KeyFields.Select(f => CurrentEntity.DTOName.ToCamelCase() + "." + f.Name + " == " + f.EmptyValue).Aggregate((current, next) => current + " && " + next)};");
                 s.Add($"");
                 s.Add($"            {CurrentEntity.Name} {CurrentEntity.CamelCaseName};");
                 s.Add($"            if (isNew)");
                 s.Add($"            {{");
                 s.Add($"                {CurrentEntity.CamelCaseName} = new {CurrentEntity.Name}();");
+                if (CurrentEntity.EntityType == EntityType.User)
+                    s.Add($"                password = Utilities.GenerateRandomPassword(opts.Value);");
                 s.Add($"");
                 foreach (var field in CurrentEntity.Fields.Where(f => !string.IsNullOrWhiteSpace(f.ControllerInsertOverride)))
                 {
@@ -773,7 +811,16 @@ namespace WEB.Models
                 s.Add($"            }}");
                 s.Add($"            else");
                 s.Add($"            {{");
-                s.Add($"                {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.SingleOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
+                if (CurrentEntity.EntityType == EntityType.User)
+                {
+                    s.Add($"                user = await userManager.Users");
+                    s.Add($"                    .Include(o => o.Roles)");
+                    s.Add($"                    .SingleOrDefaultAsync(o => o.Id == userDTO.Id);");
+                }
+                else
+                {
+                    s.Add($"                {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.SingleOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
+                }
                 s.Add($"");
                 s.Add($"                if ({CurrentEntity.CamelCaseName} == null)");
                 s.Add($"                    return NotFound();");
@@ -790,7 +837,40 @@ namespace WEB.Models
             s.Add($"");
             s.Add($"            ModelFactory.Hydrate({CurrentEntity.CamelCaseName}, {CurrentEntity.DTOName.ToCamelCase()});");
             s.Add($"");
-            s.Add($"            await {CurrentEntity.Project.DbContextVariable}.SaveChangesAsync();");
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                s.Add($"            var saveResult = (isNew ? await userManager.CreateAsync(user, password) : await userManager.UpdateAsync(user));");
+                s.Add($"");
+                s.Add($"            if (!saveResult.Succeeded)");
+                s.Add($"                return GetErrorResult(saveResult);");
+                s.Add($"");
+                s.Add($"            var appRoles = await rm.Roles.ToListAsync();");
+                s.Add($"");
+                s.Add($"            if (!isNew)");
+                s.Add($"            {{");
+                s.Add($"                foreach (var roleId in user.Roles.ToList())");
+                s.Add($"                {{");
+                s.Add($"                    var role = rm.Roles.Single(o => o.Id == roleId.RoleId);");
+                s.Add($"                    await userManager.RemoveFromRoleAsync(user, role.Name);");
+                s.Add($"                }}");
+                s.Add($"            }}");
+                s.Add($"");
+                s.Add($"            if (userDTO.RoleIds != null)");
+                s.Add($"            {{");
+                s.Add($"                foreach (var roleId in userDTO.RoleIds)");
+                s.Add($"                {{");
+                s.Add($"                    var appRole = appRoles.SingleOrDefault(r => r.Id == roleId);");
+                s.Add($"                    if (appRole != null)");
+                s.Add($"                        await userManager.AddToRoleAsync(user, appRole.Name);");
+                s.Add($"                }}");
+                s.Add($"            }}");
+                s.Add($"");
+                s.Add($"            Utilities.SendWelcomeMail(user, password);");
+            }
+            else
+            {
+                s.Add($"            await {CurrentEntity.Project.DbContextVariable}.SaveChangesAsync();");
+            }
             s.Add($"");
             s.Add($"            return await Get({CurrentEntity.KeyFields.Select(f => CurrentEntity.CamelCaseName + "." + f.Name).Aggregate((current, next) => current + ", " + next)});");
             s.Add($"        }}");
@@ -801,7 +881,7 @@ namespace WEB.Models
             s.Add($"        [HttpDelete(\"{CurrentEntity.RoutePath}\"){(CurrentEntity.AuthorizationType == AuthorizationType.ProtectChanges ? (CurrentEntity.Project.UseStringAuthorizeAttributes ? ", Authorize(Roles = \"Administrator\")" : ", AuthorizeRoles(Roles.Administrator)") : string.Empty)}]");
             s.Add($"        public async Task<IActionResult> Delete({CurrentEntity.ControllerParameters})");
             s.Add($"        {{");
-            s.Add($"            var {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.SingleOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
+            s.Add($"            var {CurrentEntity.CamelCaseName} = await {(CurrentEntity.EntityType == EntityType.User ? "userManager" : CurrentEntity.Project.DbContextVariable)}.{CurrentEntity.PluralName}.SingleOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
             s.Add($"");
             s.Add($"            if ({CurrentEntity.CamelCaseName} == null)");
             s.Add($"                return NotFound();");
@@ -823,9 +903,16 @@ namespace WEB.Models
                 }
             }
             // need to add fk checks here!
-            s.Add($"            {CurrentEntity.Project.DbContextVariable}.Entry({CurrentEntity.CamelCaseName}).State = EntityState.Deleted;");
-            s.Add($"");
-            s.Add($"            await {CurrentEntity.Project.DbContextVariable}.SaveChangesAsync();");
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                s.Add($"            await userManager.DeleteAsync(user);");
+            }
+            else
+            {
+                s.Add($"            {CurrentEntity.Project.DbContextVariable}.Entry({CurrentEntity.CamelCaseName}).State = EntityState.Deleted;");
+                s.Add($"");
+                s.Add($"            await {CurrentEntity.Project.DbContextVariable}.SaveChangesAsync();");
+            }
             s.Add($"");
             s.Add($"            return Ok();");
             s.Add($"        }}");
@@ -1381,12 +1468,22 @@ namespace WEB.Models
                 if (field.EditPageType == EditPageType.SortField) continue;
                 if (field.EditPageType == EditPageType.CalculatedField) continue;
 
+                if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
+                {
+                    var relationship = CurrentEntity.GetParentSearchRelationship(field);
+                    //var relationshipField = relationship.RelationshipFields.Single(f => f.ChildFieldId == field.FieldId);
+                    if (relationship.Hierarchy) continue;
+                }
+
                 var fieldName = field.Name.ToCamelCase();
 
+                // todo: allow an override in the user fields?
                 var controlSize = "col-sm-6 col-md-4";
                 var tagType = "input";
                 var attributes = new Dictionary<string, string>();
                 attributes.Add("type", "text");
+                if (field.CustomType == CustomType.Boolean)
+                    attributes["type"] = "checkbox";
                 attributes.Add("id", fieldName);
                 attributes.Add("name", fieldName);
                 attributes.Add("[(ngModel)]", CurrentEntity.Name.ToCamelCase() + "." + fieldName);
@@ -1600,11 +1697,9 @@ namespace WEB.Models
                 s.Add(t + $"                        <label>");
                 s.Add(t + $"                            Roles:");
                 s.Add(t + $"                        </label>");
-                s.Add(t + $"                        <ol id=\"roles\" name=\"roles\" class=\"nya-bs-select form-control\" [(ngModel)]=\"user.roleIds\" multiple>");
-                s.Add(t + $"                            <li nya-bs-option=\"role in vm.appSettings.roles\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"role.id\">");
-                s.Add(t + $"                                <a>{{{{role.label}}}}<span class=\"fas fa-check check-mark\"></span></a>");
-                s.Add(t + $"                            </li>");
-                s.Add(t + $"                        </ol>");
+                s.Add(t + $"                        <select id=\"roles\" name=\"roles\" [multiple]=\"true\" class=\"form-control\" [(ngModel)]=\"user.roleIds\">");
+                s.Add(t + $"                            <option *ngFor=\"let role of roles\" [value]=\"role.id\">{{{{role.name}}}}</option>");
+                s.Add(t + $"                        </select>");
                 s.Add(t + $"                    </div>");
                 s.Add(t + $"                </div>");
                 s.Add(t + $"");
@@ -1884,6 +1979,9 @@ namespace WEB.Models
             s.Add($"");
             s.Add($"   public {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
             s.Add($"   public isNew: boolean = true;");
+            if (CurrentEntity.EntityType == EntityType.User)
+                // todo: fix
+                s.Add($"   public roles = [{{ name: 'Administrator', id: '470356a5-f7db-4e2e-9c99-62c2800dc2f4' }}];");
             s.Add($"");
             foreach (var rel in relationshipsAsParent)
             {
