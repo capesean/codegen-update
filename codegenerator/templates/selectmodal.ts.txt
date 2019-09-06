@@ -29,6 +29,7 @@ export class NAMEModalComponent implements OnInit {
       private CAMELCASENAMEService: NAMEService,
       private errorService: ErrorService
    ) {
+      this.searchOptions.includeEntities = true;
    }
 
    ngOnInit(): void {

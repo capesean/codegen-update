@@ -1290,7 +1290,7 @@ namespace WEB.Models
             s.Add($"        <thead>");
             s.Add($"            <tr>");
             if (useSortColumn)
-                s.Add($"                <th ng-if=\"{CurrentEntity.PluralName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
+                s.Add($"                <th *ngIf=\"{CurrentEntity.PluralName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
             foreach (var field in CurrentEntity.Fields.Where(f => f.ShowInSearchResults).OrderBy(f => f.FieldOrder))
                 s.Add($"                <th>{field.Label}</th>");
             s.Add($"            </tr>");
@@ -1298,7 +1298,7 @@ namespace WEB.Models
             s.Add($"        <tbody{(CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy) ? " ui-sortable=\"sortOptions\" [(ngModel)]=\"" + CurrentEntity.PluralName.ToCamelCase() + "\"" : "")}>");
             s.Add($"            <tr *ngFor=\"let {CurrentEntity.CamelCaseName} of {CurrentEntity.PluralName.ToCamelCase()}\" (click)=\"goTo{CurrentEntity.Name}({CurrentEntity.CamelCaseName})\">");
             if (useSortColumn)
-                s.Add($"                <td ng-if=\"{CurrentEntity.PluralName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" ng-click=\"$event.stopPropagation();\"></i></td>");
+                s.Add($"                <td *ngIf=\"{CurrentEntity.PluralName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" ng-click=\"$event.stopPropagation();\"></i></td>");
             foreach (var field in CurrentEntity.Fields.Where(f => f.ShowInSearchResults).OrderBy(f => f.FieldOrder))
             {
                 s.Add($"                <td>{field.ListFieldHtml}</td>");
@@ -1913,7 +1913,7 @@ namespace WEB.Models
                     s.Add($"                        <thead>");
                     s.Add($"                            <tr>");
                     if (relationship.Hierarchy && childEntity.HasASortField)
-                        s.Add($"                                <th scope=\"col\" ng-if=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
+                        s.Add($"                                <th scope=\"col\" *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
                     foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
                     {
                         s.Add($"                                <th scope=\"col\">{column.Header}</th>");
@@ -1925,7 +1925,7 @@ namespace WEB.Models
                     // todo: click
                     s.Add($"                            <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\" (click)=\"goTo{childEntity.Name}({childEntity.Name.ToCamelCase()})\">");
                     if (relationship.Hierarchy && childEntity.HasASortField)
-                        s.Add($"                                <td ng-if=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" ng-click=\"$event.stopPropagation();\"></i></td>");
+                        s.Add($"                                <td *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" ng-click=\"$event.stopPropagation();\"></i></td>");
                     foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
                     {
                         s.Add($"                                <td>{column.Value}</td>");
@@ -1942,7 +1942,7 @@ namespace WEB.Models
                     // entities with sort fields need to show all (pageSize = 0) for sortability, so no paging needed
                     if (!childEntity.HasASortField)
                     {
-                        //s.Add($"                <div class=\"row\" ng-class=\"{{ 'disabled': vm.loading }}\">");
+                        //s.Add($"                <div class=\"row\">");
                         //s.Add($"                    <div class=\"col-sm-7\">");
                         //s.Add($"                       <{CurrentEntity.Project.AngularDirectivePrefix}-pager headers=\"{relationship.ChildEntity.PluralName.ToCamelCase()}Headers\" callback=\"load{relationship.CollectionName}\"></{CurrentEntity.Project.AngularDirectivePrefix}-pager>");
                         //s.Add($"                    </div>");
@@ -2259,13 +2259,13 @@ namespace WEB.Models
                 if (CurrentEntity.Fields.Any(o => o.FieldId == field.FieldId && o.SearchType == SearchType.Exact))
                 {
                     if (field.FieldType == FieldType.Enum)
-                        ngIf = " ng-if=\"!vm.options." + field.Name.ToCamelCase() + $"\"";
+                        ngIf = " *ngIf=\"!" + field.Name.ToCamelCase() + $"\"";
                     else
                     {
                         if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(rf => rf.ChildFieldId == field.FieldId) && r.UseSelectorDirective))
                         {
                             var relationship = CurrentEntity.GetParentSearchRelationship(field);
-                            ngIf = " ng-if=\"!vm.options." + relationship.ParentName.ToCamelCase().ToCamelCase() + $"\"";
+                            ngIf = " *ngIf=\"!" + relationship.ParentName.ToCamelCase().ToCamelCase() + $"\"";
                         }
                     }
                 }
@@ -2287,29 +2287,29 @@ namespace WEB.Models
                     appSelectFilters += Environment.NewLine;
                     if (field.FieldType == FieldType.Enum)
                     {
-                        appSelectFilters += $"                <div class=\"col-sm-6 col-md-4 col-lg-3\" ng-if=\"!vm.options.{field.Name.ToCamelCase()}\">" + Environment.NewLine;
-                        appSelectFilters += $"                    <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{field.Label}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"search.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">" + Environment.NewLine;
-                        appSelectFilters += $"                        <li nya-bs-option=\"item in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"item.id\">" + Environment.NewLine;
-                        appSelectFilters += $"                            <a>{{{{item.label}}}}<span class=\"fas fa-check check-mark\"></span></a>" + Environment.NewLine;
-                        appSelectFilters += $"                        </li>" + Environment.NewLine;
-                        appSelectFilters += $"                    </ol>" + Environment.NewLine;
-                        appSelectFilters += $"                </div>" + Environment.NewLine;
+                        appSelectFilters += $"                    <div class=\"col-sm-6 col-md-6 col-lg-4\" *ngIf=\"!{field.Name.ToCamelCase()}\">" + Environment.NewLine;
+                        appSelectFilters += $"                        <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{field.Label}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"search.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">" + Environment.NewLine;
+                        appSelectFilters += $"                            <li nya-bs-option=\"item in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"item.id\">" + Environment.NewLine;
+                        appSelectFilters += $"                                <a>{{{{item.label}}}}<span class=\"fas fa-check check-mark\"></span></a>" + Environment.NewLine;
+                        appSelectFilters += $"                            </li>" + Environment.NewLine;
+                        appSelectFilters += $"                        </ol>" + Environment.NewLine;
+                        appSelectFilters += $"                    </div>" + Environment.NewLine;
                     }
                     else
                     {
-                        appSelectFilters += $"                <div class=\"col-sm-6 col-md-4 col-lg-3\" ng-if=\"!vm.options.{relationship.ParentName.ToCamelCase()}\">" + Environment.NewLine;
-                        appSelectFilters += $"                    <div class=\"form-group\">" + Environment.NewLine;
-                        appSelectFilters += $"                        {relationship.AppSelector}" + Environment.NewLine;
+                        appSelectFilters += $"                    <div class=\"col-sm-6 col-md-6 col-lg-4\" *ngIf=\"!{relationship.ParentName.ToCamelCase()}\">" + Environment.NewLine;
+                        appSelectFilters += $"                        <div class=\"form-group\">" + Environment.NewLine;
+                        appSelectFilters += $"                            {relationship.AppSelector}" + Environment.NewLine;
+                        appSelectFilters += $"                        </div>" + Environment.NewLine;
                         appSelectFilters += $"                    </div>" + Environment.NewLine;
-                        appSelectFilters += $"                </div>" + Environment.NewLine;
                     }
 
                     if (filterAlerts == string.Empty) filterAlerts = Environment.NewLine;
 
                     if (field.FieldType == FieldType.Enum)
-                        filterAlerts += $"            <div class=\"alert alert-info alert-dismissible\" ng-if=\"options.{field.Name.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" ng-click=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" ng-if=\"options.removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{vm.options.{field.Name.ToCamelCase()}.label}}}}</div>" + Environment.NewLine;
+                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{field.Name.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" ng-click=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{field.Name.ToCamelCase()}.label}}}}</div>" + Environment.NewLine;
                     else
-                        filterAlerts += $"            <div class=\"alert alert-info alert-dismissible\" ng-if=\"options.{relationship.ParentName.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" ng-click=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" ng-if=\"options.removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{vm.options.{relationship.ParentName.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}</div>" + Environment.NewLine;
+                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{relationship.ParentName.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" ng-click=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{relationship.ParentName.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}</div>" + Environment.NewLine;
                 }
             }
 
@@ -2369,6 +2369,8 @@ namespace WEB.Models
                 .Replace("CAMELCASENAME", CurrentEntity.CamelCaseName)
                 .Replace("PLURALFRIENDLYNAME_TOLOWER", CurrentEntity.PluralFriendlyName.ToLower())
                 .Replace("PLURALFRIENDLYNAME", CurrentEntity.PluralFriendlyName)
+                .Replace("FRIENDLYNAME_LOWER", CurrentEntity.FriendlyName.ToLower())
+                .Replace("FRIENDLYNAME", CurrentEntity.FriendlyName)
                 .Replace("PLURALNAME", CurrentEntity.PluralName)
                 .Replace("NAME_TOLOWER", CurrentEntity.Name.ToLower())
                 .Replace("HYPHENATEDNAME", CurrentEntity.Name.Hyphenated())
@@ -2383,7 +2385,7 @@ namespace WEB.Models
         {
             if (String.IsNullOrWhiteSpace(entity.IconClass)) return string.Empty;
 
-            string html = $@"<span class=""input-group-btn"" ng-if=""!multiple && !!{entity.Name.ToLower()}"">
+            string html = $@"<span class=""input-group-btn"" *ngIf=""!multiple && !!{entity.Name.ToLower()}"">
         <a href=""{GetHierarchyString(entity)}"" class=""btn btn-secondary"" ng-disabled=""disabled"">
             <i class=""fas {entity.IconClass}""></i>
         </a>

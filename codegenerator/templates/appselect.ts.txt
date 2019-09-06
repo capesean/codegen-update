@@ -19,7 +19,7 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
     multiple: boolean = false;
     showAddNew: boolean = false;
     disabled: boolean = true;
-    placeholder = "Select a municipality";
+    placeholder = "Select a FRIENDLYNAME_LOWER";
 
     @ViewChild('modal', { static: false }) modal: NAMEModalComponent;
 

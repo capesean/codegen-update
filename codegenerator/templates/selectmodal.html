@@ -1,6 +1,6 @@
 ﻿<ng-template #content let-modal>
     <div class="modal-header">
-        <h4 class="modal-title" id="modal-basic-title">Select NAME</h4>
+        <h4 class="modal-title" id="modal-basic-title">Select FRIENDLYNAME</h4>
         <button type="button" class="close" aria-label="Close" (click)="modal.dismiss()">
             <span aria-hidden="true">&times;</span>
         </button>
@@ -13,13 +13,13 @@
 FILTER_ALERTS
                 <div class="row">
 
-                    <div class="col-sm-7 col-md-6 col-lg-3">
+                    <div class="col-sm-6 col-md-6 col-lg-4">
                         <div class="form-group">
                             <input type="search" ngbAutofocus name="q" id="q" [(ngModel)]="searchOptions.q" max="100" class="form-control" placeholder="Search PLURALFRIENDLYNAME_TOLOWER" />
                         </div>
                     </div>
 APP_SELECT_FILTERS
-                    <div class="col-sm-5 col-md-4 col-lg-3">
+                    <div class="col-sm-6 col-md-6 col-lg-4">
                         <div class="form-group">
                             <button type="submit" class="btn btn-success">Search<i class="fas fa-search ml-1"></i></button>
                         </div>
@@ -38,7 +38,7 @@ FIELD_HEADERS
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let CAMELCASENAME of PLURALNAME_TOCAMELCASE;" (click)="select(CAMELCASENAME)">
+                <tr *ngFor="let CAMELCASENAME of PLURALNAME_TOCAMELCASE" (click)="select(CAMELCASENAME)">
 FIELD_LIST
                     <td *ngIf="multiple" class="text-center"><i [ngClass]="{ 'fa-check-square-o': vm.isSelected(CAMELCASENAME), 'fa-square-o': !vm.isSelected(CAMELCASENAME) }" class="fa fa-fw"></i></td>
                 </tr>
