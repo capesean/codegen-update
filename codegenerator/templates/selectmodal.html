@@ -1,65 +1,60 @@
-﻿<div class="modal-header">
-    <h3 class="modal-title">Select {{vm.options.singular}}</h3>
-    <i class="fa fa-close mt-1" ng-class="{ 'disabled': vm.loading }" ng-click="vm.cancel()"></i>
-</div>
-<div class="modal-body pb-2">
+﻿<ng-template #content let-modal>
+    <div class="modal-header">
+        <h4 class="modal-title" id="modal-basic-title">Select NAME</h4>
+        <button type="button" class="close" aria-label="Close" (click)="modal.dismiss()">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div class="modal-body">
 
-    <form ng-submit="vm.runNAMESearch(0)" novalidate>
+        <form (submit)="runSearch()" novalidate>
 
-        <fieldset>
+            <fieldset>
 FILTER_ALERTS
-            <div class="row">
+                <div class="row">
 
-                <div class="col-sm-6 col-md-4 col-lg-3">
-                    <div class="form-group">
-                        <input type="search" id="q" ng-model="vm.search.q" max="100" class="form-control" placeholder="Search {{vm.options.plural.toLowerCase()}}" autofocus />
+                    <div class="col-sm-7 col-md-6 col-lg-3">
+                        <div class="form-group">
+                            <input type="search" ngbAutofocus name="q" id="q" [(ngModel)]="searchOptions.q" max="100" class="form-control" placeholder="Search PLURALFRIENDLYNAME_TOLOWER" />
+                        </div>
                     </div>
-                </div>
 APP_SELECT_FILTERS
-                <div class="col-sm-4 col-md-4 col-lg-3 col-xl-2">
-                    <div class="form-group">
-                        <button type="submit" ng-disabled="vm.loading" class="btn btn-success">Search<i class="fa fa-search ml-1"></i></button>
+                    <div class="col-sm-5 col-md-4 col-lg-3">
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-success">Search<i class="fas fa-search ml-1"></i></button>
+                        </div>
                     </div>
                 </div>
 
-            </div>
+            </fieldset>
 
-        </fieldset>
+        </form>
 
-    </form>
-
-    <table class="table table-striped table-hover table-bordered table-sm row-navigation mt-3" ng-class="{ 'disabled': vm.loading }">
-        <thead>
-            <tr>
+        <table class="table table-bordered table-striped table-hover table-sm row-navigation">
+            <thead>
+                <tr>
 FIELD_HEADERS
-                <th scope="col" class="text-center fa-col-width" ng-if="vm.options.multiple"><i class="fa fa-fw fa-check-square"></i></th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr ng-repeat="CAMELCASENAME in vm.PLURALNAME_TOCAMELCASE" ng-click="vm.select(CAMELCASENAME)">
+                    <th scope="col" class="text-center fa-col-width" *ngIf="multiple"><i class="fa fa-fw fa-check-square"></i></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let CAMELCASENAME of PLURALNAME_TOCAMELCASE;" (click)="select(CAMELCASENAME)">
 FIELD_LIST
-                <td ng-if="vm.options.multiple" class="text-center"><i ng-class="{ 'fa-check-square-o': vm.isSelected(CAMELCASENAME), 'fa-square-o': !vm.isSelected(CAMELCASENAME) }" class="fa fa-fw"></i></td>
-            </tr>
-        </tbody>
-    </table>
+                    <td *ngIf="multiple" class="text-center"><i [ngClass]="{ 'fa-check-square-o': vm.isSelected(CAMELCASENAME), 'fa-square-o': !vm.isSelected(CAMELCASENAME) }" class="fa fa-fw"></i></td>
+                </tr>
+            </tbody>
+        </table>
 
-    <div class="row" ng-class="{ 'disabled': vm.loading }">
-        <div class="col-sm-7">
-            <app-pager headers="vm.CAMELCASENAMEHeaders" callback="vm.runNAMESearch"></app-pager>
-        </div>
-        <div class="col-sm-5 text-right resultsInfo">
-            <app-pager-info headers="vm.CAMELCASENAMEHeaders"></app-pager-info>
+        <pager [headers]="headers" (pageChanged)="runSearch($event)"></pager>
+
+    </div>
+    <div class="modal-footer">
+        <div class="w-100">
+            <button type="button" class="btn btn-info" *ngIf="multiple">{{selectedItems.length}} <span *ngIf="selectedItems.length === 1">{{singular}}</span><span *ngIf="selectedItems.length !== 1">{{plural}}</span> selected</button>
+            <button type="button" class="btn btn-info" (click)="addNew()" target="_blank" *ngIf="showAddNew">Add New</button>
+            <button type="button" class="btn btn-outline-dark" (click)="close()">Close</button>
+            <button type="button" class="btn btn-secondary float-right mr-2" (click)="clear()">Clear</button>
+            <button type="button" class="btn btn-secondary float-right mr-2" (click)="selectAll()" *ngIf="multiple">Select All</button>
         </div>
     </div>
-
-</div>
-
-<div class="modal-footer">
-    <fieldset ng-disabled="vm.loading" class="w-100">
-        <span class="btn btn-info" ng-if="!!vm.options.multiple">{{vm.selectedItems.length}} <span ng-if="vm.selectedItems.length === 1">{{vm.options.singular}}</span><span ng-if="vm.selectedItems.length !== 1">{{vm.options.plural}}</span> selected</span>
-        <a href="ADDNEWURL" target="_blank" ng-if="vm.options.showAddNew" class="btn btn-info">Add New</a>
-        <button class="btn btn-secondary pull-right" type="button" ng-click="vm.close()">Close</button>
-        <button class="btn btn-secondary pull-right mr-2" type="button" ng-click="vm.clear()">Clear</button>
-        <button class="btn btn-secondary pull-right mr-2" type="button" ng-click="vm.selectAll()" ng-if="!!vm.options.multiple">Select All</button>
-    </fieldset>
-</div>
+</ng-template>

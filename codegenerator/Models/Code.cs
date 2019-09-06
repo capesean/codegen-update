@@ -1007,8 +1007,11 @@ namespace WEB.Models
             {
                 s.Add($"import {{ {e.Name}ListComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.list.component';");
                 s.Add($"import {{ {e.Name}EditComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.edit.component';");
-                //s.Add($"import {{ {e.Name}SelectComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.select.component';");
-                componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ListComponent, {e.Name}EditComponent";//, {e.Name}SelectComponent";
+                componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ListComponent, {e.Name}EditComponent";
+
+                s.Add($"import {{ {e.Name}SelectComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.select.component';");
+                s.Add($"import {{ {e.Name}ModalComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.modal.component';");
+                componentList += (componentList == "" ? "" : ", ") + $"{e.Name}SelectComponent, {e.Name}ModalComponent";
             }
             s.Add($"import {{ GeneratedRoutes }} from './generated.routes';");
             s.Add($"");
@@ -1061,7 +1064,7 @@ namespace WEB.Models
             s.Add($"            data: {{ breadcrumb: 'Home' }},");
             s.Add($"         }},");
 
-            foreach (var e in allEntities)
+            foreach (var e in allEntities.OrderBy(o => o.Name))
             {
                 var hasChildren = !e.RelationshipsAsChild.Any(r => r.Hierarchy);
 
@@ -1092,7 +1095,7 @@ namespace WEB.Models
         {
             var tabs = String.Concat(Enumerable.Repeat("      ", level));
 
-            foreach (var entity in entities)
+            foreach (var entity in entities.OrderBy(o => o.Name))
             {
                 var childEntities = entity.RelationshipsAsParent.Where(r => r.Hierarchy).Select(o => o.ChildEntity);
 
@@ -1219,14 +1222,14 @@ namespace WEB.Models
                         var relationship = CurrentEntity.GetParentSearchRelationship(field);
                         var parentEntity = relationship.ParentEntity;
                         var relField = relationship.RelationshipFields.Single();
-                        if (relationship.UseSelectorDirective)
+                        if (true || relationship.UseSelectorDirective)
                         {
-                            //s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
-                            //s.Add($"                <div class=\"form-group\">");
-                            //s.Add($"                    {relationship.AppSelector}");
-                            //s.Add($"                </div>");
-                            //s.Add($"            </div>");
-                            //s.Add($"");
+                            s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
+                            s.Add($"                <div class=\"form-group\">");
+                            s.Add($"                    {relationship.AppSelector}");
+                            s.Add($"                </div>");
+                            s.Add($"            </div>");
+                            s.Add($"");
                         }
                         else
                         {
@@ -2194,7 +2197,7 @@ namespace WEB.Models
         {
             var s = new StringBuilder();
 
-            var file = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "templates/appselect.ts");
+            var file = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "templates/appselect.ts.txt");
 
             var filterAttributes = string.Empty;
             var filterWatches = string.Empty;
@@ -2325,7 +2328,7 @@ namespace WEB.Models
         {
             var s = new StringBuilder();
 
-            var file = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "templates/selectmodal.ts");
+            var file = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "templates/selectmodal.ts.txt");
 
             var filterParams = string.Empty;
             var filterTriggers = string.Empty;
@@ -2365,8 +2368,11 @@ namespace WEB.Models
                 .Replace("PLURALNAME_TOCAMELCASE", CurrentEntity.PluralName.ToCamelCase())
                 .Replace("CAMELCASENAME", CurrentEntity.CamelCaseName)
                 .Replace("PLURALFRIENDLYNAME_TOLOWER", CurrentEntity.PluralFriendlyName.ToLower())
+                .Replace("PLURALFRIENDLYNAME", CurrentEntity.PluralFriendlyName)
                 .Replace("PLURALNAME", CurrentEntity.PluralName)
                 .Replace("NAME_TOLOWER", CurrentEntity.Name.ToLower())
+                .Replace("HYPHENATEDNAME", CurrentEntity.Name.Hyphenated())
+                .Replace("KEYFIELD", CurrentEntity.KeyFields[0].Name.ToCamelCase())
                 .Replace("NAME", CurrentEntity.Name)
                 .Replace("ICONLINK", GetIconLink(CurrentEntity))
                 .Replace("ADDNEWURL", CurrentEntity.PluralName.ToLower() + "/{{vm.appSettings.newGuid}}")
@@ -2733,55 +2739,36 @@ namespace WEB.Models
             }
             #endregion
 
-            #region todo
+            #region app-select html
+            if (deploymentOptions.AppSelectHtml)
+            {
+                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateAppSelectHtml(), entity.Name.ToLower() + ".select.component.html"))
+                    return ("App path does not exist");
+            }
+            #endregion
 
+            #region app-select typescript
+            if (deploymentOptions.AppSelectTypeScript)
+            {
+                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateAppSelectTypeScript(), entity.Name.ToLower() + ".select.component.ts"))
+                    return ("App path does not exist");
+            }
+            #endregion
 
+            #region select modal html
+            if (deploymentOptions.SelectModalHtml)
+            {
+                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateSelectModalHtml(), entity.Name.ToLower() + ".modal.component.html"))
+                    return ("App path does not exist");
+            }
+            #endregion
 
-
-            //#region app-select html
-            //if (deploymentOptions.AppSelectHtml)
-            //{
-            //    if (!entity.HasAppSelects(DbContext))
-            //        return ("App-Select is not required for this entity");
-
-            //    if (!CreateAppDirectory(entity.Project, "directives", codeGenerator.GenerateAppSelectHtml(), "appselect" + entity.Name.ToLower() + ".html"))
-            //        return ("App path does not exist");
-            //}
-            //#endregion
-
-            //#region app-select typescript
-            //if (deploymentOptions.AppSelectTypeScript)
-            //{
-            //    if (!entity.HasAppSelects(DbContext))
-            //        return ("App-Select is not required for this entity");
-
-            //    if (!CreateAppDirectory(entity.Project, "directives", codeGenerator.GenerateAppSelectTypeScript(), "appselect" + entity.Name.ToLower() + ".ts"))
-            //        return ("App path does not exist");
-            //}
-            //#endregion
-
-            //#region select modal html
-            //if (deploymentOptions.SelectModalHtml)
-            //{
-            //    if (!entity.HasAppSelects(DbContext))
-            //        return ("App-Select is not required for this entity");
-
-            //    if (!CreateAppDirectory(entity.Project, "directives", codeGenerator.GenerateSelectModalHtml(), "select" + entity.Name.ToLower() + "modal.html"))
-            //        return ("App path does not exist");
-            //}
-            //#endregion
-
-            //#region select modal typescript
-            //if (deploymentOptions.SelectModalTypeScript)
-            //{
-            //    if (!entity.HasAppSelects(DbContext))
-            //        return ("App-Select is not required for this entity");
-
-            //    if (!CreateAppDirectory(entity.Project, "directives", codeGenerator.GenerateSelectModalTypeScript(), "select" + entity.Name.ToLower() + "modal.ts"))
-            //        return ("App path does not exist");
-            //}
-            //#endregion
-
+            #region select modal typescript
+            if (deploymentOptions.SelectModalTypeScript)
+            {
+                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateSelectModalTypeScript(), entity.Name.ToLower() + ".modal.component.ts"))
+                    return ("App path does not exist");
+            }
             #endregion
 
             return null;

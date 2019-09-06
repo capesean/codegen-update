@@ -1,0 +1,121 @@
+﻿import { Component, OnInit, ViewChild, Output, EventEmitter, TemplateRef } from '@angular/core';
+import { NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
+import { Observable } from 'rxjs';
+import { NAMESearchOptions, NAMESearchResponse, NAME } from '../common/models/NAME_TOLOWER.model';
+import { NAMEService } from '../common/services/NAME_TOLOWER.service';
+import { PagingOptions } from '../common/models/http.model';
+import { ErrorService } from '../common/services/error.service';
+
+@Component({
+   selector: 'HYPHENATEDNAME-modal',
+   templateUrl: './NAME_TOLOWER.modal.component.html'
+})
+export class NAMEModalComponent implements OnInit {
+
+   modal: NgbModalRef;
+   CAMELCASENAME: NAME;
+   selectedItems: NAME[];
+   headers: PagingOptions = new PagingOptions();
+   searchOptions: NAMESearchOptions = new NAMESearchOptions();
+   PLURALNAME_TOCAMELCASE: NAME[];
+   multiple: boolean = false;
+   showAddNew: boolean = false;
+
+   @ViewChild('content', { static: false }) content: TemplateRef<any>;
+   @Output() change: EventEmitter<NAME> = new EventEmitter<NAME>();
+
+   constructor(
+      private modalService: NgbModal,
+      private CAMELCASENAMEService: NAMEService,
+      private errorService: ErrorService
+   ) {
+   }
+
+   ngOnInit(): void {
+   }
+
+   open() {
+      this.modal = this.modalService.open(this.content, { size: 'xl', centered: true, scrollable: true });
+      this.runSearch();
+      this.modal.result.then((CAMELCASENAME: NAME) => {
+         this.CAMELCASENAME = CAMELCASENAME;
+         this.change.emit(CAMELCASENAME);
+      }, () => {
+         // dismissed
+      });
+   }
+
+   private runSearch(pageIndex: number = 0): Observable<NAMESearchResponse> {
+
+      this.searchOptions.pageIndex = pageIndex;
+
+      var observable = this.CAMELCASENAMEService
+         .search(this.searchOptions);
+
+      observable.subscribe(
+         response => {
+            this.PLURALNAME_TOCAMELCASE = response.PLURALNAME_TOCAMELCASE;
+            this.headers = response.headers;
+         },
+         err => {
+
+            this.errorService.handleError(err, "PLURALFRIENDLYNAME", "Load");
+
+         }
+      );
+
+      return observable;
+
+   }
+
+   close() {
+      if (!!this.multiple) this.modal.close(this.selectedItems);
+      else this.modal.dismiss();
+   }
+
+   clear() {
+      if (this.multiple) this.modal.close([]);
+      else this.modal.close(undefined);
+   }
+
+   select(CAMELCASENAME: NAME) {
+      if (!!this.multiple) {
+         if (this.isSelected(CAMELCASENAME)) {
+            for (var i = 0; i < this.selectedItems.length; i++) {
+               if (this.selectedItems[i].KEYFIELD == CAMELCASENAME.KEYFIELD) {
+                  this.selectedItems.splice(i, 1);
+                  break;
+               }
+            }
+         } else {
+            this.selectedItems.push(CAMELCASENAME);
+         }
+      } else {
+         this.modal.close(CAMELCASENAME);
+      }
+   }
+
+   isSelected(CAMELCASENAME: NAME) {
+      if (!this.multiple) return false;
+      return this.selectedItems.filter(item => item.KEYFIELD === CAMELCASENAME.KEYFIELD).length > 0;
+   }
+
+   selectAll() {
+
+      this.searchOptions.pageSize = 0;
+      this.searchOptions.pageIndex = 0;
+
+      this.CAMELCASENAMEService.search(this.searchOptions)
+
+         .subscribe(
+            response => {
+               this.modal.close(response.PLURALNAME_TOCAMELCASE);
+               this.PLURALNAME_TOCAMELCASE = response.PLURALNAME_TOCAMELCASE;
+            },
+            err => {
+               this.errorService.handleError(err, "PLURALFRIENDLYNAME", "Load");
+            }
+         );
+
+   }
+}

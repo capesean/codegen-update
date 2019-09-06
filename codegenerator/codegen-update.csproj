@@ -611,7 +611,7 @@
     <TypeScriptCompile Include="scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="scripts\typings\moment\moment.d.ts" />
     <TypeScriptCompile Include="scripts\typings\toastr\toastr.d.ts" />
-    <TypeScriptCompile Include="templates\selectmodal.ts" />
+    <Content Include="templates\selectmodal.ts.txt" />
     <Content Include="scripts\toastr.js" />
     <Content Include="scripts\toastr.min.js" />
     <Content Include="scripts\umd\popper-utils.js" />
@@ -619,7 +619,7 @@
     <Content Include="scripts\umd\popper.js" />
     <Content Include="scripts\umd\popper.min.js" />
     <Content Include="templates\selectmodal.html" />
-    <TypeScriptCompile Include="templates\appselect.ts" />
+    <Content Include="templates\appselect.ts.txt" />
     <Content Include="templates\appselect.html" />
     <Content Include="Views\Account\Login.cshtml" />
     <Content Include="Views\Account\Reset.cshtml" />
