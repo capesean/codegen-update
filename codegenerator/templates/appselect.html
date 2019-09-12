@@ -1,9 +1,9 @@
 ﻿<div class="input-group">
-    ICONLINK<input name="CAMELCASENAME" id="CAMELCASENAME" placeholder="{{placeholder}}" (click)="openModal(content)" type="text"
+    ICONLINK<input name="CAMELCASENAME" id="CAMELCASENAME" placeholder="{{placeholder}}" (click)="openModal()" type="text"
                    class="form-control app-select" readonly="readonly" value="{{getLabel()}}" />
-    <input type="hidden" name="ngModel" id="ngModel" [(ngModel)]="ngModel" />
+    <input type="hidden" name="KEYFIELD" id="KEYFIELD" [(ngModel)]="KEYFIELD" />
     <div class="input-group-append">
-        <button type="button" class="btn btn-secondary" (click)="openModal(content)">
+        <button type="button" class="btn btn-secondary" (click)="openModal()">
             <i class="fa fa-search"></i>
         </button>
     </div>

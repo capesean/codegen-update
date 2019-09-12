@@ -1009,9 +1009,17 @@ namespace WEB.Models
                 s.Add($"import {{ {e.Name}EditComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.edit.component';");
                 componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ListComponent, {e.Name}EditComponent";
 
-                s.Add($"import {{ {e.Name}SelectComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.select.component';");
-                s.Add($"import {{ {e.Name}ModalComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.modal.component';");
-                componentList += (componentList == "" ? "" : ", ") + $"{e.Name}SelectComponent, {e.Name}ModalComponent";
+                if (e.PreventAppSelectTypeScriptDeployment == null)
+                {
+                    s.Add($"import {{ {e.Name}SelectComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.select.component';");
+                    componentList += (componentList == "" ? "" : ", ") + $"{e.Name}SelectComponent";
+                }
+
+                if (e.PreventSelectModalTypeScriptDeployment == null)
+                {
+                    s.Add($"import {{ {e.Name}ModalComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.modal.component';");
+                    componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ModalComponent";
+                }
             }
             s.Add($"import {{ GeneratedRoutes }} from './generated.routes';");
             s.Add($"");
@@ -2374,7 +2382,7 @@ namespace WEB.Models
                 .Replace("PLURALNAME", CurrentEntity.PluralName)
                 .Replace("NAME_TOLOWER", CurrentEntity.Name.ToLower())
                 .Replace("HYPHENATEDNAME", CurrentEntity.Name.Hyphenated())
-                .Replace("KEYFIELD", CurrentEntity.KeyFields[0].Name.ToCamelCase())
+                .Replace("KEYFIELD", CurrentEntity.KeyFields.Single().Name.ToCamelCase())
                 .Replace("NAME", CurrentEntity.Name)
                 .Replace("ICONLINK", GetIconLink(CurrentEntity))
                 .Replace("ADDNEWURL", CurrentEntity.PluralName.ToLower() + "/{{vm.appSettings.newGuid}}")
