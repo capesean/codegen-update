@@ -153,7 +153,8 @@ namespace WEB.Models
                 {
                     var column = new SearchResultColumn { Header = field.Label, IsOnAnotherEntity = false };
                     if (field.FieldType == FieldType.Enum)
-                        column.Value = $"{{{{ vm.appSettings.findById(vm.appSettings.{ field.Lookup.Name.ToCamelCase() }, {field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() }).label }}}}";
+                        column.Value = "todo - enums!";
+                    //column.Value = $"{{{{ vm.appSettings.findById(vm.appSettings.{ field.Lookup.Name.ToCamelCase() }, {field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() }).label }}}}";
                     else if (field.FieldType == FieldType.Bit)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } ? \"Yes\" : \"No\" }}}}";
                     else if (field.FieldType == FieldType.Date)

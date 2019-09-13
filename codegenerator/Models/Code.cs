@@ -1113,7 +1113,7 @@ namespace WEB.Models
                 s.Add(tabs + $"                  canActivate: [AccessGuard],");
                 s.Add(tabs + $"                  canActivateChild: [AccessGuard],");
                 s.Add(tabs + $"                  data: {{");
-                s.Add(tabs + $"                     breadcrumb: '(no name)'");
+                s.Add(tabs + $"                     breadcrumb: 'Add {entity.FriendlyName}'");
                 s.Add(tabs + $"                  }}" + (childEntities.Any() ? "," : ""));
                 if (childEntities.Any())
                 {
@@ -1462,11 +1462,22 @@ namespace WEB.Models
             if (CurrentEntity.EntityType == EntityType.User)
             {
                 s.Add(t + $"                <div class=\"col-sm-6 col-md-4\">");
-                s.Add(t + $"                    <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.email.$invalid }}\">");
+                s.Add(t + $"                    <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': email.invalid }}\">");
+                s.Add(t + $"");
                 s.Add(t + $"                        <label for=\"email\">");
                 s.Add(t + $"                            Email:");
                 s.Add(t + $"                        </label>");
-                s.Add(t + $"                        <input type=\"email\" id=\"email\" name=\"email\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.email\" maxlength=\"256\" class=\"form-control\" ng-required=\"true\" />");
+                s.Add(t + $"");
+                s.Add(t + $"                        <input type=\"email\" id=\"email\" name=\"email\" [(ngModel)]=\"user.email\" #email=\"ngModel\" maxlength=\"256\" class=\"form-control\" required />");
+                s.Add(t + $"");
+                s.Add(t + $"                        <div *ngIf=\"email.errors?.required\" class=\"invalid-feedback\">");
+                s.Add(t + $"                            Email is required");
+                s.Add(t + $"                        </div>");
+                s.Add(t + $"");
+                s.Add(t + $"                        <div *ngIf=\"email.errors?.maxlength\" class=\"invalid-feedback\">");
+                s.Add(t + $"                            Email must be at most 50 characters long");
+                s.Add(t + $"                        </div>");
+                s.Add(t + $"");
                 s.Add(t + $"                    </div>");
                 s.Add(t + $"                </div>");
                 s.Add($"");
@@ -1501,7 +1512,7 @@ namespace WEB.Models
                 attributes.Add("class", "form-control");
                 if (!field.IsNullable)
                     attributes.Add("required", null);
-                if(field.FieldId == CurrentEntity.PrimaryFieldId)
+                if (field.FieldId == CurrentEntity.PrimaryFieldId)
                     attributes.Add("(ngModelChange)", $"changeBreadcrumb({fieldName}.value)");
 
                 if (field.CustomType == CustomType.Boolean)
@@ -1519,6 +1530,20 @@ namespace WEB.Models
                 if (field.MinLength > 0) attributes.Add("minlength", field.MinLength.ToString());
                 //(field.RegexValidation != null ? " ng-pattern=\"/" + field.RegexValidation + "/\"" : "") + " 
 
+                if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
+                {
+                    var relationship = CurrentEntity.GetParentSearchRelationship(field);
+                    var relationshipField = relationship.RelationshipFields.Single(f => f.ChildFieldId == field.FieldId);
+                    if (!relationship.Hierarchy && relationship.UseSelectorDirective)
+                    {
+                        tagType = relationship.ParentEntity.Name.Hyphenated() + "-select";
+                        if (attributes.ContainsKey("type")) attributes.Remove("type");
+                        if (attributes.ContainsKey("class")) attributes.Remove("class");
+                        attributes.Add($"[{relationship.ParentEntity.Name.ToCamelCase()}]", $"{relationship.ChildEntity.Name.ToCamelCase()}.{relationship.ParentEntity.Name.ToCamelCase()}");
+                    }
+                }
+
+
                 s.Add(t + $"                <div class=\"{controlSize}\">");
                 s.Add(t + $"                    <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': {fieldName}.invalid }}\">");
                 s.Add(t + $"");
@@ -1533,9 +1558,12 @@ namespace WEB.Models
                     controlHtml += " " + attribute.Key;
                     if (attribute.Value != null) controlHtml += $"=\"{attribute.Value}\"";
                 }
-                controlHtml += " />";
+                if (tagType == "input")
+                    controlHtml += " />";
+                else
+                    controlHtml += $"></{tagType}>";
 
-                if (attributes["type"] == "checkbox")
+                if (attributes.ContainsKey("type") && attributes["type"] == "checkbox")
                 {
                     s.Add(t + $"                  <div class=\"form-check\">");
                     s.Add(t + $"                     {controlHtml}");
@@ -1884,7 +1912,7 @@ namespace WEB.Models
 
                     s.Add($"            <ngb-tab>");
                     s.Add($"");
-                    s.Add($"                <ng-template ngbTabTitle>{relationship.CollectionName}</ng-template>");
+                    s.Add($"                <ng-template ngbTabTitle>{relationship.CollectionFriendlyName}</ng-template>");
                     s.Add($"");
                     s.Add($"                <ng-template ngbTabContent>");
                     s.Add($"");
@@ -1926,7 +1954,7 @@ namespace WEB.Models
                     {
                         s.Add($"                                <th scope=\"col\">{column.Header}</th>");
                     }
-                    s.Add($"                                <th scope=\"col\" class=\"fa-col-width text-center\"><i class=\"fas fa-remove\"></i></th>");
+                    s.Add($"                                <th scope=\"col\" class=\"fa-col-width text-center\"><i class=\"fas fa-times\"></i></th>");
                     s.Add($"                            </tr>");
                     s.Add($"                        </thead>");
                     s.Add($"                        <tbody" + (relationship.Hierarchy && childEntity.HasASortField ? $" ui-sortable=\"{childEntity.PluralName.ToCamelCase()}SortOptions\" [(ngModel)]=\"{childEntity.PluralName.ToCamelCase()}\"" : string.Empty) + ">");
@@ -1938,7 +1966,7 @@ namespace WEB.Models
                     {
                         s.Add($"                                <td>{column.Value}</td>");
                     }
-                    s.Add($"                                <td class=\"text-center\"><i class=\"fas fa-remove clickable p-1 text-danger\" ng-click=\"remove{relationship.CollectionName}({relationship.ChildEntity.Name.ToCamelCase()}, $event)\"></i></td>");
+                    s.Add($"                                <td class=\"text-center\"><i class=\"fas fa-times clickable p-1 text-danger\" ng-click=\"remove{relationship.CollectionName}({relationship.ChildEntity.Name.ToCamelCase()}, $event)\"></i></td>");
                     s.Add($"                            </tr>");
                     s.Add($"                        </tbody>");
                     s.Add($"                    </table>");
