@@ -1166,21 +1166,21 @@ namespace WEB.Models
 
             var getParams = CurrentEntity.KeyFields.Select(o => o.Name.ToCamelCase() + ": " + o.JavascriptType).Aggregate((current, next) => current + ", " + next);
             var saveParams = CurrentEntity.Name.ToCamelCase() + ": " + CurrentEntity.Name;
-            var getUrl = CurrentEntity.KeyFields.Select(o => " + " + o.Name.ToCamelCase()).Aggregate((current, next) => current + " + " + next);
-            var saveUrl = CurrentEntity.KeyFields.Select(o => " + " + CurrentEntity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + " + " + next);
+            var getUrl = CurrentEntity.KeyFields.Select(o => "${" + o.Name.ToCamelCase() + "}").Aggregate((current, next) => current + "/" + next);
+            var saveUrl = CurrentEntity.KeyFields.Select(o => "${" + CurrentEntity.Name.ToCamelCase() + "." + o.Name.ToCamelCase() + "}").Aggregate((current, next) => current + "/" + next);
 
             s.Add($"   get({getParams}): Observable<{CurrentEntity.Name}> {{");
-            s.Add($"      return this.http.get<{CurrentEntity.Name}>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/`{getUrl});");
+            s.Add($"      return this.http.get<{CurrentEntity.Name}>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/{getUrl}`);");
             s.Add($"   }}");
             s.Add($"");
 
             s.Add($"   save({saveParams}): Observable<{CurrentEntity.Name}> {{");
-            s.Add($"      return this.http.post<{CurrentEntity.Name}>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/`{saveUrl}, {CurrentEntity.Name.ToCamelCase()});");
+            s.Add($"      return this.http.post<{CurrentEntity.Name}>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/{saveUrl}`, {CurrentEntity.Name.ToCamelCase()});");
             s.Add($"   }}");
             s.Add($"");
 
             s.Add($"   delete({getParams}): Observable<void> {{");
-            s.Add($"      return this.http.delete<void>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/`{getUrl});");
+            s.Add($"      return this.http.delete<void>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/{getUrl}`);");
             s.Add($"   }}");
             s.Add($"");
 
@@ -1923,8 +1923,9 @@ namespace WEB.Models
                     if (relationship.UseMultiSelect)
                     {
                         s.Add($"                    <button class=\"btn btn-primary\" ng-click=\"add{relationship.CollectionName}()\">Add {relationship.CollectionFriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></button><br />");
+                        s.Add($"");
                     }
-                    else
+                    else if (relationship.Hierarchy)
                     {
                         //var href = "/";
                         //foreach (var entity in childEntity.GetNavigationEntities())
@@ -1939,10 +1940,10 @@ namespace WEB.Models
                         //    }
                         //}
                         //s.Add($"                    <a class=\"btn btn-primary\" href=\"{href}\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
-                        s.Add($"                    <a [routerLink]=\"['./{childEntity.PluralName.ToLower()}', 'add']\" class=\"btn btn-primary my-3\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
-                    }
 
-                    s.Add($"");
+                        s.Add($"                    <a [routerLink]=\"['./{childEntity.PluralName.ToLower()}'{relationship.ChildEntity.KeyFields.Select(o => ", 'add'").Aggregate((current, next) => { return current + next; })}]\" class=\"btn btn-primary my-3\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
+                        s.Add($"");
+                    }
 
                     #region table
                     s.Add($"                    <table class=\"table table-bordered table-striped table-hover table-sm row-navigation\">");
@@ -2079,9 +2080,8 @@ namespace WEB.Models
             foreach (var keyField in CurrentEntity.KeyFields)
             {
                 s.Add($"         let {keyField.Name.ToCamelCase()} = params[\"{keyField.Name.ToCamelCase()}\"];");
-                // todo: what happens for multiple fields?
-                s.Add($"         this.isNew = {keyField.Name.ToCamelCase()} === \"add\";");
             }
+            s.Add($"         this.isNew = {CurrentEntity.KeyFields.Select(o => o.Name.ToCamelCase() + " === \"add\"").Aggregate((current, next) => { return current + " && " + next; })};");
             s.Add($"");
             s.Add($"         if (!this.isNew) {{");
             s.Add($"");
