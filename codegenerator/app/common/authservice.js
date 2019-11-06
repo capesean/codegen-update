@@ -1,4 +1,3 @@
-/// <reference path="../../scripts/typings/angularjs/angular.d.ts" />
 (function () {
     "use strict";
     angular
@@ -41,8 +40,6 @@
     }
     authorization.$inject = ["$rootScope", "$state", "authService", "notifications", "$window"];
     function authorization($rootScope, $state, authService, notifications, $window) {
-        // from: http://stackoverflow.com/questions/22537311/angular-ui-router-login-authentication
-        // todo: might be a better option?: http://www.codelord.net/2015/10/29/angular-authentication-remember-where-you-were-plus-demo-project/?utm_campaign=NG-Newsletter&utm_medium=email&utm_source=NG-Newsletter_121
         return {
             authorize: function () {
                 return authService.getIdentity()
@@ -51,13 +48,10 @@
                     $rootScope.toState = $rootScope.toState || {};
                     $rootScope.toState.data = $rootScope.toState.data || {};
                     if (!isLoggedIn) {
-                        // redirect to login
                         alert("not logged in");
-                        //$window.location.assign("/login" + ($window.location.pathname === "/" ? "" : "?url=" + encodeURIComponent($window.location.pathname + $window.location.search)));
                     }
                     else {
                         if ($rootScope.toState.data.allowAny) {
-                            // fine
                         }
                         else if (Object.prototype.toString.call($rootScope.toState.data.roles) !== "[object Array]") {
                             notifications.error("Route does not have any permissions - use allowAny if applicable");

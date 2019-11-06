@@ -4,64 +4,64 @@ import { NAMEModalComponent } from './NAME_TOLOWER.modal.component';
 import { NAME } from '../common/models/NAME_TOLOWER.model';
 
 @Component({
-    selector: 'HYPHENATEDNAME-select',
-    templateUrl: './NAME_TOLOWER.select.component.html',
-    providers: [{
-        provide: NG_VALUE_ACCESSOR,
-        useExisting: forwardRef(() => NAMESelectComponent),
-        multi: true
-    }],
-	host: { 'class': 'app-select' }
+   selector: 'HYPHENATEDNAME-select',
+   templateUrl: './NAME_TOLOWER.select.component.html',
+   providers: [{
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => NAMESelectComponent),
+      multi: true
+   }],
+   host: { 'class': 'app-select' }
 })
 export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
-    @Input() KEYFIELD: string;
-    @Input() CAMELCASENAME: NAME;
+   @Input() KEYFIELD: string;
+   @Input() CAMELCASENAME: NAME;
 
-    multiple: boolean = false;
-    showAddNew: boolean = false;
-    disabled: boolean = true;
-    placeholder = "Select a FRIENDLYNAME_LOWER";
+   multiple: boolean = false;
+   showAddNew: boolean = false;
+   disabled: boolean = true;
+   placeholder = "Select a FRIENDLYNAME_LOWER";
 
-    @ViewChild('modal', { static: false }) modal: NAMEModalComponent;
+   @ViewChild('modal', { static: false }) modal: NAMEModalComponent;
 
-    constructor(
-    ) {
-    }
+   constructor(
+   ) {
+   }
 
-    ngOnInit(): void {
-    }
+   ngOnInit(): void {
+   }
 
-    propagateChange = (_: any) => { };
+   propagateChange = (_: any) => { };
 
-    writeValue(KEYFIELD: string): void {
-        if (KEYFIELD !== undefined) {
-            this.KEYFIELD = KEYFIELD;
-            this.propagateChange(this.KEYFIELD);
-        }
-    }
+   writeValue(KEYFIELD: string): void {
+      if (KEYFIELD !== undefined) {
+         this.KEYFIELD = KEYFIELD;
+         this.propagateChange(this.KEYFIELD);
+      }
+   }
 
-    registerOnChange(fn: any): void {
-        this.propagateChange = fn;
-    }
+   registerOnChange(fn: any): void {
+      this.propagateChange = fn;
+   }
 
-    registerOnTouched(fn: any): void {
-    }
+   registerOnTouched(fn: any): void {
+   }
 
-    setDisabledState?(isDisabled: boolean): void {
-        throw new Error("setDisabledState not implemented.");
-    }
+   setDisabledState?(isDisabled: boolean): void {
+      throw new Error("setDisabledState not implemented.");
+   }
 
-    change(CAMELCASENAME: NAME) {
-        this.CAMELCASENAME = CAMELCASENAME;
-        this.writeValue(CAMELCASENAME ? CAMELCASENAME.KEYFIELD : null);
-    }
+   change(CAMELCASENAME: NAME) {
+      this.CAMELCASENAME = CAMELCASENAME;
+      this.writeValue(CAMELCASENAME ? CAMELCASENAME.KEYFIELD : null);
+   }
 
-    getLabel() {
-        return this.CAMELCASENAME ? this.CAMELCASENAME.LABELFIELD : "";
-    }
+   getLabel() {
+      return this.CAMELCASENAME ? this.CAMELCASENAME.LABELFIELD : "";
+   }
 
-    openModal() {
-        this.modal.open();
-    }
+   openModal() {
+      this.modal.open();
+   }
 }

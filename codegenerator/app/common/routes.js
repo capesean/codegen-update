@@ -1,6 +1,3 @@
-/// <reference path="../../scripts/typings/toastr/toastr.d.ts" />
-/// <reference path="../../scripts/typings/moment/moment.d.ts" />
-/// <reference path="../../scripts/typings/angularjs/angular.d.ts" />
 (function () {
     "use strict";
     angular.module('appRoutes', []).config(appRoutes);
@@ -10,7 +7,6 @@
         $locationProvider.html5Mode(true);
         $urlRouterProvider.otherwise("/");
         $stateProvider
-            // logged-in pages ------------------------
             .state("app", {
             abstract: true,
             template: "<div ui-view></div>",

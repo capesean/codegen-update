@@ -1,4 +1,3 @@
-/// <reference path="../../scripts/typings/angularjs/angular.d.ts" />
 (function () {
     "use strict";
     angular
@@ -6,13 +5,10 @@
         .factory("settingsResource", settingsResource)
         .factory("userResource", userResource)
         .factory("utilitiesResource", utilitiesResource);
-    //#region settings resource
     settingsResource.$inject = ["$resource", "appSettings"];
     function settingsResource($resource, appSettings) {
         return $resource(appSettings.apiServiceBaseUri + appSettings.apiPrefix + "settings");
     }
-    //#endregion
-    //#region user resource
     userResource.$inject = ["$resource", "appSettings"];
     function userResource($resource, appSettings) {
         return $resource(appSettings.apiServiceBaseUri + appSettings.apiPrefix + "users/:id", { id: "@id" }, {
@@ -22,8 +18,6 @@
             }
         });
     }
-    //#endregion
-    //#region utilities resource
     utilitiesResource.$inject = ["$resource", "appSettings"];
     function utilitiesResource($resource, appSettings) {
         return $resource(appSettings.apiServiceBaseUri + appSettings.apiPrefix + "utilities", {}, {
@@ -34,6 +28,5 @@
             }
         });
     }
-    //#endregion
 }());
 //# sourceMappingURL=api.js.map

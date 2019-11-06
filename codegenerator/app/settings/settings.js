@@ -1,4 +1,3 @@
-/// <reference path="../../scripts/typings/angularjs/angular.d.ts" />
 (function () {
     "use strict";
     angular
@@ -11,9 +10,7 @@
         vm.settings = new settingsResource();
         vm.save = saveSettings;
         initPage();
-        // events
         function initPage() {
-            //vm.settings.xxx = appSettings.xxx;
             vm.loading = false;
         }
         function saveSettings() {
@@ -25,8 +22,6 @@
                 vm.settings.$save(function (data) {
                     vm.client = data;
                     notifications.success("The settings has been saved.", "Saved");
-                    // update the global appSettings variable
-                    //appSettings.xxx = vm.settings.xxx;
                 }, function (err) {
                     errorService.handleApiError(err, "settings");
                 })

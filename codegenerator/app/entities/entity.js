@@ -1,5 +1,3 @@
-/// <reference path="../../scripts/typings/highlightjs/highlightjs.d.ts" />
-/// <reference path="../../scripts/typings/angularjs/angular.d.ts" />
 (function () {
     "use strict";
     angular

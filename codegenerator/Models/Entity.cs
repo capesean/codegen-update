@@ -93,7 +93,10 @@ namespace WEB.Models
         [Required]
         public bool Exclude { get; set; }
 
-        public Guid? PrimaryFieldId { get; set; }
+      [Required]
+      public bool ReturnOnSave { get; set; }
+
+      public Guid? PrimaryFieldId { get; set; }
 
         [MaxLength(20)]
         public string IconClass { get; set; }

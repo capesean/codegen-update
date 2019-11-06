@@ -82,7 +82,6 @@ namespace WEB.Models
                 switch (FieldType)
                 {
                     case FieldType.VarBinary:
-                    case FieldType.Geometry:
                         return "TODO!?";
                     case FieldType.Bit:
                         return "boolean";
@@ -101,6 +100,7 @@ namespace WEB.Models
                     case FieldType.Text:
                     case FieldType.Varchar:
                     case FieldType.Guid:
+                    case FieldType.Geometry:
                         return "string";
                 }
                 throw new NotImplementedException("JavascriptType: " + FieldType.ToString());
@@ -171,7 +171,7 @@ namespace WEB.Models
                 case FieldType.VarBinary:
                     return "byte[]";
                 case FieldType.Geometry:
-                    return "System.Data.Entity.Spatial.DbGeometry";
+                    return "NetTopologySuite.Geometries.Geometry";
             }
             throw new NotImplementedException("NetType: " + fieldType.ToString());
         }

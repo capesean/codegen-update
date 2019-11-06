@@ -64,6 +64,17 @@ namespace WEB.Models
         }
 
         [NotMapped]
+        public string ReturnRoute
+        {
+            get
+            {
+                //if (!RelationshipsAsChild.Any(r => r.Hierarchy && !r.ParentEntity.Exclude))
+                //    return $"this.router.navigate([\"/{PluralName.ToLower()}\"]);";
+                return $"this.router.navigate([\"../{String.Concat(Enumerable.Repeat("../", KeyFields.Count))}\"], {{ relativeTo: this.route }});";
+            }
+        }
+
+        [NotMapped]
         public string ControllerParameters
         {
             get

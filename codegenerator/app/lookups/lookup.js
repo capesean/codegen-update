@@ -1,4 +1,3 @@
-/// <reference path="../../scripts/typings/angularjs/angular.d.ts" />
 (function () {
     "use strict";
     angular
@@ -128,7 +127,6 @@
             }, function (data) {
                 notifications.success("The order has been updated", "Update Order");
             }, function (err) {
-                // todo: reset to original order by re-sorting the milestones manually
                 errorService.handleApiError(err, "fields", "re-order");
             })
                 .$promise.finally(function () { return vm.loading = false; });

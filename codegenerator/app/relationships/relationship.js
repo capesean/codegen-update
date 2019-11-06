@@ -1,4 +1,3 @@
-/// <reference path="../../scripts/typings/angularjs/angular.d.ts" />
 (function () {
     "use strict";
     angular
@@ -37,14 +36,6 @@
                 pageSize: 0,
                 projectId: $stateParams.projectId
             }, function (data) {
-                // remove current item & store in entity object
-                //for (var i = data.length - 1; i >= 0; i--) {
-                //    if (data[i].entityId === $stateParams.entityId) {
-                //        vm.entity = data[i];
-                //        vm.project = vm.entity.project;
-                //        data.splice(i, 1);
-                //    }
-                //}
                 vm.entities = data;
             }, function (err) {
                 notifications.error("Failed to load the entities.", "Error", err);

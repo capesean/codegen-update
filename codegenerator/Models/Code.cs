@@ -153,11 +153,12 @@ namespace WEB.Models
                     }
                     else if (field.FieldType == FieldType.Date)
                         attributes.Add($"Column(TypeName = \"Date\")");
-                    else if (field.NetType == "decimal" && field.EditPageType != EditPageType.CalculatedField)
+                    else if (field.NetType.StartsWith("decimal") && field.EditPageType != EditPageType.CalculatedField)
                         attributes.Add($"Column(TypeName = \"decimal({field.Precision}, {field.Scale})\")");
                 }
 
-                s.Add($"        [" + string.Join(", ", attributes) + "]");
+                if (attributes.Count > 0)
+                    s.Add($"        [" + string.Join(", ", attributes) + "]");
 
                 if (field.EditPageType == EditPageType.CalculatedField)
                 {
@@ -693,7 +694,7 @@ namespace WEB.Models
                 foreach (var result in GetTopAncestors(new List<string>(), "o", relationship, relationship.RelationshipAncestorLimit, includeIfHierarchy: true))
                     s.Add($"                .Include(o => {result})");
             }
-            s.Add($"                .SingleOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
+            s.Add($"                .FirstOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
             s.Add($"");
             s.Add($"            if ({CurrentEntity.CamelCaseName} == null)");
             s.Add($"                return NotFound();");
@@ -729,7 +730,7 @@ namespace WEB.Models
             if (CurrentEntity.HasCompositePrimaryKey)
             {
                 // composite keys don't use the insert method, they use the update for both inserts & updates
-                s.Add($"            var {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.SingleOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
+                s.Add($"            var {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.FirstOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
                 s.Add($"            var isNew = {CurrentEntity.CamelCaseName} == null;");
                 s.Add($"");
                 s.Add($"            if (isNew)");
@@ -815,11 +816,11 @@ namespace WEB.Models
                 {
                     s.Add($"                user = await userManager.Users");
                     s.Add($"                    .Include(o => o.Roles)");
-                    s.Add($"                    .SingleOrDefaultAsync(o => o.Id == userDTO.Id);");
+                    s.Add($"                    .FirstOrDefaultAsync(o => o.Id == userDTO.Id);");
                 }
                 else
                 {
-                    s.Add($"                {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.SingleOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
+                    s.Add($"                {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.FirstOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
                 }
                 s.Add($"");
                 s.Add($"                if ({CurrentEntity.CamelCaseName} == null)");
@@ -881,7 +882,7 @@ namespace WEB.Models
             s.Add($"        [HttpDelete(\"{CurrentEntity.RoutePath}\"){(CurrentEntity.AuthorizationType == AuthorizationType.ProtectChanges ? (CurrentEntity.Project.UseStringAuthorizeAttributes ? ", Authorize(Roles = \"Administrator\")" : ", AuthorizeRoles(Roles.Administrator)") : string.Empty)}]");
             s.Add($"        public async Task<IActionResult> Delete({CurrentEntity.ControllerParameters})");
             s.Add($"        {{");
-            s.Add($"            var {CurrentEntity.CamelCaseName} = await {(CurrentEntity.EntityType == EntityType.User ? "userManager" : CurrentEntity.Project.DbContextVariable)}.{CurrentEntity.PluralName}.SingleOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
+            s.Add($"            var {CurrentEntity.CamelCaseName} = await {(CurrentEntity.EntityType == EntityType.User ? "userManager" : CurrentEntity.Project.DbContextVariable)}.{CurrentEntity.PluralName}.FirstOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
             s.Add($"");
             s.Add($"            if ({CurrentEntity.CamelCaseName} == null)");
             s.Add($"                return NotFound();");
@@ -1022,11 +1023,12 @@ namespace WEB.Models
                 }
             }
             s.Add($"import {{ GeneratedRoutes }} from './generated.routes';");
+            s.Add($"import {{ CustomComponents }} from './custom.module';");
             s.Add($"");
 
 
             s.Add($"@NgModule({{");
-            s.Add($"   declarations: [PagerComponent, {componentList}],");
+            s.Add($"   declarations: [PagerComponent, {componentList}].concat(CustomComponents),");
             s.Add($"   imports: [");
             s.Add($"      CommonModule,");
             s.Add($"      FormsModule,");
@@ -1048,6 +1050,7 @@ namespace WEB.Models
             s.Add($"import {{ HomeComponent }} from './home/home.component';");
             s.Add($"import {{ AccessGuard }} from './common/auth/accessguard';");
             s.Add($"import {{ MainComponent }} from './main.component';");
+            s.Add($"import {{ CustomRoutes }} from './custom.routes';");
 
             var allEntities = AllEntities.Where(e => !e.Exclude).OrderBy(o => o.Name);
             foreach (var e in allEntities)
@@ -1055,6 +1058,7 @@ namespace WEB.Models
                 s.Add($"import {{ {e.Name}ListComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.list.component';");
                 s.Add($"import {{ {e.Name}EditComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.edit.component';");
             }
+            s.Add($"import {{ NotFoundComponent }} from './common/notfound.component';");
             s.Add($"");
 
             s.Add($"export const GeneratedRoutes: Route[] = [");
@@ -1062,7 +1066,7 @@ namespace WEB.Models
             s.Add($"      path: '',");
             s.Add($"      component: MainComponent,");
             s.Add($"      data: {{}},");
-            s.Add($"      children: [");
+            s.Add($"      children: (<Route[]>[");
             s.Add($"         {{");
             s.Add($"            path: '',");
             s.Add($"            canActivate: [AccessGuard],");
@@ -1091,7 +1095,11 @@ namespace WEB.Models
                 s.Add($"         }}" + (e == allEntities.Last() ? "" : ","));
             }
 
-            s.Add($"      ]");
+            s.Add($"      ]).concat(CustomRoutes)");
+            s.Add($"   }},");
+            s.Add($"   {{");
+            s.Add($"      path: '**',");
+            s.Add($"      component: NotFoundComponent");
             s.Add($"   }}");
             s.Add($"];");
 
@@ -1306,7 +1314,7 @@ namespace WEB.Models
             s.Add($"        <tbody{(CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy) ? " ui-sortable=\"sortOptions\" [(ngModel)]=\"" + CurrentEntity.PluralName.ToCamelCase() + "\"" : "")}>");
             s.Add($"            <tr *ngFor=\"let {CurrentEntity.CamelCaseName} of {CurrentEntity.PluralName.ToCamelCase()}\" (click)=\"goTo{CurrentEntity.Name}({CurrentEntity.CamelCaseName})\">");
             if (useSortColumn)
-                s.Add($"                <td *ngIf=\"{CurrentEntity.PluralName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" ng-click=\"$event.stopPropagation();\"></i></td>");
+                s.Add($"                <td *ngIf=\"{CurrentEntity.PluralName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" (click)=\"$event.stopPropagation();\"></i></td>");
             foreach (var field in CurrentEntity.Fields.Where(f => f.ShowInSearchResults).OrderBy(f => f.FieldOrder))
             {
                 s.Add($"                <td>{field.ListFieldHtml}</td>");
@@ -1340,9 +1348,9 @@ namespace WEB.Models
 
             var s = new StringBuilder();
 
-            s.Add($"import {{ Component, OnInit }} from '@angular/core';");
-            s.Add($"import {{ ActivatedRoute, Router }} from '@angular/router';");
-            s.Add($"import {{ Observable }} from 'rxjs';");
+            s.Add($"import {{ Component, OnInit, OnDestroy }} from '@angular/core';");
+            s.Add($"import {{ ActivatedRoute, Router, NavigationEnd }} from '@angular/router';");
+            s.Add($"import {{ Observable, Subscription }} from 'rxjs';");
             s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             s.Add($"import {{ ErrorService }} from '../common/services/error.service';");
             s.Add($"import {{ {CurrentEntity.Name}SearchOptions, {CurrentEntity.Name}SearchResponse, {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
@@ -1357,6 +1365,7 @@ namespace WEB.Models
             s.Add($"   private {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.Name}[];");
             s.Add($"   public searchOptions = new {CurrentEntity.Name}SearchOptions();");
             s.Add($"   public headers = new PagingOptions();");
+            s.Add($"   public routerSubscription: Subscription;");
             s.Add($"");
             s.Add($"   constructor(");
             s.Add($"      public route: ActivatedRoute,");
@@ -1367,11 +1376,20 @@ namespace WEB.Models
             s.Add($"   }}");
             s.Add($"");
             s.Add($"   ngOnInit(): void {{");
+            s.Add($"      this.routerSubscription = this.router.events.subscribe(event => {{");
+            s.Add($"         if (event instanceof NavigationEnd && !this.route.firstChild) {{");
+            s.Add($"            this.runSearch();");
+            s.Add($"         }}");
+            s.Add($"      }});");
             // todo: this should only be when required, e.g. hierarchies?
             var hasParentHierarchy = CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy);
             if (hasParentHierarchy)
                 s.Add($"      this.searchOptions.includeEntities = true;");
             s.Add($"      this.runSearch();");
+            s.Add($"   }}");
+            s.Add($"");
+            s.Add($"   ngOnDestroy(): void {{");
+            s.Add($"      this.routerSubscription.unsubscribe();");
             s.Add($"   }}");
             s.Add($"");
             s.Add($"   runSearch(pageIndex: number = 0): Observable<{CurrentEntity.Name}SearchResponse> {{");
@@ -1388,7 +1406,7 @@ namespace WEB.Models
             s.Add($"         }},");
             s.Add($"         err => {{");
             s.Add($"");
-            s.Add($"            this.errorService.handleError(err, \"{CurrentEntity.PluralName}\", \"Load\");");
+            s.Add($"            this.errorService.handleError(err, \"{CurrentEntity.PluralFriendlyName}\", \"Load\");");
             s.Add($"");
             s.Add($"         }}");
             s.Add($"      );");
@@ -1513,7 +1531,9 @@ namespace WEB.Models
                 if (!field.IsNullable)
                     attributes.Add("required", null);
                 if (field.FieldId == CurrentEntity.PrimaryFieldId)
-                    attributes.Add("(ngModelChange)", $"changeBreadcrumb({fieldName}.value)");
+                    attributes.Add("(ngModelChange)", $"changeBreadcrumb()");
+                if (field.CustomType == CustomType.Number && field.Scale > 0)
+                    attributes.Add("step", "any");
 
                 if (field.CustomType == CustomType.Boolean)
                 {
@@ -1524,6 +1544,11 @@ namespace WEB.Models
                 else if (field.CustomType == CustomType.Number)
                 {
                     attributes["type"] = "number";
+                }
+                else if (field.CustomType == CustomType.Enum)
+                {
+                    tagType = "select";
+                    attributes["type"] = null;
                 }
 
                 if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
@@ -1560,6 +1585,13 @@ namespace WEB.Models
                 }
                 if (tagType == "input")
                     controlHtml += " />";
+                else if (tagType == "select")
+                {
+                    controlHtml += $">" + Environment.NewLine;
+                    controlHtml += $"                           <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of orders; let i = index\" [value]=\"orders[i].id\">sdf</option>" + Environment.NewLine;
+                    controlHtml += $"                       </{tagType}>";
+                }
+                //";
                 else
                     controlHtml += $"></{tagType}>";
 
@@ -1922,7 +1954,7 @@ namespace WEB.Models
 
                     if (relationship.UseMultiSelect)
                     {
-                        s.Add($"                    <button class=\"btn btn-primary\" ng-click=\"add{relationship.CollectionName}()\">Add {relationship.CollectionFriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></button><br />");
+                        s.Add($"                    <button class=\"btn btn-primary\" (click)=\"add{relationship.CollectionName}()\">Add {relationship.CollectionFriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></button><br />");
                         s.Add($"");
                     }
                     else if (relationship.Hierarchy)
@@ -1962,12 +1994,12 @@ namespace WEB.Models
                     // todo: click
                     s.Add($"                            <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\" (click)=\"goTo{childEntity.Name}({childEntity.Name.ToCamelCase()})\">");
                     if (relationship.Hierarchy && childEntity.HasASortField)
-                        s.Add($"                                <td *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" ng-click=\"$event.stopPropagation();\"></i></td>");
+                        s.Add($"                                <td *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" (click)=\"$event.stopPropagation();\"></i></td>");
                     foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
                     {
                         s.Add($"                                <td>{column.Value}</td>");
                     }
-                    s.Add($"                                <td class=\"text-center\"><i class=\"fas fa-times clickable p-1 text-danger\" ng-click=\"remove{relationship.CollectionName}({relationship.ChildEntity.Name.ToCamelCase()}, $event)\"></i></td>");
+                    s.Add($"                                <td class=\"text-center\"><i class=\"fas fa-times clickable p-1 text-danger\" (click)=\"delete{relationship.CollectionName}({relationship.ChildEntity.Name.ToCamelCase()}, $event)\"></i></td>");
                     s.Add($"                            </tr>");
                     s.Add($"                        </tbody>");
                     s.Add($"                    </table>");
@@ -2017,12 +2049,12 @@ namespace WEB.Models
 
             var s = new StringBuilder();
 
-            s.Add($"import {{ Component, OnInit }} from '@angular/core';");
-            s.Add($"import {{ Router, ActivatedRoute }} from '@angular/router';");
+            s.Add($"import {{ Component, OnInit, OnDestroy }} from '@angular/core';");
+            s.Add($"import {{ Router, ActivatedRoute, NavigationEnd }} from '@angular/router';");
             s.Add($"import {{ ToastrService }} from 'ngx-toastr';");
             s.Add($"import {{ NgForm }} from '@angular/forms';");
             // only needed if children?
-            s.Add($"import {{ Observable }} from 'rxjs';");
+            s.Add($"import {{ Observable, Subscription }} from 'rxjs';");
             s.Add($"import {{ HttpErrorResponse }} from '@angular/common/http';");
             s.Add($"import {{ BreadcrumbService }} from 'angular-crumbs';");
             s.Add($"import {{ ErrorService }} from '../common/services/error.service';");
@@ -2042,10 +2074,11 @@ namespace WEB.Models
             s.Add($"   templateUrl: './{CurrentEntity.Name.ToLower()}.edit.component.html'");
             s.Add($"}})");
 
-            s.Add($"export class {CurrentEntity.Name}EditComponent implements OnInit {{");
+            s.Add($"export class {CurrentEntity.Name}EditComponent implements OnInit, OnDestroy {{");
             s.Add($"");
             s.Add($"   public {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
             s.Add($"   public isNew: boolean = true;");
+            s.Add($"   public routerSubscription: Subscription;");
             if (CurrentEntity.EntityType == EntityType.User)
                 // todo: fix
                 s.Add($"   public roles = [{{ name: 'Administrator', id: '470356a5-f7db-4e2e-9c99-62c2800dc2f4' }}];");
@@ -2073,7 +2106,7 @@ namespace WEB.Models
             s.Add($"   }}");
             s.Add($"");
 
-            s.Add($"   ngOnInit() {{");
+            s.Add($"   ngOnInit(): void {{");
             s.Add($"");
             s.Add($"      this.route.params.subscribe(params => {{");
             s.Add($"");
@@ -2109,8 +2142,22 @@ namespace WEB.Models
                 s.Add($"         }}");
             }
             s.Add($"");
+            s.Add($"         this.routerSubscription = this.router.events.subscribe(event => {{");
+            s.Add($"            if (event instanceof NavigationEnd && !this.route.firstChild) {{");
+            s.Add($"               this.load{CurrentEntity.Name}();");
+            foreach (var rel in relationshipsAsParent.Where(o => o.Hierarchy))
+            {
+                s.Add($"               this.load{rel.CollectionName}();");
+            }
+            s.Add($"            }}");
+            s.Add($"         }});");
+            s.Add($"");
             s.Add($"      }});");
             s.Add($"");
+            s.Add($"   }}");
+            s.Add($"");
+            s.Add($"   ngOnDestroy(): void {{");
+            s.Add($"      this.routerSubscription.unsubscribe();");
             s.Add($"   }}");
             s.Add($"");
 
@@ -2120,12 +2167,12 @@ namespace WEB.Models
             s.Add($"         .subscribe(");
             s.Add($"            {CurrentEntity.Name.ToCamelCase()} => {{");
             s.Add($"               this.{CurrentEntity.Name.ToCamelCase()} = {CurrentEntity.Name.ToCamelCase()};");
-            s.Add($"               this.changeBreadcrumb(this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")});");
+            s.Add($"               this.changeBreadcrumb();");
             s.Add($"            }},");
             s.Add($"            err => {{");
-            s.Add($"               this.errorService.handleError(err, \"{CurrentEntity.Name}\", \"Load\");");
+            s.Add($"               this.errorService.handleError(err, \"{CurrentEntity.FriendlyName}\", \"Load\");");
             s.Add($"               if (err instanceof HttpErrorResponse && err.status === 404)");
-            s.Add($"                  this.router.navigate([\"/{CurrentEntity.PluralName.ToLower()}\"]);");
+            s.Add($"                  {CurrentEntity.ReturnRoute}");
             s.Add($"            }}");
             s.Add($"         );");
             s.Add($"");
@@ -2143,9 +2190,12 @@ namespace WEB.Models
             s.Add($"");
             s.Add($"      this.{CurrentEntity.Name.ToCamelCase()}Service.save(this.{CurrentEntity.Name.ToCamelCase()})");
             s.Add($"         .subscribe(");
-            s.Add($"            {CurrentEntity.Name.ToCamelCase()} => {{");
+            s.Add($"            {(CurrentEntity.ReturnOnSave ? "()" : CurrentEntity.Name.ToCamelCase())} => {{");
             s.Add($"               this.toastr.success(\"The {CurrentEntity.FriendlyName.ToLower()} has been saved\", \"Save {CurrentEntity.FriendlyName}\");");
-            s.Add($"               if (this.isNew) this.router.navigate([\"../\", {CurrentEntity.KeyFields.Select(o => $"{CurrentEntity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}], {{ relativeTo: this.route }});");
+            if (CurrentEntity.ReturnOnSave)
+                s.Add($"               {CurrentEntity.ReturnRoute}");
+            else
+                s.Add($"               if (this.isNew) this.router.navigate([\"../\", {CurrentEntity.KeyFields.Select(o => $"{CurrentEntity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}], {{ relativeTo: this.route }});");
             s.Add($"            }},");
             s.Add($"            err => {{");
             s.Add($"               this.errorService.handleError(err, \"{CurrentEntity.FriendlyName}\", \"Save\");");
@@ -2164,7 +2214,7 @@ namespace WEB.Models
             s.Add($"         .subscribe(");
             s.Add($"            () => {{");
             s.Add($"               this.toastr.success(\"The {CurrentEntity.FriendlyName.ToLower()} has been deleted\", \"Delete {CurrentEntity.FriendlyName}\");");
-            s.Add($"               this.router.navigate([\"/{CurrentEntity.PluralName.ToLower()}\"]);");
+            s.Add($"               {CurrentEntity.ReturnRoute}");
             s.Add($"            }},");
             s.Add($"            err => {{");
             s.Add($"               this.errorService.handleError(err, \"{CurrentEntity.FriendlyName}\", \"Delete\");");
@@ -2174,8 +2224,15 @@ namespace WEB.Models
             s.Add($"   }}");
             s.Add($"");
 
-            s.Add($"   changeBreadcrumb(label: string): void {{");
-            s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, label || \"(no {CurrentEntity.PrimaryField.Label.ToLower()})\");");
+            s.Add($"   changeBreadcrumb(): void {{");
+            // if the 'primary field' is a foreign key to another entity
+            if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First().ChildFieldId == CurrentEntity.PrimaryField.FieldId))
+            {
+                var rel = CurrentEntity.RelationshipsAsChild.Single(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First().ChildFieldId == CurrentEntity.PrimaryField.FieldId);
+                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")} : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+            }
+            else
+                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")} : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
             s.Add($"   }}");
             s.Add($"");
 
@@ -2211,6 +2268,24 @@ namespace WEB.Models
                 s.Add($"      this.router.navigate([{GetRouterLink(rel.ChildEntity)}]);");
                 s.Add($"   }}");
                 s.Add($"");
+                s.Add($"   delete{rel.CollectionName}({rel.ChildEntity.Name.ToCamelCase()}: {rel.ChildEntity.Name}, $event: Event) {{");
+                s.Add($"      event.stopPropagation();");
+                s.Add($"");
+                s.Add($"      if (!confirm('Are you sure you want to delete this {rel.ChildEntity.FriendlyName}?')) return;");
+                s.Add($"");
+                s.Add($"      this.{rel.ChildEntity.Name.ToCamelCase()}Service.delete({rel.ChildEntity.KeyFields.Select(o => $"{rel.ChildEntity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })})");
+                s.Add($"         .subscribe(");
+                s.Add($"            () => {{");
+                s.Add($"               this.toastr.success(\"The {rel.ChildEntity.FriendlyName.ToLower()} has been deleted\", \"Delete {rel.ChildEntity.FriendlyName}\");");
+                s.Add($"               this.load{rel.CollectionName}();");
+                s.Add($"            }},");
+                s.Add($"            err => {{");
+                s.Add($"               this.errorService.handleError(err, \"{rel.ChildEntity.FriendlyName}\", \"Delete\");");
+                s.Add($"            }}");
+                s.Add($"         );");
+                s.Add($"   }}");
+                s.Add($"");
+                //
             }
 
             s.Add($"}}");
@@ -2343,9 +2418,9 @@ namespace WEB.Models
                     if (filterAlerts == string.Empty) filterAlerts = Environment.NewLine;
 
                     if (field.FieldType == FieldType.Enum)
-                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{field.Name.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" ng-click=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{field.Name.ToCamelCase()}.label}}}}</div>" + Environment.NewLine;
+                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{field.Name.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" (click)=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{field.Name.ToCamelCase()}.label}}}}</div>" + Environment.NewLine;
                     else
-                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{relationship.ParentName.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" ng-click=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{relationship.ParentName.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}</div>" + Environment.NewLine;
+                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{relationship.ParentName.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" (click)=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{relationship.ParentName.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}</div>" + Environment.NewLine;
                 }
             }
 
@@ -2476,7 +2551,7 @@ namespace WEB.Models
             replacements.InsertRange(0, DbContext.CodeReplacements.Where(o => o.Entity.ProjectId == CurrentEntity.ProjectId && !o.Disabled && o.CodeType == CodeType.Global).ToList());
 
             // common scripts need a common replacement
-            if (type == CodeType.Enums || type == CodeType.ApiResource || type == CodeType.AppRouter || type == CodeType.BundleConfig || type == CodeType.DbContext)
+            if (type == CodeType.Enums || type == CodeType.AppRouter || type == CodeType.BundleConfig || type == CodeType.DbContext)
                 replacements = CodeReplacements.Where(cr => !cr.Disabled && cr.CodeType == type && cr.Entity.ProjectId == CurrentEntity.ProjectId).ToList();
 
             foreach (var replacement in replacements.OrderBy(o => o.SortOrder))

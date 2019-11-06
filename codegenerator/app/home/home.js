@@ -1,4 +1,3 @@
-/// <reference path="../../scripts/typings/angularjs/angular.d.ts" />
 (function () {
     "use strict";
     angular
@@ -7,7 +6,7 @@
     home.$inject = ["authService", "$rootScope", "appSettings", "$scope", "$state", "$timeout", "$resource", "projectResource", "notifications", "$stateParams"];
     function home(authService, $rootScope, appSettings, $scope, $state, $timeout, $resource, projectResource, notifications, $stateParams) {
         var vm = this;
-        vm.appSettings = appSettings; //todo: remove
+        vm.appSettings = appSettings;
         vm.goToProject = function (projectId) { return $state.go("app.project", { projectId: projectId }); };
         initPage();
         function initPage() {

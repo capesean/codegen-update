@@ -1,5 +1,3 @@
-/// <reference path="../../scripts/typings/highlightjs/highlightjs.d.ts" />
-/// <reference path="../../scripts/typings/angularjs/angular.d.ts" />
 (function () {
     "use strict";
     angular
@@ -88,7 +86,6 @@
             vm.code = undefined;
             entityResource.getCode({ entityId: $stateParams.entityId }, function (data) {
                 setCode(data);
-                //toastr.success("Code has been regenerated");
             }, function (err) {
                 errorService.handleApiError(err, "code", "generate");
             }).$promise.finally(function () {
