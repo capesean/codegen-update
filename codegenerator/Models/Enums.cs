@@ -26,7 +26,8 @@ namespace WEB.Models
         AppSelectHtml,
         AppSelectTypeScript,
         SelectModalHtml,
-        SelectModalTypeScript
+        SelectModalTypeScript,
+        TypeScriptModel
     }
 
     public enum EditPageType

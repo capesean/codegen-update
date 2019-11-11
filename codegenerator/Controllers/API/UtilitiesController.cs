@@ -55,6 +55,8 @@ namespace WEB.Controllers
 
                     if (entity.Exclude) continue;
 
+                    if (entity.PrimaryField == null) return BadRequest(entity.Name + " doesn't have a Primary Field");
+
                     if (option.Model) RunDeploy(entity, CodeType.Model, results);
                     if (option.Enums) RunDeploy(entity, CodeType.Enums, results);
                     if (option.DTO) RunDeploy(entity, CodeType.DTO, results);

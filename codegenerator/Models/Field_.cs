@@ -82,7 +82,7 @@ namespace WEB.Models
                 switch (FieldType)
                 {
                     case FieldType.VarBinary:
-                        return "TODO!?";
+                        return "string";
                     case FieldType.Bit:
                         return "boolean";
                     case FieldType.Date:

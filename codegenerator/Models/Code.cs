@@ -35,7 +35,7 @@ namespace WEB.Models
                         .Include(e => e.RelationshipsAsChild.Select(p => p.ParentEntity))
                         .Include(e => e.RelationshipsAsParent.Select(p => p.RelationshipFields))
                         .Include(e => e.RelationshipsAsParent.Select(p => p.ChildEntity))
-                        .Where(e => e.ProjectId == CurrentEntity.ProjectId).OrderBy(e => e.Name).ToList();
+                        .Where(e => e.ProjectId == CurrentEntity.ProjectId && !e.Exclude).OrderBy(e => e.Name).ToList();
                 }
                 return _allEntities;
             }
@@ -228,9 +228,9 @@ namespace WEB.Models
 
             var s = new StringBuilder();
             s.Add($"import {{ SearchOptions, PagingOptions }} from './http.model';");
-            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(r => !r.ParentEntity.Exclude).OrderBy(o => o.ParentEntity.Name))
+            foreach (var relationshipParentEntity in CurrentEntity.RelationshipsAsChild.Where(r => !r.ParentEntity.Exclude && r.ParentEntityId != CurrentEntity.EntityId).Select(o => o.ParentEntity).Distinct().OrderBy(o => o.Name))
             {
-                s.Add($"import {{ {relationship.ParentEntity.Name} }} from './{ relationship.ParentEntity.Name.ToLower() }.model';");
+                s.Add($"import {{ {relationshipParentEntity.Name} }} from './{ relationshipParentEntity.Name.ToLower() }.model';");
             }
             s.Add($"");
 
@@ -278,7 +278,7 @@ namespace WEB.Models
 
 
 
-            return RunCodeReplacements(s.ToString(), CodeType.Model);
+            return RunCodeReplacements(s.ToString(), CodeType.TypeScriptModel);
         }
 
         public string GenerateEnums()
@@ -510,8 +510,10 @@ namespace WEB.Models
                 {
                     if (!entity.RelationshipsAsChild.Any(r => r.ParentEntityId == relationship.ParentEntityId && r.RelationshipId != relationship.RelationshipId)) continue;
                     s.Add($"            modelBuilder.Entity<{entity.Name}>()");
-                    s.Add($"                .{(relationship.RelationshipFields.First().ChildField.IsNullable ? "HasOptional" : "HasRequired")}(o => o.{relationship.ParentName})");
+                    s.Add($"                .HasOne(o => o.{relationship.ParentName})");
                     s.Add($"                .WithMany(o => o.{relationship.CollectionName})");
+                    if (!relationship.RelationshipFields.First().ChildField.IsNullable)
+                        s.Add($"                .IsRequired()");
                     s.Add($"                .HasForeignKey(o => o.{relationship.RelationshipFields.First().ChildField.Name});");
                     s.Add($"");
                 }
@@ -565,14 +567,14 @@ namespace WEB.Models
             s.Add($"using System.Threading.Tasks;");
             s.Add($"using Microsoft.AspNetCore.Mvc;");
             s.Add($"using Microsoft.AspNetCore.Identity;");
+            s.Add($"using Microsoft.AspNetCore.Authorization;");
             s.Add($"using Microsoft.EntityFrameworkCore;");
             s.Add($"using {CurrentEntity.Project.Namespace}.Models;");
             s.Add($"using Microsoft.Extensions.Options;");
             s.Add($"");
             s.Add($"namespace {CurrentEntity.Project.Namespace}.Controllers");
             s.Add($"{{");
-            // todo: add back roles!
-            s.Add($"    [Route(\"api/[Controller]\")]");
+            s.Add($"    [Route(\"api/[Controller]\"), Authorize{(CurrentEntity.AuthorizationType == AuthorizationType.ProtectAll ? (CurrentEntity.Project.UseStringAuthorizeAttributes ? "(Roles = \"Administrator\")" : "Roles(Roles.Administrator)") : string.Empty)}]");
             s.Add($"    public {(CurrentEntity.PartialControllerClass ? "partial " : string.Empty)}class {CurrentEntity.PluralName}Controller : BaseApiController");
             s.Add($"    {{");
             if (CurrentEntity.EntityType == EntityType.User)
@@ -589,7 +591,7 @@ namespace WEB.Models
             s.Add($"");
 
             #region search
-            s.Add($"        [HttpGet(\"\")]");
+            s.Add($"        [HttpGet]");
 
             var fieldsToSearch = new List<Field>();
             foreach (var relationship in CurrentEntity.RelationshipsAsChild.OrderBy(r => r.RelationshipFields.Min(f => f.ChildField.FieldOrder)))
@@ -788,7 +790,7 @@ namespace WEB.Models
                 s.Add($"            {{");
                 s.Add($"                {CurrentEntity.CamelCaseName} = new {CurrentEntity.Name}();");
                 if (CurrentEntity.EntityType == EntityType.User)
-                    s.Add($"                password = Utilities.GenerateRandomPassword(opts.Value);");
+                    s.Add($"                password = Utilities.General.GenerateRandomPassword(opts.Value);");
                 s.Add($"");
                 foreach (var field in CurrentEntity.Fields.Where(f => !string.IsNullOrWhiteSpace(f.ControllerInsertOverride)))
                 {
@@ -866,7 +868,7 @@ namespace WEB.Models
                 s.Add($"                }}");
                 s.Add($"            }}");
                 s.Add($"");
-                s.Add($"            Utilities.SendWelcomeMail(user, password);");
+                s.Add($"            Utilities.General.SendWelcomeMail(user, password);");
             }
             else
             {
@@ -1010,20 +1012,20 @@ namespace WEB.Models
                 s.Add($"import {{ {e.Name}EditComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.edit.component';");
                 componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ListComponent, {e.Name}EditComponent";
 
-                if (e.PreventAppSelectTypeScriptDeployment == null)
+                if (string.IsNullOrWhiteSpace(e.PreventAppSelectTypeScriptDeployment))
                 {
                     s.Add($"import {{ {e.Name}SelectComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.select.component';");
                     componentList += (componentList == "" ? "" : ", ") + $"{e.Name}SelectComponent";
                 }
 
-                if (e.PreventSelectModalTypeScriptDeployment == null)
+                if (string.IsNullOrWhiteSpace(e.PreventSelectModalTypeScriptDeployment))
                 {
                     s.Add($"import {{ {e.Name}ModalComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.modal.component';");
                     componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ModalComponent";
                 }
             }
             s.Add($"import {{ GeneratedRoutes }} from './generated.routes';");
-            s.Add($"import {{ CustomComponents }} from './custom.module';");
+            s.Add($"import {{ CustomComponents }} from './custom.components';");
             s.Add($"");
 
 
@@ -1096,10 +1098,6 @@ namespace WEB.Models
             }
 
             s.Add($"      ]).concat(CustomRoutes)");
-            s.Add($"   }},");
-            s.Add($"   {{");
-            s.Add($"      path: '**',");
-            s.Add($"      component: NotFoundComponent");
             s.Add($"   }}");
             s.Add($"];");
 
@@ -2062,10 +2060,11 @@ namespace WEB.Models
             s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             s.Add($"import {{ {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
             s.Add($"import {{ {CurrentEntity.Name}Service }} from '../common/services/{CurrentEntity.Name.ToLower()}.service';");
-            foreach (var rel in relationshipsAsParent)
+            foreach (var relChildEntity in relationshipsAsParent.Select(o => o.ChildEntity).Distinct().OrderBy(o => o.Name))
             {
-                s.Add($"import {{ {rel.ChildEntity.Name}, {rel.ChildEntity.Name}SearchOptions, {rel.ChildEntity.Name}SearchResponse }} from '../common/models/{rel.ChildEntity.Name.ToLower()}.model';");
-                s.Add($"import {{ {rel.ChildEntity.Name}Service }} from '../common/services/{rel.ChildEntity.Name.ToLower()}.service';");
+                s.Add($"import {{ {(relChildEntity.EntityId == CurrentEntity.EntityId ? "" : relChildEntity.Name + ", ")}{relChildEntity.Name}SearchOptions, {relChildEntity.Name}SearchResponse }} from '../common/models/{relChildEntity.Name.ToLower()}.model';");
+                if (relChildEntity.EntityId != CurrentEntity.EntityId)
+                    s.Add($"import {{ {relChildEntity.Name}Service }} from '../common/services/{relChildEntity.Name.ToLower()}.service';");
             }
             s.Add($"");
 
@@ -2098,9 +2097,10 @@ namespace WEB.Models
             s.Add($"      private breadcrumbService: BreadcrumbService,");
             s.Add($"      private errorService: ErrorService,");
             s.Add($"      private {CurrentEntity.Name.ToCamelCase()}Service: {CurrentEntity.Name}Service,");
-            foreach (var rel in relationshipsAsParent)
+            var relChildEntities = relationshipsAsParent.Where(o => o.ChildEntityId != CurrentEntity.EntityId).Select(o => o.ChildEntity).Distinct().OrderBy(o => o.Name);
+            foreach (var relChildEntity in relChildEntities)
             {
-                s.Add($"      private {rel.ChildEntity.Name.ToCamelCase()}Service: {rel.ChildEntity.Name}Service" + (rel == relationshipsAsParent.Last() ? "" : ","));
+                s.Add($"      private {relChildEntity.Name.ToCamelCase()}Service: {relChildEntity.Name}Service" + (relChildEntity == relChildEntities.Last() ? "" : ","));
             }
             s.Add($"   ) {{");
             s.Add($"   }}");
@@ -2226,13 +2226,13 @@ namespace WEB.Models
 
             s.Add($"   changeBreadcrumb(): void {{");
             // if the 'primary field' is a foreign key to another entity
-            if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First().ChildFieldId == CurrentEntity.PrimaryField.FieldId))
+            if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First()?.ChildFieldId == CurrentEntity.PrimaryField.FieldId))
             {
                 var rel = CurrentEntity.RelationshipsAsChild.Single(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First().ChildFieldId == CurrentEntity.PrimaryField.FieldId);
                 s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")} : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
             }
             else
-                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")} : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField?.Name.ToCamelCase() + (CurrentEntity.PrimaryField?.JavascriptType == "string" ? "" : ".toString()")} : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
             s.Add($"   }}");
             s.Add($"");
 
