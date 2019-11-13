@@ -232,6 +232,8 @@ namespace WEB.Models
             {
                 s.Add($"import {{ {relationshipParentEntity.Name} }} from './{ relationshipParentEntity.Name.ToLower() }.model';");
             }
+            if (CurrentEntity.EntityType == EntityType.User)
+                s.Add($"import {{ Role }} from './roles.model';");
             s.Add($"");
 
             s.Add($"export class {CurrentEntity.Name} {{");
@@ -245,6 +247,8 @@ namespace WEB.Models
             {
                 s.Add($"   {relationship.ParentName.ToCamelCase()}: {relationship.ParentEntity.Name};");
             }
+            if (CurrentEntity.EntityType == EntityType.User)
+                s.Add($"   roles: Role[] = [];");
             s.Add($"");
 
             s.Add($"   constructor() {{");
@@ -401,7 +405,10 @@ namespace WEB.Models
             s.Add($"using System;");
             s.Add($"using System.ComponentModel.DataAnnotations;");
             if (CurrentEntity.EntityType == EntityType.User)
+            {
                 s.Add($"using System.Collections.Generic;");
+                s.Add($"using System.Linq;");
+            }
             s.Add($"");
             s.Add($"namespace {CurrentEntity.Project.Namespace}.Models");
             s.Add($"{{");
@@ -445,23 +452,22 @@ namespace WEB.Models
             {
                 s.Add($"        public string Email {{ get; set; }}");
                 s.Add($"");
-                s.Add($"        public IList<Guid> RoleIds {{ get; set; }}");
+                s.Add($"        public IList<string> Roles {{ get; set; }}");
                 s.Add($"");
             }
             s.Add($"    }}");
             s.Add($"");
             s.Add($"    public static partial class ModelFactory");
             s.Add($"    {{");
-            s.Add($"        public static {CurrentEntity.DTOName} Create({CurrentEntity.Name} {CurrentEntity.CamelCaseName})");
+            s.Add($"        public static {CurrentEntity.DTOName} Create({CurrentEntity.Name} {CurrentEntity.CamelCaseName}{(CurrentEntity.EntityType == EntityType.User ? ", List<AppRole> appRoles = null" : "")})");
             s.Add($"        {{");
             s.Add($"            if ({CurrentEntity.CamelCaseName} == null) return null;");
             s.Add($"");
             if (CurrentEntity.EntityType == EntityType.User)
             {
-                s.Add($"            var roleIds = new List<Guid>();");
-                s.Add($"            if ({CurrentEntity.CamelCaseName}.Roles != null)");
-                s.Add($"                foreach (var role in {CurrentEntity.CamelCaseName}.Roles)");
-                s.Add($"                    roleIds.Add(role.RoleId);");
+                s.Add($"            var roles = new List<string>();");
+                s.Add($"            if ({CurrentEntity.CamelCaseName}.Roles != null && appRoles != null)");
+                s.Add($"                roles = appRoles.Where(o => user.Roles.Any(r => r.RoleId == o.Id)).Select(o => o.Name).ToList();");
                 s.Add($"");
             }
             s.Add($"            var {CurrentEntity.DTOName.ToCamelCase()} = new {CurrentEntity.DTOName}();");
@@ -473,7 +479,7 @@ namespace WEB.Models
             if (CurrentEntity.EntityType == EntityType.User)
             {
                 s.Add($"            {CurrentEntity.DTOName.ToCamelCase()}.Email = {CurrentEntity.CamelCaseName}.Email;");
-                s.Add($"            {CurrentEntity.DTOName.ToCamelCase()}.RoleIds = roleIds;");
+                s.Add($"            {CurrentEntity.DTOName.ToCamelCase()}.Roles = roles;");
             }
             foreach (var relationship in CurrentEntity.RelationshipsAsChild.OrderBy(o => o.ParentFriendlyName))
             {
@@ -710,7 +716,16 @@ namespace WEB.Models
             //    counter++;
             //}
             s.Add($"");
-            s.Add($"            return Ok((await GetPaginatedResponse(results, pagingOptions)).Select(o => ModelFactory.Create(o)));");
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                s.Add($"            var roles = await db.Roles.ToListAsync();");
+                s.Add($"");
+                s.Add($"            return Ok((await GetPaginatedResponse(results, pagingOptions)).Select(o => ModelFactory.Create(o, roles)));");
+            }
+            else
+            {
+                s.Add($"            return Ok((await GetPaginatedResponse(results, pagingOptions)).Select(o => ModelFactory.Create(o)));");
+            }
             s.Add($"        }}");
             s.Add($"");
             #endregion
@@ -741,7 +756,16 @@ namespace WEB.Models
             s.Add($"            if ({CurrentEntity.CamelCaseName} == null)");
             s.Add($"                return NotFound();");
             s.Add($"");
-            s.Add($"            return Ok(ModelFactory.Create({CurrentEntity.CamelCaseName}));");
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                s.Add($"            var roles = await db.Roles.ToListAsync();");
+                s.Add($"");
+                s.Add($"            return Ok(ModelFactory.Create({CurrentEntity.CamelCaseName}));");
+            }
+            else
+            {
+                s.Add($"            return Ok(ModelFactory.Create({CurrentEntity.CamelCaseName}));");
+            }
             s.Add($"        }}");
             s.Add($"");
             #endregion
@@ -898,17 +922,15 @@ namespace WEB.Models
                 s.Add($"                }}");
                 s.Add($"            }}");
                 s.Add($"");
-                s.Add($"            if (userDTO.RoleIds != null)");
+                s.Add($"            if (userDTO.Roles != null)");
                 s.Add($"            {{");
-                s.Add($"                foreach (var roleId in userDTO.RoleIds)");
+                s.Add($"                foreach (var roleName in userDTO.Roles)");
                 s.Add($"                {{");
-                s.Add($"                    var appRole = appRoles.SingleOrDefault(r => r.Id == roleId);");
-                s.Add($"                    if (appRole != null)");
-                s.Add($"                        await userManager.AddToRoleAsync(user, appRole.Name);");
+                s.Add($"                    await userManager.AddToRoleAsync(user, roleName);");
                 s.Add($"                }}");
                 s.Add($"            }}");
                 s.Add($"");
-                s.Add($"            Utilities.General.SendWelcomeMail(user, password);");
+                s.Add($"            if (isNew) Utilities.General.SendWelcomeMail(user, password);");
             }
             else
             {
@@ -1066,11 +1088,12 @@ namespace WEB.Models
             }
             s.Add($"import {{ GeneratedRoutes }} from './generated.routes';");
             s.Add($"import {{ CustomComponents }} from './custom.components';");
+            s.Add($"import {{ MomentPipe }} from './common/pipes/momentPipe';");
             s.Add($"");
 
 
             s.Add($"@NgModule({{");
-            s.Add($"   declarations: [PagerComponent, {componentList}].concat(CustomComponents),");
+            s.Add($"   declarations: [PagerComponent, {componentList}, MomentPipe].concat(CustomComponents),");
             s.Add($"   imports: [");
             s.Add($"      CommonModule,");
             s.Add($"      FormsModule,");
@@ -1834,14 +1857,17 @@ namespace WEB.Models
 
             if (CurrentEntity.EntityType == EntityType.User)
             {
-                s.Add(t + $"                <div class=\"col-sm-12 col-lg-6\">");
+                s.Add(t + $"                <div class=\"col-sm-6 col-md-4\">");
                 s.Add(t + $"                    <div class=\"form-group\">");
+                s.Add($"");
                 s.Add(t + $"                        <label>");
                 s.Add(t + $"                            Roles:");
                 s.Add(t + $"                        </label>");
-                s.Add(t + $"                        <select id=\"roles\" name=\"roles\" [multiple]=\"true\" class=\"form-control\" [(ngModel)]=\"user.roleIds\">");
-                s.Add(t + $"                            <option *ngFor=\"let role of roles\" [value]=\"role.id\">{{{{role.name}}}}</option>");
+                s.Add($"");
+                s.Add(t + $"                        <select id=\"roles\" name=\"roles\" [multiple]=\"true\" class=\"form-control\" [(ngModel)]=\"user.roles\">");
+                s.Add(t + $"                            <option *ngFor=\"let role of roles\" [ngValue]=\"role.name\">{{{{role.label}}}}</option>");
                 s.Add(t + $"                        </select>");
+                s.Add($"");
                 s.Add(t + $"                    </div>");
                 s.Add(t + $"                </div>");
                 s.Add(t + $"");
@@ -2115,6 +2141,8 @@ namespace WEB.Models
                 if (relChildEntity.EntityId != CurrentEntity.EntityId)
                     s.Add($"import {{ {relChildEntity.Name}Service }} from '../common/services/{relChildEntity.Name.ToLower()}.service';");
             }
+            if (CurrentEntity.EntityType == EntityType.User)
+                s.Add($"import {{ Roles }} from '../common/models/roles.model';");
             s.Add($"");
 
             s.Add($"@Component({{");
@@ -2124,26 +2152,25 @@ namespace WEB.Models
 
             s.Add($"export class {CurrentEntity.Name}EditComponent implements OnInit, OnDestroy {{");
             s.Add($"");
-            s.Add($"   public {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
-            s.Add($"   public isNew: boolean = true;");
-            s.Add($"   public routerSubscription: Subscription;");
+            s.Add($"   private {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
+            s.Add($"   private isNew: boolean = true;");
+            s.Add($"   private routerSubscription: Subscription;");
             foreach (var enumLookup in enumLookups)
                 s.Add($"   private {enumLookup.PluralName.ToCamelCase()}: Enum[] = Enums.{enumLookup.PluralName};");
             if (CurrentEntity.EntityType == EntityType.User)
-                // todo: fix
-                s.Add($"   public roles = [{{ name: 'Administrator', id: '470356a5-f7db-4e2e-9c99-62c2800dc2f4' }}];");
+                s.Add($"   private roles = Roles.List;");
             s.Add($"");
             foreach (var rel in relationshipsAsParent)
             {
-                s.Add($"   public {rel.CollectionName.ToCamelCase()}SearchOptions = new {rel.ChildEntity.Name}SearchOptions();");
-                s.Add($"   public {rel.CollectionName.ToCamelCase()}Headers = new PagingOptions();");
-                s.Add($"   public {rel.CollectionName.ToCamelCase()}: {rel.ChildEntity.Name}[] = [];");
+                s.Add($"   private {rel.CollectionName.ToCamelCase()}SearchOptions = new {rel.ChildEntity.Name}SearchOptions();");
+                s.Add($"   private {rel.CollectionName.ToCamelCase()}Headers = new PagingOptions();");
+                s.Add($"   private {rel.CollectionName.ToCamelCase()}: {rel.ChildEntity.Name}[] = [];");
                 s.Add($"");
             }
 
             s.Add($"   constructor(");
             s.Add($"      private router: Router,");
-            s.Add($"      public route: ActivatedRoute,");
+            s.Add($"      private route: ActivatedRoute,");
             s.Add($"      private toastr: ToastrService,");
             s.Add($"      private breadcrumbService: BreadcrumbService,");
             s.Add($"      private errorService: ErrorService,");
@@ -2553,7 +2580,7 @@ namespace WEB.Models
                 .Replace("KEYFIELD", CurrentEntity.KeyFields.Single().Name.ToCamelCase())
                 .Replace("NAME", CurrentEntity.Name)
                 .Replace("ICONLINK", GetIconLink(CurrentEntity))
-                .Replace("ADDNEWURL", CurrentEntity.PluralName.ToLower() + "/{{vm.appSettings.newGuid}}")
+                .Replace("ADDNEWURL", CurrentEntity.PluralName.ToLower() + "/add")
                 .Replace("// <reference", "/// <reference");
         }
 

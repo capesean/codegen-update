@@ -20,7 +20,7 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
    multiple: boolean = false;
    showAddNew: boolean = false;
-   disabled: boolean = true;
+   disabled: boolean = false;
    placeholder = "Select a FRIENDLYNAME_LOWER";
 
    @ViewChild('modal', { static: false }) modal: NAMEModalComponent;
@@ -49,10 +49,11 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
    }
 
    setDisabledState?(isDisabled: boolean): void {
-      throw new Error("setDisabledState not implemented.");
+      this.disabled = isDisabled;
    }
 
    change(CAMELCASENAME: NAME) {
+		if (this.disabled) return;
       this.CAMELCASENAME = CAMELCASENAME;
       this.writeValue(CAMELCASENAME ? CAMELCASENAME.KEYFIELD : null);
    }
@@ -62,6 +63,7 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
    }
 
    openModal() {
+		if (this.disabled) return;
       this.modal.open();
    }
 }

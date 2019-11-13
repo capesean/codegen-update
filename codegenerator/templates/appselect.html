@@ -1,6 +1,6 @@
-﻿<div class="input-group">
+﻿<div class="input-group" [ngClass]="{ 'disabled': disabled }">
     ICONLINK<input name="CAMELCASENAME" id="CAMELCASENAME" placeholder="{{placeholder}}" (click)="openModal()" type="text"
-                   class="form-control" readonly="readonly" value="{{getLabel()}}" />
+                   class="form-control" readonly="readonly" value="{{getLabel()}}" [disabled]="disabled" />
     <input type="hidden" name="KEYFIELD" id="KEYFIELD" [(ngModel)]="KEYFIELD" />
     <div class="input-group-append">
         <button type="button" class="btn btn-secondary" (click)="openModal()">
