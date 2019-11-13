@@ -272,13 +272,52 @@ namespace WEB.Models
             s.Add($"");
 
             s.Add($"export class {CurrentEntity.Name}SearchResponse {{");
-            s.Add($"   {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.Name}[];");
+            s.Add($"   {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.Name}[] = [];");
             s.Add($"   headers: PagingOptions;");
             s.Add($"}}");
 
-
-
             return RunCodeReplacements(s.ToString(), CodeType.TypeScriptModel);
+        }
+
+        public string GenerateTypeScriptEnums()
+        {
+            var s = new StringBuilder();
+
+            s.Add($"export class Enum {{");
+            s.Add($"   value: number;");
+            s.Add($"   name: string;");
+            s.Add($"   label: string;");
+            s.Add($"}}");
+            s.Add($"");
+
+            foreach (var lookup in Lookups)
+            {
+                s.Add($"export enum {lookup.PluralName} {{");
+                var options = lookup.LookupOptions.OrderBy(o => o.SortOrder);
+                foreach (var option in options)
+                    s.Add($"   {option.Name}{(option.Value.HasValue ? " = " + option.Value : string.Empty)}" + (option == options.Last() ? string.Empty : ","));
+                s.Add($"}}");
+                s.Add($"");
+            }
+
+            s.Add($"export class Enums {{");
+            s.Add($"");
+            foreach (var lookup in Lookups)
+            {
+                s.Add($"    static {lookup.PluralName}: Enum[] = [");
+                var options = lookup.LookupOptions.OrderBy(o => o.SortOrder);
+                var counter = 0;
+                foreach (var option in options)
+                {
+                    s.Add($"      {{ value: {(option.Value.HasValue ? option.Value : counter)}, name: '{option.Name}', label: '{option.FriendlyName}' }}" + (option == options.Last() ? string.Empty : ","));
+                    counter++;
+                }
+                s.Add($"    ]");
+                s.Add($"");
+            }
+            s.Add($"}}");
+
+            return RunCodeReplacements(s.ToString(), CodeType.TypeScriptEnums);
         }
 
         public string GenerateEnums()
@@ -420,8 +459,9 @@ namespace WEB.Models
             if (CurrentEntity.EntityType == EntityType.User)
             {
                 s.Add($"            var roleIds = new List<Guid>();");
-                s.Add($"            foreach (var role in {CurrentEntity.CamelCaseName}.Roles)");
-                s.Add($"                roleIds.Add(role.RoleId);");
+                s.Add($"            if ({CurrentEntity.CamelCaseName}.Roles != null)");
+                s.Add($"                foreach (var role in {CurrentEntity.CamelCaseName}.Roles)");
+                s.Add($"                    roleIds.Add(role.RoleId);");
                 s.Add($"");
             }
             s.Add($"            var {CurrentEntity.DTOName.ToCamelCase()} = new {CurrentEntity.DTOName}();");
@@ -1060,7 +1100,7 @@ namespace WEB.Models
                 s.Add($"import {{ {e.Name}ListComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.list.component';");
                 s.Add($"import {{ {e.Name}EditComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.edit.component';");
             }
-            s.Add($"import {{ NotFoundComponent }} from './common/notfound.component';");
+            //s.Add($"import {{ NotFoundComponent }} from './common/notfound.component';");
             s.Add($"");
 
             s.Add($"export const GeneratedRoutes: Route[] = [");
@@ -1309,7 +1349,7 @@ namespace WEB.Models
                 s.Add($"                <th>{field.Label}</th>");
             s.Add($"            </tr>");
             s.Add($"        </thead>");
-            s.Add($"        <tbody{(CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy) ? " ui-sortable=\"sortOptions\" [(ngModel)]=\"" + CurrentEntity.PluralName.ToCamelCase() + "\"" : "")}>");
+            s.Add($"        <tbody>");// {(CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy) ? " ui-sortable=\"sortOptions\" [(ngModel)]=\"" + CurrentEntity.PluralName.ToCamelCase() + "\"" : "")}>");
             s.Add($"            <tr *ngFor=\"let {CurrentEntity.CamelCaseName} of {CurrentEntity.PluralName.ToCamelCase()}\" (click)=\"goTo{CurrentEntity.Name}({CurrentEntity.CamelCaseName})\">");
             if (useSortColumn)
                 s.Add($"                <td *ngIf=\"{CurrentEntity.PluralName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" (click)=\"$event.stopPropagation();\"></i></td>");
@@ -1343,6 +1383,7 @@ namespace WEB.Models
                     includeEntities = true;
                     break;
                 }
+            var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum && o.ShowInSearchResults).Select(o => o.Lookup).Distinct().ToList();
 
             var s = new StringBuilder();
 
@@ -1353,6 +1394,8 @@ namespace WEB.Models
             s.Add($"import {{ ErrorService }} from '../common/services/error.service';");
             s.Add($"import {{ {CurrentEntity.Name}SearchOptions, {CurrentEntity.Name}SearchResponse, {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
             s.Add($"import {{ {CurrentEntity.Name}Service }} from '../common/services/{CurrentEntity.Name.ToLower()}.service';");
+            if (enumLookups.Any())
+                s.Add($"import {{ Enum, Enums }} from '../common/models/enums.model';");
             s.Add($"");
             s.Add($"@Component({{");
             s.Add($"   selector: '{CurrentEntity.Name.ToLower()}-list',");
@@ -1360,13 +1403,16 @@ namespace WEB.Models
             s.Add($"}})");
             s.Add($"export class {CurrentEntity.Name}ListComponent implements OnInit {{");
             s.Add($"");
-            s.Add($"   private {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.Name}[];");
-            s.Add($"   public searchOptions = new {CurrentEntity.Name}SearchOptions();");
-            s.Add($"   public headers = new PagingOptions();");
-            s.Add($"   public routerSubscription: Subscription;");
+            s.Add($"   private {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.Name}[] = [];");
+            s.Add($"   private searchOptions = new {CurrentEntity.Name}SearchOptions();");
+            s.Add($"   private headers = new PagingOptions();");
+            s.Add($"   private routerSubscription: Subscription;");
+            foreach (var enumLookup in enumLookups)
+                s.Add($"   private {enumLookup.PluralName.ToCamelCase()}: Enum[] = Enums.{enumLookup.PluralName};");
+
             s.Add($"");
             s.Add($"   constructor(");
-            s.Add($"      public route: ActivatedRoute,");
+            s.Add($"      private route: ActivatedRoute,");
             s.Add($"      private router: Router,");
             s.Add($"      private errorService: ErrorService,");
             s.Add($"      private {CurrentEntity.Name.ToCamelCase()}Service: {CurrentEntity.Name}Service");
@@ -1546,7 +1592,7 @@ namespace WEB.Models
                 else if (field.CustomType == CustomType.Enum)
                 {
                     tagType = "select";
-                    attributes["type"] = null;
+                    attributes.Remove("type");
                 }
 
                 if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
@@ -1586,7 +1632,7 @@ namespace WEB.Models
                 else if (tagType == "select")
                 {
                     controlHtml += $">" + Environment.NewLine;
-                    controlHtml += $"                           <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of orders; let i = index\" [value]=\"orders[i].id\">sdf</option>" + Environment.NewLine;
+                    controlHtml += $"                           <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Lookup.Name.ToCamelCase()}.value\">{{{{ {field.Lookup.Name.ToCamelCase()}.label }}}}</option>" + Environment.NewLine;
                     controlHtml += $"                       </{tagType}>";
                 }
                 //";
@@ -1988,7 +2034,7 @@ namespace WEB.Models
                     s.Add($"                                <th scope=\"col\" class=\"fa-col-width text-center\"><i class=\"fas fa-times\"></i></th>");
                     s.Add($"                            </tr>");
                     s.Add($"                        </thead>");
-                    s.Add($"                        <tbody" + (relationship.Hierarchy && childEntity.HasASortField ? $" ui-sortable=\"{childEntity.PluralName.ToCamelCase()}SortOptions\" [(ngModel)]=\"{childEntity.PluralName.ToCamelCase()}\"" : string.Empty) + ">");
+                    s.Add($"                        <tbody>");// + (relationship.Hierarchy && childEntity.HasASortField ? $" ui-sortable=\"{childEntity.PluralName.ToCamelCase()}SortOptions\" [(ngModel)]=\"{childEntity.PluralName.ToCamelCase()}\"" : string.Empty) + ">");
                     // todo: click
                     s.Add($"                            <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\" (click)=\"goTo{childEntity.Name}({childEntity.Name.ToCamelCase()})\">");
                     if (relationship.Hierarchy && childEntity.HasASortField)
@@ -2044,6 +2090,7 @@ namespace WEB.Models
             var multiSelectRelationships = CurrentEntity.RelationshipsAsParent.Where(r => r.UseMultiSelect && !r.ChildEntity.Exclude).OrderBy(o => o.SortOrder);
             var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent).OrderBy(r => r.SortOrder);
             var relationshipsAsChildHierarchy = CurrentEntity.RelationshipsAsChild.FirstOrDefault(r => r.Hierarchy);
+            var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).Select(o => o.Lookup).Distinct().ToList();
 
             var s = new StringBuilder();
 
@@ -2060,6 +2107,8 @@ namespace WEB.Models
             s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             s.Add($"import {{ {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
             s.Add($"import {{ {CurrentEntity.Name}Service }} from '../common/services/{CurrentEntity.Name.ToLower()}.service';");
+            if (enumLookups.Count > 0)
+                s.Add($"import {{ Enum, Enums }} from '../common/models/enums.model';");
             foreach (var relChildEntity in relationshipsAsParent.Select(o => o.ChildEntity).Distinct().OrderBy(o => o.Name))
             {
                 s.Add($"import {{ {(relChildEntity.EntityId == CurrentEntity.EntityId ? "" : relChildEntity.Name + ", ")}{relChildEntity.Name}SearchOptions, {relChildEntity.Name}SearchResponse }} from '../common/models/{relChildEntity.Name.ToLower()}.model';");
@@ -2078,6 +2127,8 @@ namespace WEB.Models
             s.Add($"   public {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
             s.Add($"   public isNew: boolean = true;");
             s.Add($"   public routerSubscription: Subscription;");
+            foreach (var enumLookup in enumLookups)
+                s.Add($"   private {enumLookup.PluralName.ToCamelCase()}: Enum[] = Enums.{enumLookup.PluralName};");
             if (CurrentEntity.EntityType == EntityType.User)
                 // todo: fix
                 s.Add($"   public roles = [{{ name: 'Administrator', id: '470356a5-f7db-4e2e-9c99-62c2800dc2f4' }}];");
@@ -2086,7 +2137,7 @@ namespace WEB.Models
             {
                 s.Add($"   public {rel.CollectionName.ToCamelCase()}SearchOptions = new {rel.ChildEntity.Name}SearchOptions();");
                 s.Add($"   public {rel.CollectionName.ToCamelCase()}Headers = new PagingOptions();");
-                s.Add($"   public {rel.CollectionName.ToCamelCase()}: {rel.ChildEntity.Name}[];");
+                s.Add($"   public {rel.CollectionName.ToCamelCase()}: {rel.ChildEntity.Name}[] = [];");
                 s.Add($"");
             }
 
@@ -2381,10 +2432,10 @@ namespace WEB.Models
                     }
                 }
 
-                fieldHeaders += (fieldHeaders == string.Empty ? string.Empty : Environment.NewLine) + $"                <th scope=\"col\"{ngIf}>{field.Label}</th>";
+                fieldHeaders += (fieldHeaders == string.Empty ? string.Empty : Environment.NewLine) + $"                    <th scope=\"col\"{ngIf}>{field.Label}</th>";
                 fieldList += (fieldList == string.Empty ? string.Empty : Environment.NewLine);
 
-                fieldList += $"                <td{ngIf}>{field.ListFieldHtml}</td>";
+                fieldList += $"                    <td{ngIf}>{field.ListFieldHtml}</td>";
             }
 
             foreach (var field in CurrentEntity.Fields.Where(f => f.SearchType == SearchType.Exact).OrderBy(f => f.FieldOrder))
@@ -2399,11 +2450,9 @@ namespace WEB.Models
                     if (field.FieldType == FieldType.Enum)
                     {
                         appSelectFilters += $"                    <div class=\"col-sm-6 col-md-6 col-lg-4\" *ngIf=\"!{field.Name.ToCamelCase()}\">" + Environment.NewLine;
-                        appSelectFilters += $"                        <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{field.Label}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"search.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">" + Environment.NewLine;
-                        appSelectFilters += $"                            <li nya-bs-option=\"item in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"item.id\">" + Environment.NewLine;
-                        appSelectFilters += $"                                <a>{{{{item.label}}}}<span class=\"fas fa-check check-mark\"></span></a>" + Environment.NewLine;
-                        appSelectFilters += $"                            </li>" + Environment.NewLine;
-                        appSelectFilters += $"                        </ol>" + Environment.NewLine;
+                        appSelectFilters += $"                        <select id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" #{field.Name.ToCamelCase()}=\"ngModel\" class=\"form-control\">" + Environment.NewLine;
+                        appSelectFilters += $"                            <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Name.ToCamelCase()}.value\">{{{{ {field.Name.ToCamelCase()}.label }}}}</option>" + Environment.NewLine;
+                        appSelectFilters += $"                        </select>" + Environment.NewLine;
                         appSelectFilters += $"                    </div>" + Environment.NewLine;
                     }
                     else
@@ -2418,9 +2467,9 @@ namespace WEB.Models
                     if (filterAlerts == string.Empty) filterAlerts = Environment.NewLine;
 
                     if (field.FieldType == FieldType.Enum)
-                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{field.Name.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" (click)=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{field.Name.ToCamelCase()}.label}}}}</div>" + Environment.NewLine;
+                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{field.Name.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" (click)=\"searchOptions.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{field.Name.ToCamelCase()}.label}}}}</div>" + Environment.NewLine;
                     else
-                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{relationship.ParentName.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" (click)=\"search.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{relationship.ParentName.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}</div>" + Environment.NewLine;
+                        filterAlerts += $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"{relationship.ParentName.ToCamelCase()}\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" (click)=\"searchOptions.{field.Name.ToCamelCase()}=undefined;\"><span aria-hidden=\"true\" *ngIf=\"removeFilters\">&times;</span></button>Filtered by {field.Label.ToLower()}: {{{{{relationship.ParentName.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}</div>" + Environment.NewLine;
                 }
             }
 
@@ -2443,6 +2492,18 @@ namespace WEB.Models
 
             var filterParams = string.Empty;
             var filterTriggers = string.Empty;
+            var imports = string.Empty;
+            var properties = string.Empty;
+
+            var lookups = CurrentEntity.Fields.Where(f => f.SearchType == SearchType.Exact && f.FieldType == FieldType.Enum).Select(f => f.Lookup).Distinct().OrderBy(o => o.Name);
+            if (lookups.Any())
+                imports += $"import {{ Enum, Enums }} from '../common/models/enums.model';" + Environment.NewLine;
+
+            foreach (var lookup in lookups)
+            {
+                properties += $"   {lookup.PluralName.ToCamelCase()}: Enum[] = Enums.{lookup.PluralName};" + Environment.NewLine;
+                properties += $"   {lookup.Name.ToCamelCase()}: Enum;" + Environment.NewLine;
+            }
 
             foreach (var field in CurrentEntity.Fields.Where(o => o.SearchType == SearchType.Exact))
             {
@@ -2465,6 +2526,8 @@ namespace WEB.Models
             }
 
             file = RunTemplateReplacements(file)
+                .Replace("/*IMPORTS*/", imports)
+                .Replace("/*PROPERTIES*/", properties)
                 .Replace("/*FILTER_PARAMS*/", filterParams)
                 .Replace("/*FILTER_TRIGGERS*/", filterTriggers);
 
@@ -2475,6 +2538,8 @@ namespace WEB.Models
 
         private string RunTemplateReplacements(string input)
         {
+            if (CurrentEntity.KeyFields.Count > 1) throw new Exception("Unable to run key field replacements (multiple keys): " + CurrentEntity.Name);
+
             return input
                 .Replace("PLURALNAME_TOCAMELCASE", CurrentEntity.PluralName.ToCamelCase())
                 .Replace("CAMELCASENAME", CurrentEntity.CamelCaseName)
@@ -2752,6 +2817,10 @@ namespace WEB.Models
 
                 var code = codeGenerator.GenerateEnums();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, "Enums.cs"), code);
+
+                // todo: move this to own deployment option
+                if (!CreateAppDirectory(entity.Project, "common\\models", codeGenerator.GenerateTypeScriptEnums(), "enums.model.ts"))
+                    return ("App path does not exist");
             }
             #endregion
 

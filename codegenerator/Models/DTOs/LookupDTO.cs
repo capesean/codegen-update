@@ -15,6 +15,10 @@ namespace WEB.Models
         [MaxLength(50)]
         public string Name { get; set; }
 
+        [DisplayFormat(ConvertEmptyStringToNull = false)]
+        [MaxLength(50)]
+        public string PluralName { get; set; }
+
         public ProjectDTO Project { get; set; }
 
     }
@@ -30,6 +34,7 @@ namespace WEB.Models
             lookupDTO.LookupId = lookup.LookupId;
             lookupDTO.ProjectId = lookup.ProjectId;
             lookupDTO.Name = lookup.Name;
+            lookupDTO.PluralName = lookup.PluralName;
             lookupDTO.Project = Create(lookup.Project);
 
             return lookupDTO;
@@ -39,6 +44,7 @@ namespace WEB.Models
         {
             lookup.ProjectId = lookupDTO.ProjectId;
             lookup.Name = lookupDTO.Name;
+            lookup.PluralName = lookupDTO.PluralName;
         }
     }
 }

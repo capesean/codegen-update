@@ -8,18 +8,27 @@
 
             <div class="row">
 
-                <div class="col-sm-12">
+               <div class="col-sm-12">
+
+                  <div class="col-sm-6 col-md-4">
+                     <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.name.$invalid }">
+                        <label for="name" class="control-label">
+                           Name:
+                        </label>
+                        <input type="text" id="name" name="name" ng-model="vm.lookup.name" maxlength="50" class="form-control" ng-required="true" />
+                     </div>
+                  </div>
 
                     <div class="col-sm-6 col-md-4">
-                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.name.$invalid }">
-                            <label for="name" class="control-label">
-                                Name:
+                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.pluralName.$invalid }">
+                            <label for="pluralName" class="control-label">
+                                Plural Name:
                             </label>
-                            <input type="text" id="name" name="name" ng-model="vm.lookup.name" maxlength="50" class="form-control" ng-required="true" />
+                            <input type="text" id="pluralName" name="pluralName" ng-model="vm.lookup.pluralName" maxlength="50" class="form-control" ng-required="true" />
                         </div>
                     </div>
 
-                </div>
+               </div>
             </div>
 
         </fieldset>
@@ -40,6 +49,14 @@
                     ng-messages="mainForm.name.$error">
                     <span ng-message="required">
                         Name is required.
+                    </span>
+                </li>
+
+                <li class="help-block has-error"
+                    ng-if="mainForm.$submitted"
+                    ng-messages="mainForm.pluralName.$error">
+                    <span ng-message="required">
+                        Plural Name is required.
                     </span>
                 </li>
 

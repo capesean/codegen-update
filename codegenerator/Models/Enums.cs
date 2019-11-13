@@ -27,7 +27,8 @@ namespace WEB.Models
         AppSelectTypeScript,
         SelectModalHtml,
         SelectModalTypeScript,
-        TypeScriptModel
+        TypeScriptModel,
+        TypeScriptEnums
     }
 
     public enum EditPageType
@@ -143,6 +144,10 @@ namespace WEB.Models
                     return "Select Model Html";
                 case CodeType.SelectModalTypeScript:
                     return "Select Modal TypeScript";
+                case CodeType.TypeScriptModel:
+                    return "TypeScript Model";
+                case CodeType.TypeScriptEnums:
+                    return "TypeScript Enums";
                 default:
                     return null;
             }

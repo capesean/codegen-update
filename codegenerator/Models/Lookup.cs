@@ -18,6 +18,10 @@ namespace WEB.Models
         [MaxLength(50)]
         public string Name { get; set; }
 
+        [Required(AllowEmptyStrings = true)]
+        [MaxLength(50)]
+        public string PluralName { get; set; }
+
         public virtual ICollection<Field> LookupFields { get; set; } = new List<Field>();
 
         public virtual ICollection<LookupOption> LookupOptions { get; set; } = new List<LookupOption>();
