@@ -19,6 +19,8 @@ namespace WEB.Models
         [MaxLength(50)]
         public string PluralName { get; set; }
 
+        public bool IsRoleList { get; set; }
+
         public ProjectDTO Project { get; set; }
 
     }
@@ -35,6 +37,7 @@ namespace WEB.Models
             lookupDTO.ProjectId = lookup.ProjectId;
             lookupDTO.Name = lookup.Name;
             lookupDTO.PluralName = lookup.PluralName;
+            lookupDTO.IsRoleList = lookup.IsRoleList;
             lookupDTO.Project = Create(lookup.Project);
 
             return lookupDTO;
@@ -45,6 +48,7 @@ namespace WEB.Models
             lookup.ProjectId = lookupDTO.ProjectId;
             lookup.Name = lookupDTO.Name;
             lookup.PluralName = lookupDTO.PluralName;
+            lookup.IsRoleList = lookupDTO.IsRoleList;
         }
     }
 }

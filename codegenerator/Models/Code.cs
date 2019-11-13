@@ -330,7 +330,7 @@ namespace WEB.Models
 
             s.Add($"namespace {CurrentEntity.Project.Namespace}.Models");
             s.Add($"{{");
-            foreach (var lookup in Lookups)
+            foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
             {
                 s.Add($"    public enum " + lookup.Name);
                 s.Add($"    {{");
@@ -342,7 +342,7 @@ namespace WEB.Models
             }
             s.Add($"    public static class Extensions");
             s.Add($"    {{");
-            foreach (var lookup in Lookups)
+            foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
             {
                 s.Add($"        public static string Label(this {lookup.Name} {lookup.Name.ToCamelCase()})");
                 s.Add($"        {{");
@@ -366,6 +366,58 @@ namespace WEB.Models
             return RunCodeReplacements(s.ToString(), CodeType.Enums);
         }
 
+        public string GenerateTypeScriptRoles()
+        {
+            var s = new StringBuilder();
+
+            s.Add($"export class Role {{");
+            s.Add($"   value: number;");
+            s.Add($"   name: string;");
+            s.Add($"   label: string;");
+            s.Add($"}}");
+            s.Add($"");
+
+            s.Add($"export class Roles {{");
+            if (CurrentEntity.Project.Lookups.Where(o => o.IsRoleList).Count() > 1) throw new Exception("Project has more than 1 IsRoleList Lookups");
+            var roleLookup = CurrentEntity.Project.Lookups.SingleOrDefault(o => o.IsRoleList);
+            if (roleLookup == null)
+            {
+                s.Add($"   static List: Roles[] = [];");
+            }
+            else
+            {
+                var counter = 0;
+                foreach (var option in roleLookup.LookupOptions)
+                {
+                    s.Add($"   static {option.Name}: Role = {{ value: {(option.Value.HasValue ? option.Value : counter)}, name: '{option.Name}', label: '{option.FriendlyName}' }};");
+                    counter++;
+                }
+                s.Add($"   static List: Roles[] = [{(roleLookup.LookupOptions.Select(o => o.Name).Aggregate((current, next) => { return current + ", " + next; }))}];");
+            }
+            s.Add($"}}");
+
+            return RunCodeReplacements(s.ToString(), CodeType.TypeScriptRoles);
+        }
+
+        public string GenerateRoles()
+        {
+            var s = new StringBuilder();
+
+            if (CurrentEntity.Project.Lookups.Where(o => o.IsRoleList).Count() > 1) throw new Exception("Project has more than 1 IsRoleList Lookups");
+            var roleLookup = CurrentEntity.Project.Lookups.SingleOrDefault(o => o.IsRoleList);
+
+            s.Add($"namespace WEB.Models");
+            s.Add($"{{");
+            s.Add($"    public enum Roles");
+            s.Add($"    {{");
+            if (roleLookup != null)
+                s.Add($"        " + roleLookup.LookupOptions.Select(o => o.Name).Aggregate((current, next) => { return current + ", " + next; }));
+            s.Add($"    }}");
+            s.Add($"}}");
+
+            return RunCodeReplacements(s.ToString(), CodeType.Roles);
+        }
+
         public string GenerateSettingsDTO()
         {
             var s = new StringBuilder();
@@ -377,12 +429,12 @@ namespace WEB.Models
             s.Add($"{{");
             s.Add($"    public partial class SettingsDTO");
             s.Add($"    {{");
-            foreach (var lookup in Lookups)
+            foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
                 s.Add($"        public List<EnumDTO> {lookup.Name} {{ get; set; }}");
             s.Add($"");
             s.Add($"        public SettingsDTO()");
             s.Add($"        {{");
-            foreach (var lookup in Lookups)
+            foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
             {
                 s.Add($"            {lookup.Name} = new List<EnumDTO>();");
                 s.Add($"            foreach ({lookup.Name} type in Enum.GetValues(typeof({lookup.Name})))");
@@ -760,7 +812,7 @@ namespace WEB.Models
             {
                 s.Add($"            var roles = await db.Roles.ToListAsync();");
                 s.Add($"");
-                s.Add($"            return Ok(ModelFactory.Create({CurrentEntity.CamelCaseName}));");
+                s.Add($"            return Ok(ModelFactory.Create({CurrentEntity.CamelCaseName}, roles));");
             }
             else
             {
@@ -2848,6 +2900,14 @@ namespace WEB.Models
                 // todo: move this to own deployment option
                 if (!CreateAppDirectory(entity.Project, "common\\models", codeGenerator.GenerateTypeScriptEnums(), "enums.model.ts"))
                     return ("App path does not exist");
+
+                // todo: move this to own deployment option
+                if (!CreateAppDirectory(entity.Project, "common\\models", codeGenerator.GenerateTypeScriptRoles(), "roles.model.ts"))
+                    return ("App path does not exist");
+
+                // todo: move this to own deployment option
+                File.WriteAllText(Path.Combine(entity.Project.RootPath, "Models", "Roles.cs"), codeGenerator.GenerateRoles());
+
             }
             #endregion
 

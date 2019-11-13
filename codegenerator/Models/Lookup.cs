@@ -22,6 +22,8 @@ namespace WEB.Models
         [MaxLength(50)]
         public string PluralName { get; set; }
 
+        public bool IsRoleList { get; set; }
+
         public virtual ICollection<Field> LookupFields { get; set; } = new List<Field>();
 
         public virtual ICollection<LookupOption> LookupOptions { get; set; } = new List<LookupOption>();

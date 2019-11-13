@@ -28,7 +28,9 @@ namespace WEB.Models
         SelectModalHtml,
         SelectModalTypeScript,
         TypeScriptModel,
-        TypeScriptEnums
+        TypeScriptEnums,
+        TypeScriptRoles,
+        Roles
     }
 
     public enum EditPageType
