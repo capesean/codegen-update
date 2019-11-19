@@ -68,9 +68,13 @@ namespace WEB.Models
         {
             get
             {
-                //if (!RelationshipsAsChild.Any(r => r.Hierarchy && !r.ParentEntity.Exclude))
-                //    return $"this.router.navigate([\"/{PluralName.ToLower()}\"]);";
-                return $"this.router.navigate([\"../{String.Concat(Enumerable.Repeat("../", KeyFields.Count))}\"], {{ relativeTo: this.route }});";
+                // hierarchies have format: /parententities/:parententityid/childentities/:childentityid
+                // non-hierarchies have format: /childentities/:childentityid
+                // so when in hierarchy, need to move one extra step up (childentities)
+                string prefix = "";
+                if (RelationshipsAsChild.Any(o => o.Hierarchy))
+                    prefix = "../";
+                return $"this.router.navigate([\"{prefix}{String.Concat(Enumerable.Repeat("../", KeyFields.Count))}\"], {{ relativeTo: this.route }});";
             }
         }
 

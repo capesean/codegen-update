@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, ViewChild, Output, EventEmitter, TemplateRef } from '@angular/core';
+﻿import { Component, OnInit, ViewChild, Output, EventEmitter, TemplateRef, Input } from '@angular/core';
 import { NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { Observable } from 'rxjs';
 import { NAMESearchOptions, NAMESearchResponse, NAME } from '../common/models/NAME_TOLOWER.model';
@@ -23,17 +23,18 @@ export class NAMEModalComponent implements OnInit {
 /*PROPERTIES*/
    @ViewChild('content', { static: false }) content: TemplateRef<any>;
    @Output() change: EventEmitter<NAME> = new EventEmitter<NAME>();
-
+   @Input() canRemoveFilters: boolean = false;
+/*INPUTS*/
    constructor(
       private modalService: NgbModal,
       private CAMELCASENAMEService: NAMEService,
       private errorService: ErrorService
    ) {
-      this.searchOptions.includeEntities = true;
    }
 
    ngOnInit(): void {
-   }
+      this.searchOptions.includeEntities = true;
+/*SEARCHOPTIONS*/   }
 
    open() {
       this.modal = this.modalService.open(this.content, { size: 'xl', centered: true, scrollable: true });

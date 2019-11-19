@@ -1,8 +1,9 @@
-﻿import { Component, OnInit, forwardRef, ViewChild, Input } from '@angular/core';
+﻿import { Component, OnInit, forwardRef, ViewChild, Input, EventEmitter, Output } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { NAMEModalComponent } from './NAME_TOLOWER.modal.component';
 import { NAME } from '../common/models/NAME_TOLOWER.model';
-
+import { Enum } from '../common/models/enums.model';
+/*IMPORTS*/
 @Component({
    selector: 'HYPHENATEDNAME-select',
    templateUrl: './NAME_TOLOWER.select.component.html',
@@ -17,7 +18,9 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
    @Input() KEYFIELD: string;
    @Input() CAMELCASENAME: NAME;
-
+   @Output() CAMELCASENAMEChange = new EventEmitter<NAME>();
+   @Input() canRemoveFilters: boolean = false;
+/*INPUTS*/
    multiple: boolean = false;
    showAddNew: boolean = false;
    disabled: boolean = false;
@@ -53,8 +56,9 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
    }
 
    change(CAMELCASENAME: NAME) {
-		if (this.disabled) return;
+      if (this.disabled) return;
       this.CAMELCASENAME = CAMELCASENAME;
+      this.CAMELCASENAMEChange.emit(CAMELCASENAME);
       this.writeValue(CAMELCASENAME ? CAMELCASENAME.KEYFIELD : null);
    }
 
@@ -63,7 +67,7 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
    }
 
    openModal() {
-		if (this.disabled) return;
+      if (this.disabled) return;
       this.modal.open();
    }
 }
