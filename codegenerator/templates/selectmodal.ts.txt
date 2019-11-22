@@ -34,10 +34,10 @@ export class NAMEModalComponent implements OnInit {
 
    ngOnInit(): void {
       this.searchOptions.includeEntities = true;
-/*SEARCHOPTIONS*/   }
+   }
 
    open() {
-      this.modal = this.modalService.open(this.content, { size: 'xl', centered: true, scrollable: true });
+/*SEARCHOPTIONS*/      this.modal = this.modalService.open(this.content, { size: 'xl', centered: true, scrollable: true });
       this.runSearch();
       this.modal.result.then((CAMELCASENAME: NAME) => {
          this.CAMELCASENAME = CAMELCASENAME;

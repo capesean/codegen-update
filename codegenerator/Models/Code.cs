@@ -1247,7 +1247,7 @@ namespace WEB.Models
                     s.Add(tabs + $"                  ]");
                 }
 
-                s.Add(tabs + $"               }}" + (entity == entities.Last() ? "" : ","));
+                s.Add(tabs + $"               }}" + (entity == entities.OrderBy(o => o.Name).Last() ? "" : ","));
             }
         }
 
@@ -1575,7 +1575,8 @@ namespace WEB.Models
 
         public string GenerateEditHtml()
         {
-            //if (CurrentEntity.EntityType == EntityType.User) return string.Empty;
+            var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent).OrderBy(r => r.SortOrder);
+            var hasChildRoutes = relationshipsAsParent.Any();
 
             var s = new StringBuilder();
 
@@ -1657,6 +1658,8 @@ namespace WEB.Models
                     attributes.Add("(ngModelChange)", $"changeBreadcrumb()");
                 if (field.CustomType == CustomType.Number && field.Scale > 0)
                     attributes.Add("step", "any");
+                if (field.EditPageType == EditPageType.ReadOnly)
+                    attributes.Add("readonly", null);
 
                 if (field.CustomType == CustomType.Boolean)
                 {
@@ -1688,6 +1691,8 @@ namespace WEB.Models
                         if (attributes.ContainsKey("type")) attributes.Remove("type");
                         if (attributes.ContainsKey("class")) attributes.Remove("class");
                         attributes.Add($"[{relationship.ParentEntity.Name.ToCamelCase()}]", $"{relationship.ChildEntity.Name.ToCamelCase()}.{relationship.ParentEntity.Name.ToCamelCase()}");
+                        if (field.EditPageType == EditPageType.ReadOnly)
+                            attributes.Add("disabled", null);
                     }
                 }
 
@@ -1720,12 +1725,12 @@ namespace WEB.Models
 
                 if (attributes.ContainsKey("type") && attributes["type"] == "checkbox")
                 {
-                    s.Add(t + $"                  <div class=\"form-check\">");
-                    s.Add(t + $"                     {controlHtml}");
-                    s.Add(t + $"                     <label class=\"form-check-label\" for=\"{field.Name}\">");
-                    s.Add(t + $"                        {field.Label}");
-                    s.Add(t + $"                     </label>");
-                    s.Add(t + $"                  </div>");
+                    s.Add(t + $"                        <div class=\"form-check\">");
+                    s.Add(t + $"                           {controlHtml}");
+                    s.Add(t + $"                           <label class=\"form-check-label\" for=\"{field.Name}\">");
+                    s.Add(t + $"                              {field.Label}");
+                    s.Add(t + $"                           </label>");
+                    s.Add(t + $"                        </div>");
                 }
                 else
                     s.Add(t + $"                        {controlHtml}");
@@ -2162,7 +2167,9 @@ namespace WEB.Models
 
             s.Add($"</div>");
             s.Add($"");
-            s.Add($"<router-outlet></router-outlet>");
+
+            if (hasChildRoutes)
+                s.Add($"<router-outlet></router-outlet>");
 
             return RunCodeReplacements(s.ToString(), CodeType.EditHtml);
         }
@@ -2173,20 +2180,21 @@ namespace WEB.Models
             var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent).OrderBy(r => r.SortOrder);
             var relationshipsAsChildHierarchy = CurrentEntity.RelationshipsAsChild.FirstOrDefault(r => r.Hierarchy);
             var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).Select(o => o.Lookup).Distinct().ToList();
+            var hasChildRoutes = relationshipsAsParent.Any();
 
             var s = new StringBuilder();
 
-            s.Add($"import {{ Component, OnInit, OnDestroy }} from '@angular/core';");
-            s.Add($"import {{ Router, ActivatedRoute, NavigationEnd }} from '@angular/router';");
+            s.Add($"import {{ Component, OnInit{(hasChildRoutes ? ", OnDestroy" : "")} }} from '@angular/core';");
+            s.Add($"import {{ Router, ActivatedRoute{(hasChildRoutes ? ", NavigationEnd" : "")}ActivatedRoute, NavigationEnd }} from '@angular/router';");
             s.Add($"import {{ ToastrService }} from 'ngx-toastr';");
             s.Add($"import {{ NgForm }} from '@angular/forms';");
-            // only needed if children?
-            s.Add($"import {{ Observable, Subscription }} from 'rxjs';");
+            if (hasChildRoutes)
+                s.Add($"import {{ Observable, Subscription }} from 'rxjs';");
             s.Add($"import {{ HttpErrorResponse }} from '@angular/common/http';");
             s.Add($"import {{ BreadcrumbService }} from 'angular-crumbs';");
             s.Add($"import {{ ErrorService }} from '../common/services/error.service';");
-            // only needed if children?
-            s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
+            if (hasChildRoutes)
+                s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             s.Add($"import {{ {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
             s.Add($"import {{ {CurrentEntity.Name}Service }} from '../common/services/{CurrentEntity.Name.ToLower()}.service';");
             if (enumLookups.Count > 0)
@@ -2206,11 +2214,12 @@ namespace WEB.Models
             s.Add($"   templateUrl: './{CurrentEntity.Name.ToLower()}.edit.component.html'");
             s.Add($"}})");
 
-            s.Add($"export class {CurrentEntity.Name}EditComponent implements OnInit, OnDestroy {{");
+            s.Add($"export class {CurrentEntity.Name}EditComponent implements OnInit{(hasChildRoutes ? ", OnDestroy" : "")} {{");
             s.Add($"");
             s.Add($"   private {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
             s.Add($"   private isNew: boolean = true;");
-            s.Add($"   private routerSubscription: Subscription;");
+            if (hasChildRoutes)
+                s.Add($"   private routerSubscription: Subscription;");
             foreach (var enumLookup in enumLookups)
                 s.Add($"   private {enumLookup.PluralName.ToCamelCase()}: Enum[] = Enums.{enumLookup.PluralName};");
             if (CurrentEntity.EntityType == EntityType.User)
@@ -2242,58 +2251,61 @@ namespace WEB.Models
 
             s.Add($"   ngOnInit(): void {{");
             s.Add($"");
-            s.Add($"      this.route.params.subscribe(params => {{");
+            foreach (var keyField in CurrentEntity.KeyFields)
+            {
+                s.Add($"      let {keyField.Name.ToCamelCase()} = this.route.snapshot.paramMap.get(\"{keyField.Name.ToCamelCase()}\");");
+            }
+            s.Add($"      this.isNew = {CurrentEntity.KeyFields.Select(o => o.Name.ToCamelCase() + " === \"add\"").Aggregate((current, next) => { return current + " && " + next; })};");
+            s.Add($"");
+            s.Add($"      if (!this.isNew) {{");
             s.Add($"");
             foreach (var keyField in CurrentEntity.KeyFields)
             {
-                s.Add($"         let {keyField.Name.ToCamelCase()} = params[\"{keyField.Name.ToCamelCase()}\"];");
+                s.Add($"         this.{CurrentEntity.Name.ToCamelCase()}.{keyField.Name.ToCamelCase()} = {keyField.Name.ToCamelCase()};");
             }
-            s.Add($"         this.isNew = {CurrentEntity.KeyFields.Select(o => o.Name.ToCamelCase() + " === \"add\"").Aggregate((current, next) => { return current + " && " + next; })};");
-            s.Add($"");
-            s.Add($"         if (!this.isNew) {{");
-            s.Add($"");
-            foreach (var keyField in CurrentEntity.KeyFields)
-            {
-                s.Add($"            this.{CurrentEntity.Name.ToCamelCase()}.{keyField.Name.ToCamelCase()} = {keyField.Name.ToCamelCase()};");
-            }
-            s.Add($"            this.load{CurrentEntity.Name}();");
+            s.Add($"         this.load{CurrentEntity.Name}();");
             s.Add($"");
             foreach (var rel in relationshipsAsParent)
             {
                 foreach (var relField in rel.RelationshipFields)
-                    s.Add($"            this.{rel.CollectionName.ToCamelCase()}SearchOptions.{relField.ChildField.Name.ToCamelCase()} = {relField.ParentField.Name.ToCamelCase()};");
-                s.Add($"            this.{rel.CollectionName.ToCamelCase()}SearchOptions.includeEntities = true; // can remove if using relative routerLink");
-                s.Add($"            this.load{rel.CollectionName}();");
+                    s.Add($"         this.{rel.CollectionName.ToCamelCase()}SearchOptions.{relField.ChildField.Name.ToCamelCase()} = {relField.ParentField.Name.ToCamelCase()};");
+                s.Add($"         this.{rel.CollectionName.ToCamelCase()}SearchOptions.includeEntities = true; // can remove if using relative routerLink");
+                s.Add($"         this.load{rel.CollectionName}();");
                 s.Add($"");
             }
 
-            s.Add($"         }}");
+            s.Add($"      }}");
             if (relationshipsAsChildHierarchy != null)
             {
-                s.Add($"         else {{");
+                s.Add($"      else {{");
                 foreach (var field in relationshipsAsChildHierarchy.RelationshipFields)
-                    s.Add($"            this.{CurrentEntity.Name.ToCamelCase()}.{field.ChildField.Name.ToCamelCase()} = this.route.snapshot.parent.params.{field.ParentField.Name.ToCamelCase()};");
-                s.Add($"         }}");
+                    s.Add($"         this.{CurrentEntity.Name.ToCamelCase()}.{field.ChildField.Name.ToCamelCase()} = this.route.snapshot.parent.params.{field.ParentField.Name.ToCamelCase()};");
+                s.Add($"      }}");
             }
             s.Add($"");
-            s.Add($"         this.routerSubscription = this.router.events.subscribe(event => {{");
-            s.Add($"            if (event instanceof NavigationEnd && !this.route.firstChild) {{");
-            s.Add($"               this.load{CurrentEntity.Name}();");
-            foreach (var rel in relationshipsAsParent.Where(o => o.Hierarchy))
+            if (hasChildRoutes)
             {
-                s.Add($"               this.load{rel.CollectionName}();");
+                s.Add($"      this.routerSubscription = this.router.events.subscribe(event => {{");
+                s.Add($"         if (event instanceof NavigationEnd && !this.route.firstChild && !this.isNew) {{");
+                s.Add($"            this.load{CurrentEntity.Name}();");
+                foreach (var rel in relationshipsAsParent.Where(o => o.Hierarchy))
+                {
+                    s.Add($"            this.load{rel.CollectionName}();");
+                }
+                s.Add($"         }}");
+                s.Add($"      }});");
+                s.Add($"");
             }
-            s.Add($"            }}");
-            s.Add($"         }});");
-            s.Add($"");
-            s.Add($"      }});");
-            s.Add($"");
             s.Add($"   }}");
             s.Add($"");
-            s.Add($"   ngOnDestroy(): void {{");
-            s.Add($"      this.routerSubscription.unsubscribe();");
-            s.Add($"   }}");
-            s.Add($"");
+
+            if (hasChildRoutes)
+            {
+                s.Add($"   ngOnDestroy(): void {{");
+                s.Add($"      this.routerSubscription.unsubscribe();");
+                s.Add($"   }}");
+                s.Add($"");
+            }
 
             s.Add($"   private load{CurrentEntity.Name}() {{");
             s.Add($"");

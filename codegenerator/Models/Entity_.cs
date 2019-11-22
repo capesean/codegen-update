@@ -160,7 +160,7 @@ namespace WEB.Models
                     result.Add(new SearchResultColumn
                     {
                         Header = rel.ParentEntity.FriendlyName,
-                        Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ rel.ParentName.ToCamelCase() }.{ rel.ParentField.Name.ToCamelCase() } }}}}",
+                        Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ rel.ParentName.ToCamelCase() + (field.IsNullable ? "?" : "") }.{ rel.ParentField.Name.ToCamelCase() } }}}}",
                         IsOnAnotherEntity = true
                     });
                 }

@@ -206,16 +206,16 @@ namespace WEB.Models
                 if (Entity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == FieldId)))
                 {
                     var relationship = Entity.GetParentSearchRelationship(this);
-                    return $"{{{{ { Entity.CamelCaseName}.{ relationship.ParentName.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()} }}}}";
+                    return $"{{{{ { Entity.CamelCaseName}.{ relationship.ParentName.ToCamelCase() + (this.IsNullable ? "?" : "")}.{relationship.ParentField.Name.ToCamelCase()} }}}}";
                 }
                 else
                 {
                     if (CustomType == CustomType.Date)
                     {
                         if (IsNullable)
-                            return $"{{{{ { Entity.CamelCaseName}.{ Name.ToCamelCase()} === null ? \"\" : vm.moment({ Entity.CamelCaseName}.{ Name.ToCamelCase()}).format('DD MMM YYYY{(FieldType == FieldType.Date ? string.Empty : " HH:mm" + (FieldType == FieldType.SmallDateTime ? "" : ":ss"))}') }}}}";
+                            return $"{{{{ { Entity.CamelCaseName}.{ Name.ToCamelCase()} === null ? \"\" : { Entity.CamelCaseName}.{ Name.ToCamelCase()} | momentPipe: 'DD MMM YYYY{(FieldType == FieldType.Date ? string.Empty : " HH:mm" + (FieldType == FieldType.SmallDateTime ? "" : ":ss"))}' }}}}";
                         else
-                            return $"{{{{ vm.moment({ Entity.CamelCaseName}.{ Name.ToCamelCase()}).format('DD MMM YYYY{(FieldType == FieldType.Date ? string.Empty : " HH:mm" + (FieldType == FieldType.SmallDateTime ? "" : ":ss"))}') }}}}";
+                            return $"{{{{ { Entity.CamelCaseName}.{ Name.ToCamelCase()} | momentPipe: 'DD MMM YYYY{(FieldType == FieldType.Date ? string.Empty : " HH:mm" + (FieldType == FieldType.SmallDateTime ? "" : ":ss"))}' }}}}";
                     }
                     else if (CustomType == CustomType.Enum)
                         return $"{{{{ {Lookup.PluralName.ToCamelCase()}[{ Entity.Name.ToCamelCase()}.{Lookup.Name.ToCamelCase()}].label }}}}";
