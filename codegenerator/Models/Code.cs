@@ -842,7 +842,7 @@ namespace WEB.Models
                         hierarchyFields += (hierarchyFields == string.Empty ? "" : " && ") + "o." + relField.ChildField.Name + " == " + CurrentEntity.DTOName.ToCamelCase() + "." + relField.ChildField.Name;
                     hierarchyFields += " && ";
                 }
-                s.Add($"            if (" + (field.IsNullable ? field.NotNullCheck(CurrentEntity.DTOName.ToCamelCase() + "." + field.Name) + " && " : "") + $"await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.AnyAsync(o => {hierarchyFields}o.{field.Name} == {CurrentEntity.DTOName.ToCamelCase()}.{field.Name} && {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase(), " != ", " || ", true)}))");
+                s.Add($"            if (" + (field.IsNullable ? field.NotNullCheck(CurrentEntity.DTOName.ToCamelCase() + "." + field.Name) + " && " : "") + $"await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.AnyAsync(o => {hierarchyFields}o.{field.Name} == {CurrentEntity.DTOName.ToCamelCase()}.{field.Name} && {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase(), "!=", "||", true)}))");
                 s.Add($"                return BadRequest(\"{field.Label} already exists{(ParentHierarchyRelationship == null ? string.Empty : " on this " + ParentHierarchyRelationship.ParentEntity.FriendlyName)}.\");");
                 s.Add($"");
             }
@@ -1121,6 +1121,7 @@ namespace WEB.Models
             s.Add($"import {{ RouterModule }} from '@angular/router';");
             s.Add($"import {{ PagerComponent }} from './common/pager.component';");
             s.Add($"import {{ NgbModule }} from '@ng-bootstrap/ng-bootstrap';");
+            s.Add($"import {{ DragDropModule }} from '@angular/cdk/drag-drop';");
 
             var entitiesToBundle = AllEntities.Where(e => !e.Exclude);
             var componentList = "";
@@ -1154,7 +1155,8 @@ namespace WEB.Models
             s.Add($"      CommonModule,");
             s.Add($"      FormsModule,");
             s.Add($"      RouterModule.forChild(GeneratedRoutes),");
-            s.Add($"      NgbModule");
+            s.Add($"      NgbModule,");
+            s.Add($"      DragDropModule");
             s.Add($"   ]");
             s.Add($"}})");
             s.Add($"export class GeneratedModule {{ }}");
@@ -1309,6 +1311,14 @@ namespace WEB.Models
             s.Add($"   }}");
             s.Add($"");
 
+
+            if (CurrentEntity.HasASortField)
+            {
+                s.Add($"   sort(ids: {CurrentEntity.KeyFields.First().JavascriptType}[]): Observable<void> {{");
+                s.Add($"      return this.http.post<void>(`${{environment.baseApiUrl}}{CurrentEntity.PluralName.ToLower()}/sort`, ids);");
+                s.Add($"   }}");
+                s.Add($"");
+            }
             s.Add($"}}");
 
             return RunCodeReplacements(s.ToString(), CodeType.ApiResource);
@@ -1423,15 +1433,15 @@ namespace WEB.Models
             s.Add($"        <thead>");
             s.Add($"            <tr>");
             if (useSortColumn)
-                s.Add($"                <th *ngIf=\"{CurrentEntity.PluralName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
+                s.Add($"                <th class=\"text-center fa-col-width\"><i class=\"fas fa-sort\"></i></th>");
             foreach (var field in CurrentEntity.Fields.Where(f => f.ShowInSearchResults).OrderBy(f => f.FieldOrder))
                 s.Add($"                <th>{field.Label}</th>");
             s.Add($"            </tr>");
             s.Add($"        </thead>");
-            s.Add($"        <tbody>");// {(CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy) ? " ui-sortable=\"sortOptions\" [(ngModel)]=\"" + CurrentEntity.PluralName.ToCamelCase() + "\"" : "")}>");
-            s.Add($"            <tr *ngFor=\"let {CurrentEntity.CamelCaseName} of {CurrentEntity.PluralName.ToCamelCase()}\" (click)=\"goTo{CurrentEntity.Name}({CurrentEntity.CamelCaseName})\">");
+            s.Add($"        <tbody{(useSortColumn ? " cdkDropList (cdkDropListDropped)=\"drop($event)\"" : "")}>");
+            s.Add($"            <tr *ngFor=\"let {CurrentEntity.CamelCaseName} of {CurrentEntity.PluralName.ToCamelCase()}\" (click)=\"goTo{CurrentEntity.Name}({CurrentEntity.CamelCaseName})\"{(useSortColumn ? " cdkDrag" : "")}>");
             if (useSortColumn)
-                s.Add($"                <td *ngIf=\"{CurrentEntity.PluralName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" (click)=\"$event.stopPropagation();\"></i></td>");
+                s.Add($"                <td class=\"text-center fa-col-width\" cdkDragHandle (click)=\"$event.stopPropagation();\"><span *cdkDragPreview></span><i class=\"fas fa-sort\"></i></td>");
             foreach (var field in CurrentEntity.Fields.Where(f => f.ShowInSearchResults).OrderBy(f => f.FieldOrder))
             {
                 s.Add($"                <td>{field.ListFieldHtml}</td>");
@@ -1470,11 +1480,15 @@ namespace WEB.Models
             s.Add($"import {{ ActivatedRoute, Router, NavigationEnd }} from '@angular/router';");
             s.Add($"import {{ Observable, Subscription }} from 'rxjs';");
             s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
+            if (CurrentEntity.HasASortField)
+                s.Add($"import {{ CdkDragDrop, moveItemInArray }} from '@angular/cdk/drag-drop';");
             s.Add($"import {{ ErrorService }} from '../common/services/error.service';");
             s.Add($"import {{ {CurrentEntity.Name}SearchOptions, {CurrentEntity.Name}SearchResponse, {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
             s.Add($"import {{ {CurrentEntity.Name}Service }} from '../common/services/{CurrentEntity.Name.ToLower()}.service';");
             if (enumLookups.Any())
                 s.Add($"import {{ Enum, Enums }} from '../common/models/enums.model';");
+            if (CurrentEntity.HasASortField)
+                s.Add($"import {{ ToastrService }} from 'ngx-toastr';");
             s.Add($"");
             s.Add($"@Component({{");
             s.Add($"   selector: '{CurrentEntity.Name.ToLower()}-list',");
@@ -1494,20 +1508,24 @@ namespace WEB.Models
             s.Add($"      private route: ActivatedRoute,");
             s.Add($"      private router: Router,");
             s.Add($"      private errorService: ErrorService,");
+            if (CurrentEntity.HasASortField)
+                s.Add($"      private toastr: ToastrService,");
             s.Add($"      private {CurrentEntity.Name.ToCamelCase()}Service: {CurrentEntity.Name}Service");
             s.Add($"   ) {{");
             s.Add($"   }}");
             s.Add($"");
             s.Add($"   ngOnInit(): void {{");
+            // todo: this should only be when required, e.g. hierarchies?
+            var hasParentHierarchy = CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy);
+            if (hasParentHierarchy)
+                s.Add($"      this.searchOptions.includeEntities = true;");
+            if (CurrentEntity.HasASortField)
+                s.Add($"      this.searchOptions.pageSize = 0;");
             s.Add($"      this.routerSubscription = this.router.events.subscribe(event => {{");
             s.Add($"         if (event instanceof NavigationEnd && !this.route.firstChild) {{");
             s.Add($"            this.runSearch();");
             s.Add($"         }}");
             s.Add($"      }});");
-            // todo: this should only be when required, e.g. hierarchies?
-            var hasParentHierarchy = CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy);
-            if (hasParentHierarchy)
-                s.Add($"      this.searchOptions.includeEntities = true;");
             s.Add($"      this.runSearch();");
             s.Add($"   }}");
             s.Add($"");
@@ -1538,6 +1556,20 @@ namespace WEB.Models
             s.Add($"");
             s.Add($"   }}");
             s.Add($"");
+            if (CurrentEntity.HasASortField)
+            {
+                s.Add($"   drop(event: CdkDragDrop<{CurrentEntity.Name}[]>) {{");
+                s.Add($"      moveItemInArray(this.{CurrentEntity.PluralName.ToCamelCase()}, event.previousIndex, event.currentIndex);");
+                s.Add($"      this.{CurrentEntity.Name.ToCamelCase()}Service.sort(this.{CurrentEntity.PluralName.ToCamelCase()}.map(o => o.{CurrentEntity.KeyFields.First().Name.ToCamelCase()})).subscribe(");
+                s.Add($"         () => {{");
+                s.Add($"            this.toastr.success(\"The sort order has been updated\", \"Change Sort Order\");");
+                s.Add($"         }},");
+                s.Add($"         err => {{");
+                s.Add($"            this.errorService.handleError(err, \"{CurrentEntity.PluralFriendlyName}\", \"Sort\");");
+                s.Add($"         }});");
+                s.Add($"   }}");
+                s.Add($"");
+            }
             s.Add($"   goTo{CurrentEntity.Name}({CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name}): void {{");
             s.Add($"      this.router.navigate([{GetRouterLink(CurrentEntity)}]);");
             s.Add($"   }}");
@@ -2185,7 +2217,7 @@ namespace WEB.Models
             var s = new StringBuilder();
 
             s.Add($"import {{ Component, OnInit{(hasChildRoutes ? ", OnDestroy" : "")} }} from '@angular/core';");
-            s.Add($"import {{ Router, ActivatedRoute{(hasChildRoutes ? ", NavigationEnd" : "")}ActivatedRoute, NavigationEnd }} from '@angular/router';");
+            s.Add($"import {{ Router, ActivatedRoute{(hasChildRoutes ? ", NavigationEnd" : "")} }} from '@angular/router';");
             s.Add($"import {{ ToastrService }} from 'ngx-toastr';");
             s.Add($"import {{ NgForm }} from '@angular/forms';");
             if (hasChildRoutes)
@@ -2238,13 +2270,13 @@ namespace WEB.Models
             s.Add($"      private route: ActivatedRoute,");
             s.Add($"      private toastr: ToastrService,");
             s.Add($"      private breadcrumbService: BreadcrumbService,");
-            s.Add($"      private errorService: ErrorService,");
             s.Add($"      private {CurrentEntity.Name.ToCamelCase()}Service: {CurrentEntity.Name}Service,");
             var relChildEntities = relationshipsAsParent.Where(o => o.ChildEntityId != CurrentEntity.EntityId).Select(o => o.ChildEntity).Distinct().OrderBy(o => o.Name);
             foreach (var relChildEntity in relChildEntities)
             {
                 s.Add($"      private {relChildEntity.Name.ToCamelCase()}Service: {relChildEntity.Name}Service" + (relChildEntity == relChildEntities.Last() ? "" : ","));
             }
+            s.Add($"      private errorService: ErrorService");
             s.Add($"   ) {{");
             s.Add($"   }}");
             s.Add($"");
