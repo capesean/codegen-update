@@ -2367,51 +2367,56 @@ namespace WEB.Models
 
             s.Add($"   ngOnInit(): void {{");
             s.Add($"");
-            foreach (var keyField in CurrentEntity.KeyFields)
-            {
-                s.Add($"      let {keyField.Name.ToCamelCase()} = this.route.snapshot.paramMap.get(\"{keyField.Name.ToCamelCase()}\");");
-            }
-            s.Add($"      this.isNew = {CurrentEntity.KeyFields.Select(o => o.Name.ToCamelCase() + " === \"add\"").Aggregate((current, next) => { return current + " && " + next; })};");
-            s.Add($"");
-            s.Add($"      if (!this.isNew) {{");
+            // use subscribe, so that a save changes url and reloads data
+            s.Add($"      this.route.params.subscribe(params => {{");
             s.Add($"");
             foreach (var keyField in CurrentEntity.KeyFields)
             {
-                s.Add($"         this.{CurrentEntity.Name.ToCamelCase()}.{keyField.Name.ToCamelCase()} = {keyField.Name.ToCamelCase()};");
+                s.Add($"         let {keyField.Name.ToCamelCase()} = params[\"{keyField.Name.ToCamelCase()}\"];");
             }
-            s.Add($"         this.load{CurrentEntity.Name}();");
+            s.Add($"         this.isNew = {CurrentEntity.KeyFields.Select(o => o.Name.ToCamelCase() + " === \"add\"").Aggregate((current, next) => { return current + " && " + next; })};");
+            s.Add($"");
+            s.Add($"         if (!this.isNew) {{");
+            s.Add($"");
+            foreach (var keyField in CurrentEntity.KeyFields)
+            {
+                s.Add($"            this.{CurrentEntity.Name.ToCamelCase()}.{keyField.Name.ToCamelCase()} = {keyField.Name.ToCamelCase()};");
+            }
+            s.Add($"            this.load{CurrentEntity.Name}();");
             s.Add($"");
             foreach (var rel in relationshipsAsParent)
             {
                 foreach (var relField in rel.RelationshipFields)
-                    s.Add($"         this.{rel.CollectionName.ToCamelCase()}SearchOptions.{relField.ChildField.Name.ToCamelCase()} = {relField.ParentField.Name.ToCamelCase()};");
-                s.Add($"         this.{rel.CollectionName.ToCamelCase()}SearchOptions.includeEntities = true; // can remove if using relative routerLink");
-                s.Add($"         this.load{rel.CollectionName}();");
+                    s.Add($"            this.{rel.CollectionName.ToCamelCase()}SearchOptions.{relField.ChildField.Name.ToCamelCase()} = {relField.ParentField.Name.ToCamelCase()};");
+                s.Add($"            this.{rel.CollectionName.ToCamelCase()}SearchOptions.includeEntities = true; // can remove if using relative routerLink");
+                s.Add($"            this.load{rel.CollectionName}();");
                 s.Add($"");
             }
 
-            s.Add($"      }}");
+            s.Add($"         }}");
             if (relationshipsAsChildHierarchy != null)
             {
-                s.Add($"      else {{");
+                s.Add($"         else {{");
                 foreach (var field in relationshipsAsChildHierarchy.RelationshipFields)
-                    s.Add($"         this.{CurrentEntity.Name.ToCamelCase()}.{field.ChildField.Name.ToCamelCase()} = this.route.snapshot.parent.params.{field.ParentField.Name.ToCamelCase()};");
-                s.Add($"      }}");
+                    s.Add($"            this.{CurrentEntity.Name.ToCamelCase()}.{field.ChildField.Name.ToCamelCase()} = this.route.snapshot.parent.params.{field.ParentField.Name.ToCamelCase()};");
+                s.Add($"         }}");
             }
             s.Add($"");
             if (hasChildRoutes)
             {
-                s.Add($"      this.routerSubscription = this.router.events.subscribe(event => {{");
-                s.Add($"         if (event instanceof NavigationEnd && !this.route.firstChild && !this.isNew) {{");
-                s.Add($"            this.load{CurrentEntity.Name}();");
+                s.Add($"         this.routerSubscription = this.router.events.subscribe(event => {{");
+                s.Add($"            if (event instanceof NavigationEnd && !this.route.firstChild && !this.isNew) {{");
+                s.Add($"               this.load{CurrentEntity.Name}();");
                 foreach (var rel in relationshipsAsParent.Where(o => o.Hierarchy))
                 {
-                    s.Add($"            this.load{rel.CollectionName}();");
+                    s.Add($"               this.load{rel.CollectionName}();");
                 }
-                s.Add($"         }}");
-                s.Add($"      }});");
+                s.Add($"            }}");
+                s.Add($"         }});");
                 s.Add($"");
             }
+            s.Add($"      }});");
+            s.Add($"");
             s.Add($"   }}");
             s.Add($"");
 
