@@ -30,7 +30,8 @@ namespace WEB.Models
         TypeScriptModel,
         TypeScriptEnums,
         TypeScriptRoles,
-        Roles
+        Roles,
+        SharedModule
     }
 
     public enum EditPageType
@@ -150,6 +151,12 @@ namespace WEB.Models
                     return "TypeScript Model";
                 case CodeType.TypeScriptEnums:
                     return "TypeScript Enums";
+                case CodeType.Roles:
+                    return "Roles";
+                case CodeType.TypeScriptRoles:
+                    return "TypeScript Roles";
+                case CodeType.SharedModule:
+                    return "Shared Module";
                 default:
                     return null;
             }

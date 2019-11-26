@@ -248,7 +248,10 @@ namespace WEB.Models
                 s.Add($"   {relationship.ParentName.ToCamelCase()}: {relationship.ParentEntity.Name};");
             }
             if (CurrentEntity.EntityType == EntityType.User)
+            {
                 s.Add($"   roles: Role[] = [];");
+                s.Add($"   email: string;");
+            }
             s.Add($"");
 
             s.Add($"   constructor() {{");
@@ -1119,7 +1122,6 @@ namespace WEB.Models
             s.Add($"import {{ CommonModule }} from '@angular/common';");
             s.Add($"import {{ FormsModule }} from '@angular/forms';");
             s.Add($"import {{ RouterModule }} from '@angular/router';");
-            s.Add($"import {{ PagerComponent }} from './common/pager.component';");
             s.Add($"import {{ NgbModule }} from '@ng-bootstrap/ng-bootstrap';");
             s.Add($"import {{ DragDropModule }} from '@angular/cdk/drag-drop';");
 
@@ -1131,6 +1133,60 @@ namespace WEB.Models
                 s.Add($"import {{ {e.Name}EditComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.edit.component';");
                 componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ListComponent, {e.Name}EditComponent";
 
+                //if (string.IsNullOrWhiteSpace(e.PreventAppSelectTypeScriptDeployment))
+                //{
+                //    s.Add($"import {{ {e.Name}SelectComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.select.component';");
+                //    componentList += (componentList == "" ? "" : ", ") + $"{e.Name}SelectComponent";
+                //}
+
+                //if (string.IsNullOrWhiteSpace(e.PreventSelectModalTypeScriptDeployment))
+                //{
+                //    s.Add($"import {{ {e.Name}ModalComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.modal.component';");
+                //    componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ModalComponent";
+                //}
+            }
+            s.Add($"import {{ SharedModule }} from './shared.module';");
+            s.Add($"import {{ GeneratedRoutes }} from './generated.routes';");
+            s.Add($"");
+
+
+            s.Add($"@NgModule({{");
+            s.Add($"   declarations: [{componentList}],");
+            s.Add($"   imports: [");
+            s.Add($"      CommonModule,");
+            s.Add($"      FormsModule,");
+            s.Add($"      RouterModule.forChild(GeneratedRoutes),");
+            s.Add($"      NgbModule,");
+            s.Add($"      DragDropModule,");
+            s.Add($"      SharedModule");
+            s.Add($"   ]");
+            s.Add($"}})");
+            s.Add($"export class GeneratedModule {{ }}");
+
+            return RunCodeReplacements(s.ToString(), CodeType.BundleConfig);
+
+        }
+
+        public string GenerateSharedModule()
+        {
+            var s = new StringBuilder();
+
+            s.Add($"import {{ NgModule }} from '@angular/core';");
+            s.Add($"import {{ CommonModule }} from '@angular/common';");
+            s.Add($"import {{ PagerComponent }} from './common/pager.component';");
+            s.Add($"import {{ RouterModule }} from '@angular/router';");
+            s.Add($"import {{ MainComponent }} from './main.component';");
+            s.Add($"import {{ NavMenuComponent }} from './common/nav-menu/nav-menu.component';");
+            s.Add($"import {{ MomentPipe }} from './common/pipes/momentPipe';");
+            s.Add($"import {{ FormsModule }} from '@angular/forms';");
+            s.Add($"import {{ NgbModule }} from '@ng-bootstrap/ng-bootstrap';");
+            s.Add($"import {{ DragDropModule }} from '@angular/cdk/drag-drop';");
+            s.Add($"import {{ BreadcrumbModule }} from 'primeng/breadcrumb';");
+
+            var entitiesToBundle = AllEntities.Where(e => !e.Exclude);
+            var componentList = "";
+            foreach (var e in entitiesToBundle)
+            {
                 if (string.IsNullOrWhiteSpace(e.PreventAppSelectTypeScriptDeployment))
                 {
                     s.Add($"import {{ {e.Name}SelectComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.select.component';");
@@ -1143,25 +1199,38 @@ namespace WEB.Models
                     componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ModalComponent";
                 }
             }
-            s.Add($"import {{ GeneratedRoutes }} from './generated.routes';");
-            s.Add($"import {{ CustomComponents }} from './custom.components';");
-            s.Add($"import {{ MomentPipe }} from './common/pipes/momentPipe';");
             s.Add($"");
 
 
             s.Add($"@NgModule({{");
-            s.Add($"   declarations: [PagerComponent, {componentList}, MomentPipe].concat(CustomComponents),");
+            //s.Add($"   declarations: [{componentList}],");
             s.Add($"   imports: [");
             s.Add($"      CommonModule,");
             s.Add($"      FormsModule,");
-            s.Add($"      RouterModule.forChild(GeneratedRoutes),");
+            s.Add($"      RouterModule,");
             s.Add($"      NgbModule,");
-            s.Add($"      DragDropModule");
+            s.Add($"      DragDropModule,");
+            s.Add($"      BreadcrumbModule");
+            s.Add($"   ],");
+            s.Add($"   declarations: [");
+            s.Add($"      PagerComponent,");
+            s.Add($"      MainComponent,");
+            s.Add($"      NavMenuComponent,");
+            s.Add($"      MomentPipe,");
+            s.Add($"      " + componentList);
+            s.Add($"   ],");
+            s.Add($"   exports: [");
+            s.Add($"      PagerComponent,");
+            s.Add($"      MainComponent,");
+            s.Add($"      NavMenuComponent,");
+            s.Add($"      NgbModule,");
+            s.Add($"      MomentPipe,");
+            s.Add($"      " + componentList);
             s.Add($"   ]");
             s.Add($"}})");
-            s.Add($"export class GeneratedModule {{ }}");
+            s.Add($"export class SharedModule {{ }}");
 
-            return RunCodeReplacements(s.ToString(), CodeType.BundleConfig);
+            return RunCodeReplacements(s.ToString(), CodeType.SharedModule);
 
         }
 
@@ -1170,10 +1239,7 @@ namespace WEB.Models
             var s = new StringBuilder();
 
             s.Add($"import {{ Route }} from '@angular/router';");
-            s.Add($"import {{ HomeComponent }} from './home/home.component';");
             s.Add($"import {{ AccessGuard }} from './common/auth/accessguard';");
-            s.Add($"import {{ MainComponent }} from './main.component';");
-            s.Add($"import {{ CustomRoutes }} from './custom.routes';");
 
             var allEntities = AllEntities.Where(e => !e.Exclude).OrderBy(o => o.Name);
             foreach (var e in allEntities)
@@ -1185,41 +1251,26 @@ namespace WEB.Models
             s.Add($"");
 
             s.Add($"export const GeneratedRoutes: Route[] = [");
-            s.Add($"   {{");
-            s.Add($"      path: '',");
-            s.Add($"      component: MainComponent,");
-            s.Add($"      data: {{}},");
-            s.Add($"      children: (<Route[]>[");
-            s.Add($"         {{");
-            s.Add($"            path: '',");
-            s.Add($"            canActivate: [AccessGuard],");
-            s.Add($"            canActivateChild: [AccessGuard],");
-            s.Add($"            component: HomeComponent,");
-            s.Add($"            pathMatch: 'full',");
-            s.Add($"            data: {{ breadcrumb: 'Home' }},");
-            s.Add($"         }},");
 
             foreach (var e in allEntities.OrderBy(o => o.Name))
             {
                 var hasChildren = !e.RelationshipsAsChild.Any(r => r.Hierarchy);
 
-                s.Add($"         {{");
-                s.Add($"            path: '{e.PluralName.ToLower()}',");
-                s.Add($"            canActivate: [AccessGuard],");
-                s.Add($"            canActivateChild: [AccessGuard],");
-                s.Add($"            component: {e.Name}ListComponent,");
-                s.Add($"            data: {{ breadcrumb: '{e.PluralFriendlyName}' }}" + (hasChildren ? "," : ""));
+                s.Add($"   {{");
+                s.Add($"      path: '{e.PluralName.ToLower()}',");
+                s.Add($"      canActivate: [AccessGuard],");
+                s.Add($"      canActivateChild: [AccessGuard],");
+                s.Add($"      component: {e.Name}ListComponent,");
+                s.Add($"      data: {{ breadcrumb: '{e.PluralFriendlyName}' }}" + (hasChildren ? "," : ""));
                 if (hasChildren)
                 {
-                    s.Add($"            children: [");
+                    s.Add($"      children: [");
                     WriteEditRoute(new List<Entity> { e }, s, 0);
-                    s.Add($"            ]");
+                    s.Add($"      ]");
                 }
-                s.Add($"         }}" + (e == allEntities.Last() ? "" : ","));
+                s.Add($"   }}" + (e == allEntities.Last() ? "" : ","));
             }
 
-            s.Add($"      ]).concat(CustomRoutes)");
-            s.Add($"   }}");
             s.Add($"];");
 
             return RunCodeReplacements(s.ToString(), CodeType.AppRouter);
@@ -1234,22 +1285,22 @@ namespace WEB.Models
             {
                 var childEntities = entity.RelationshipsAsParent.Where(r => r.Hierarchy).Select(o => o.ChildEntity);
 
-                s.Add(tabs + $"               {{");
-                s.Add(tabs + $"                  path: '{(level == 0 ? "" : entity.PluralName.ToLower() + "/")}{entity.KeyFields.Select(o => ":" + o.Name.ToCamelCase()).Aggregate((current, next) => { return current + "/" + next; })}',");
-                s.Add(tabs + $"                  component: {entity.Name}EditComponent,");
-                s.Add(tabs + $"                  canActivate: [AccessGuard],");
-                s.Add(tabs + $"                  canActivateChild: [AccessGuard],");
-                s.Add(tabs + $"                  data: {{");
-                s.Add(tabs + $"                     breadcrumb: 'Add {entity.FriendlyName}'");
-                s.Add(tabs + $"                  }}" + (childEntities.Any() ? "," : ""));
+                s.Add(tabs + $"         {{");
+                s.Add(tabs + $"            path: '{(level == 0 ? "" : entity.PluralName.ToLower() + "/")}{entity.KeyFields.Select(o => ":" + o.Name.ToCamelCase()).Aggregate((current, next) => { return current + "/" + next; })}',");
+                s.Add(tabs + $"            component: {entity.Name}EditComponent,");
+                s.Add(tabs + $"            canActivate: [AccessGuard],");
+                s.Add(tabs + $"            canActivateChild: [AccessGuard],");
+                s.Add(tabs + $"            data: {{");
+                s.Add(tabs + $"               breadcrumb: 'Add {entity.FriendlyName}'");
+                s.Add(tabs + $"            }}" + (childEntities.Any() ? "," : ""));
                 if (childEntities.Any())
                 {
-                    s.Add(tabs + $"                  children: [");
+                    s.Add(tabs + $"            children: [");
                     WriteEditRoute(childEntities, s, level + 1);
-                    s.Add(tabs + $"                  ]");
+                    s.Add(tabs + $"            ]");
                 }
 
-                s.Add(tabs + $"               }}" + (entity == entities.OrderBy(o => o.Name).Last() ? "" : ","));
+                s.Add(tabs + $"         }}" + (entity == entities.OrderBy(o => o.Name).Last() ? "" : ","));
             }
         }
 
@@ -1327,37 +1378,47 @@ namespace WEB.Models
 
         public string GenerateListHtml()
         {
+            var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent && r.Hierarchy).OrderBy(r => r.SortOrder);
+            var hasChildRoutes = relationshipsAsParent.Any();
+            if (!CurrentEntity.RelationshipsAsChild.Any(o => o.Hierarchy && !o.ParentEntity.Exclude))
+                hasChildRoutes = true;
+
             var s = new StringBuilder();
-            s.Add($"<div *ngIf=\"route.children.length === 0\">");
+            var t = "";
+            if (hasChildRoutes)
+            {
+                s.Add($"<div *ngIf=\"route.children.length === 0\">");
+                s.Add($"");
+                t = "    ";
+            }
             if (CurrentEntity.Fields.Any(f => f.SearchType != SearchType.None))
             {
+                s.Add(t + $"<form (submit)=\"runSearch(0)\" novalidate>");
                 s.Add($"");
-                s.Add($"    <form (submit)=\"runSearch(0)\" novalidate>");
-                s.Add($"");
-                s.Add($"        <div class=\"row\">");
+                s.Add(t + $"    <div class=\"row\">");
                 s.Add($"");
                 if (CurrentEntity.Fields.Any(f => f.SearchType == SearchType.Text))
                 {
-                    s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
-                    s.Add($"                <div class=\"form-group\">");
-                    s.Add($"                    <input type=\"search\" name=\"q\" id=\"q\" [(ngModel)]=\"searchOptions.q\" max=\"100\" class=\"form-control\" placeholder=\"Search {CurrentEntity.PluralFriendlyName.ToLower()}\" />");
-                    s.Add($"                </div>");
-                    s.Add($"            </div>");
+                    s.Add(t + $"        <div class=\"col-sm-6 col-md-4 col-lg-3\">");
+                    s.Add(t + $"            <div class=\"form-group\">");
+                    s.Add(t + $"                <input type=\"search\" name=\"q\" id=\"q\" [(ngModel)]=\"searchOptions.q\" max=\"100\" class=\"form-control\" placeholder=\"Search {CurrentEntity.PluralFriendlyName.ToLower()}\" />");
+                    s.Add(t + $"            </div>");
+                    s.Add(t + $"        </div>");
                     s.Add($"");
                 }
                 foreach (var field in CurrentEntity.Fields.Where(f => f.SearchType == SearchType.Exact).OrderBy(f => f.FieldOrder))
                 {
                     if (field.CustomType == CustomType.Enum)
                     {
-                        //s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
-                        //s.Add($"                <div class=\"form-group\">");
-                        //s.Add($"                    <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{field.Label}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">");
-                        //s.Add($"                        <li nya-bs-option=\"item in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"item.id\">");
-                        //s.Add($"                            <a>{{{{item.label}}}}<span class=\"fas fa-check check-mark\"></span></a>");
-                        //s.Add($"                        </li>");
-                        //s.Add($"                    </ol>");
-                        //s.Add($"                </div>");
-                        //s.Add($"            </div>");
+                        //s.Add(t + $"        <div class=\"col-sm-6 col-md-4 col-lg-3\">");
+                        //s.Add(t + $"            <div class=\"form-group\">");
+                        //s.Add(t + $"                <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{field.Label}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">");
+                        //s.Add(t + $"                    <li nya-bs-option=\"item in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"item.id\">");
+                        //s.Add(t + $"                        <a>{{{{item.label}}}}<span class=\"fas fa-check check-mark\"></span></a>");
+                        //s.Add(t + $"                    </li>");
+                        //s.Add(t + $"                </ol>");
+                        //s.Add(t + $"            </div>");
+                        //s.Add(t + $"        </div>");
                         //s.Add($"");
                     }
                     else if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
@@ -1367,24 +1428,24 @@ namespace WEB.Models
                         var relField = relationship.RelationshipFields.Single();
                         if (true || relationship.UseSelectorDirective)
                         {
-                            s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
-                            s.Add($"                <div class=\"form-group\">");
-                            s.Add($"                    {relationship.AppSelector}");
-                            s.Add($"                </div>");
-                            s.Add($"            </div>");
+                            s.Add(t + $"        <div class=\"col-sm-6 col-md-4 col-lg-3\">");
+                            s.Add(t + $"            <div class=\"form-group\">");
+                            s.Add(t + $"                {relationship.AppSelector}");
+                            s.Add(t + $"            </div>");
+                            s.Add(t + $"        </div>");
                             s.Add($"");
                         }
                         else
                         {
-                            //s.Add($"            <div class=\"col-sm-6 col-md-4 col-lg-3\">");
-                            //s.Add($"                <div class=\"form-group\">");
-                            //s.Add($"                    <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{parentEntity.PluralFriendlyName}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">");
-                            //s.Add($"                        <li nya-bs-option=\"{parentEntity.Name.ToCamelCase()} in vm.{parentEntity.PluralName.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"{parentEntity.Name.ToCamelCase()}.{relField.ParentField.Name.ToCamelCase()}\">");
-                            //s.Add($"                            <a>{{{{{parentEntity.Name.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}<span class=\"fas fa-check check-mark\"></span></a>");
-                            //s.Add($"                        </li>");
-                            //s.Add($"                    </ol>");
-                            //s.Add($"                </div>");
-                            //s.Add($"            </div>");
+                            //s.Add(t + $"        <div class=\"col-sm-6 col-md-4 col-lg-3\">");
+                            //s.Add(t + $"            <div class=\"form-group\">");
+                            //s.Add(t + $"                <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{parentEntity.PluralFriendlyName}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">");
+                            //s.Add(t + $"                    <li nya-bs-option=\"{parentEntity.Name.ToCamelCase()} in vm.{parentEntity.PluralName.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"{parentEntity.Name.ToCamelCase()}.{relField.ParentField.Name.ToCamelCase()}\">");
+                            //s.Add(t + $"                        <a>{{{{{parentEntity.Name.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}<span class=\"fas fa-check check-mark\"></span></a>");
+                            //s.Add(t + $"                    </li>");
+                            //s.Add(t + $"                </ol>");
+                            //s.Add(t + $"            </div>");
+                            //s.Add(t + $"        </div>");
                             //s.Add($"");
                         }
                     }
@@ -1394,71 +1455,74 @@ namespace WEB.Models
                     if (field.CustomType == CustomType.Date)
                     {
                         // should use uib-tooltip, but angular-bootstrap-ui doesn't work (little arrow is missing)
-                        s.Add($"            <div class=\"col-sm-6 col-md-3 col-lg-2\">");
-                        s.Add($"                <div class=\"form-group\" data-toggle=\"tooltip\" data-placement=\"top\" title=\"From {field.Label}\">");
-                        s.Add($"                    <input type=\"{(field.FieldType == FieldType.Date ? "date" : "datetime-local")}\" id=\"from{field.Name}\" name=\"from{field.Name}\" [(ngModel)]=\"searchOptions.from{field.Name}\" {(field.FieldType == FieldType.Date ? "ng-model-options=\"{timezone: 'utc'} \" " : "")}class=\"form-control\" />");
-                        s.Add($"                </div>");
-                        s.Add($"            </div>");
+                        s.Add(t + $"        <div class=\"col-sm-6 col-md-3 col-lg-2\">");
+                        s.Add(t + $"            <div class=\"form-group\" data-toggle=\"tooltip\" data-placement=\"top\" title=\"From {field.Label}\">");
+                        s.Add(t + $"                <input type=\"{(field.FieldType == FieldType.Date ? "date" : "datetime-local")}\" id=\"from{field.Name}\" name=\"from{field.Name}\" [(ngModel)]=\"searchOptions.from{field.Name}\" {(field.FieldType == FieldType.Date ? "ng-model-options=\"{timezone: 'utc'} \" " : "")}class=\"form-control\" />");
+                        s.Add(t + $"            </div>");
+                        s.Add(t + $"        </div>");
                         s.Add($"");
-                        s.Add($"            <div class=\"col-sm-6 col-md-3 col-lg-2\">");
-                        s.Add($"                <div class=\"form-group\" data-toggle=\"tooltip\" data-placement=\"top\" title=\"To {field.Label}\">");
-                        s.Add($"                    <input type=\"{(field.FieldType == FieldType.Date ? "date" : "datetime-local")}\" id=\"to{field.Name}\" name=\"to{field.Name}\" [(ngModel)]=\"searchOptions.to{field.Name}\" {(field.FieldType == FieldType.Date ? "ng-model-options=\"{timezone: 'utc'} \" " : "")}class=\"form-control\" />");
-                        s.Add($"                </div>");
-                        s.Add($"            </div>");
+                        s.Add(t + $"        <div class=\"col-sm-6 col-md-3 col-lg-2\">");
+                        s.Add(t + $"            <div class=\"form-group\" data-toggle=\"tooltip\" data-placement=\"top\" title=\"To {field.Label}\">");
+                        s.Add(t + $"                <input type=\"{(field.FieldType == FieldType.Date ? "date" : "datetime-local")}\" id=\"to{field.Name}\" name=\"to{field.Name}\" [(ngModel)]=\"searchOptions.to{field.Name}\" {(field.FieldType == FieldType.Date ? "ng-model-options=\"{timezone: 'utc'} \" " : "")}class=\"form-control\" />");
+                        s.Add(t + $"            </div>");
+                        s.Add(t + $"        </div>");
                         s.Add($"");
                     }
                 }
-                s.Add($"        </div>");
+                s.Add(t + $"    </div>");
                 s.Add($"");
-                s.Add($"        <fieldset>");
+                s.Add(t + $"    <fieldset>");
                 s.Add($"");
-                s.Add($"            <button type=\"submit\" class=\"btn btn-success\">Search<i class=\"fas fa-search{(CurrentEntity.Project.Bootstrap3 ? string.Empty : " ml-1")}\"></i></button>");
+                s.Add(t + $"        <button type=\"submit\" class=\"btn btn-success\">Search<i class=\"fas fa-search{(CurrentEntity.Project.Bootstrap3 ? string.Empty : " ml-1")}\"></i></button>");
                 if (CurrentEntity.RelationshipsAsChild.Count(r => r.Hierarchy) == 0)
                 {
                     // todo: needs field list + field.newParameter
-                    s.Add($"            <a [routerLink]=\"['./', 'add']\" class=\"btn btn-primary ml-1\">Add<i class=\"fas fa-plus-circle ml-1\"></i></a>");
+                    s.Add(t + $"        <a [routerLink]=\"['./', 'add']\" class=\"btn btn-primary ml-1\">Add<i class=\"fas fa-plus-circle ml-1\"></i></a>");
                 }
                 s.Add($"");
-                s.Add($"        </fieldset>");
+                s.Add(t + $"    </fieldset>");
                 s.Add($"");
-                s.Add($"    </form>");
+                s.Add(t + $"</form>");
             }
             s.Add($"");
-            s.Add($"    <hr />");
+            s.Add(t + $"<hr />");
             s.Add($"");
             // removed (not needed?): id=\"resultsList\" 
             var useSortColumn = CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy);
 
-            s.Add($"    <table class=\"table table-bordered table-striped table-hover table-sm row-navigation\">");
-            s.Add($"        <thead>");
-            s.Add($"            <tr>");
+            s.Add(t + $"<table class=\"table table-bordered table-striped table-hover table-sm row-navigation\">");
+            s.Add(t + $"    <thead>");
+            s.Add(t + $"        <tr>");
             if (useSortColumn)
-                s.Add($"                <th class=\"text-center fa-col-width\"><i class=\"fas fa-sort\"></i></th>");
+                s.Add(t + $"            <th class=\"text-center fa-col-width\"><i class=\"fas fa-sort\"></i></th>");
             foreach (var field in CurrentEntity.Fields.Where(f => f.ShowInSearchResults).OrderBy(f => f.FieldOrder))
-                s.Add($"                <th>{field.Label}</th>");
-            s.Add($"            </tr>");
-            s.Add($"        </thead>");
-            s.Add($"        <tbody{(useSortColumn ? " cdkDropList (cdkDropListDropped)=\"drop($event)\"" : "")}>");
-            s.Add($"            <tr *ngFor=\"let {CurrentEntity.CamelCaseName} of {CurrentEntity.PluralName.ToCamelCase()}\" (click)=\"goTo{CurrentEntity.Name}({CurrentEntity.CamelCaseName})\"{(useSortColumn ? " cdkDrag" : "")}>");
+                s.Add(t + $"            <th>{field.Label}</th>");
+            s.Add(t + $"        </tr>");
+            s.Add(t + $"    </thead>");
+            s.Add(t + $"    <tbody{(useSortColumn ? " cdkDropList (cdkDropListDropped)=\"drop($event)\"" : "")}>");
+            s.Add(t + $"        <tr *ngFor=\"let {CurrentEntity.CamelCaseName} of {CurrentEntity.PluralName.ToCamelCase()}\" (click)=\"goTo{CurrentEntity.Name}({CurrentEntity.CamelCaseName})\"{(useSortColumn ? " cdkDrag" : "")}>");
             if (useSortColumn)
-                s.Add($"                <td class=\"text-center fa-col-width\" cdkDragHandle (click)=\"$event.stopPropagation();\"><span *cdkDragPreview></span><i class=\"fas fa-sort\"></i></td>");
+                s.Add(t + $"            <td class=\"text-center fa-col-width\" cdkDragHandle (click)=\"$event.stopPropagation();\"><span *cdkDragPreview></span><i class=\"fas fa-sort\"></i></td>");
             foreach (var field in CurrentEntity.Fields.Where(f => f.ShowInSearchResults).OrderBy(f => f.FieldOrder))
             {
-                s.Add($"                <td>{field.ListFieldHtml}</td>");
+                s.Add(t + $"            <td>{field.ListFieldHtml}</td>");
             }
-            s.Add($"            </tr>");
-            s.Add($"        </tbody>");
-            s.Add($"    </table>");
+            s.Add(t + $"        </tr>");
+            s.Add(t + $"    </tbody>");
+            s.Add(t + $"</table>");
             s.Add($"");
             // entities with sort fields need to show all (pageSize = 0) for sortability, so no paging needed
             if (!(CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy)))
             {
-                s.Add($"    <pager [headers]=\"headers\" (pageChanged)=\"runSearch($event)\"></pager>");
+                s.Add(t + $"<pager [headers]=\"headers\" (pageChanged)=\"runSearch($event)\"></pager>");
                 s.Add($"");
             }
-            s.Add($"</div>");
-            s.Add($"");
-            s.Add($"<router-outlet></router-outlet>");
+            if (hasChildRoutes)
+            {
+                s.Add($"</div>");
+                s.Add($"");
+                s.Add($"<router-outlet></router-outlet>");
+            }
 
             return RunCodeReplacements(s.ToString(), CodeType.ListHtml);
         }
@@ -1473,12 +1537,16 @@ namespace WEB.Models
                     break;
                 }
             var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum && o.ShowInSearchResults).Select(o => o.Lookup).Distinct().ToList();
+            var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent && r.Hierarchy).OrderBy(r => r.SortOrder);
+            var hasChildRoutes = relationshipsAsParent.Any();
+            if (!CurrentEntity.RelationshipsAsChild.Any(o => o.Hierarchy && !o.ParentEntity.Exclude))
+                hasChildRoutes = true;
 
             var s = new StringBuilder();
 
-            s.Add($"import {{ Component, OnInit, OnDestroy }} from '@angular/core';");
-            s.Add($"import {{ ActivatedRoute, Router, NavigationEnd }} from '@angular/router';");
-            s.Add($"import {{ Observable, Subscription }} from 'rxjs';");
+            s.Add($"import {{ Component, OnInit{(hasChildRoutes ? ", OnDestroy" : "")} }} from '@angular/core';");
+            s.Add($"import {{ Router{(hasChildRoutes ? ", ActivatedRoute, NavigationEnd" : "")} }} from '@angular/router';");
+            s.Add($"import {{ Observable{(hasChildRoutes ? ", Subscription" : "")} }} from 'rxjs';");
             s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             if (CurrentEntity.HasASortField)
                 s.Add($"import {{ CdkDragDrop, moveItemInArray }} from '@angular/cdk/drag-drop';");
@@ -1496,16 +1564,18 @@ namespace WEB.Models
             s.Add($"}})");
             s.Add($"export class {CurrentEntity.Name}ListComponent implements OnInit {{");
             s.Add($"");
-            s.Add($"   private {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.Name}[] = [];");
-            s.Add($"   private searchOptions = new {CurrentEntity.Name}SearchOptions();");
-            s.Add($"   private headers = new PagingOptions();");
-            s.Add($"   private routerSubscription: Subscription;");
+            s.Add($"   public {CurrentEntity.PluralName.ToCamelCase()}: {CurrentEntity.Name}[] = [];");
+            s.Add($"   public searchOptions = new {CurrentEntity.Name}SearchOptions();");
+            s.Add($"   public headers = new PagingOptions();");
+            if (hasChildRoutes)
+                s.Add($"   private routerSubscription: Subscription;");
             foreach (var enumLookup in enumLookups)
-                s.Add($"   private {enumLookup.PluralName.ToCamelCase()}: Enum[] = Enums.{enumLookup.PluralName};");
+                s.Add($"   public {enumLookup.PluralName.ToCamelCase()}: Enum[] = Enums.{enumLookup.PluralName};");
 
             s.Add($"");
             s.Add($"   constructor(");
-            s.Add($"      private route: ActivatedRoute,");
+            if (hasChildRoutes)
+                s.Add($"      public route: ActivatedRoute,");
             s.Add($"      private router: Router,");
             s.Add($"      private errorService: ErrorService,");
             if (CurrentEntity.HasASortField)
@@ -1521,18 +1591,24 @@ namespace WEB.Models
                 s.Add($"      this.searchOptions.includeEntities = true;");
             if (CurrentEntity.HasASortField)
                 s.Add($"      this.searchOptions.pageSize = 0;");
-            s.Add($"      this.routerSubscription = this.router.events.subscribe(event => {{");
-            s.Add($"         if (event instanceof NavigationEnd && !this.route.firstChild) {{");
-            s.Add($"            this.runSearch();");
-            s.Add($"         }}");
-            s.Add($"      }});");
+            if (hasChildRoutes)
+            {
+                s.Add($"      this.routerSubscription = this.router.events.subscribe(event => {{");
+                s.Add($"         if (event instanceof NavigationEnd && !this.route.firstChild) {{");
+                s.Add($"            this.runSearch();");
+                s.Add($"         }}");
+                s.Add($"      }});");
+            }
             s.Add($"      this.runSearch();");
             s.Add($"   }}");
             s.Add($"");
-            s.Add($"   ngOnDestroy(): void {{");
-            s.Add($"      this.routerSubscription.unsubscribe();");
-            s.Add($"   }}");
-            s.Add($"");
+            if (hasChildRoutes)
+            {
+                s.Add($"   ngOnDestroy(): void {{");
+                s.Add($"      this.routerSubscription.unsubscribe();");
+                s.Add($"   }}");
+                s.Add($"");
+            }
             s.Add($"   runSearch(pageIndex: number = 0): Observable<{CurrentEntity.Name}SearchResponse> {{");
             s.Add($"");
             s.Add($"      this.searchOptions.pageIndex = pageIndex;");
@@ -1607,54 +1683,57 @@ namespace WEB.Models
 
         public string GenerateEditHtml()
         {
-            var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent).OrderBy(r => r.SortOrder);
+            var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent && r.Hierarchy).OrderBy(r => r.SortOrder);
             var hasChildRoutes = relationshipsAsParent.Any();
 
             var s = new StringBuilder();
 
-            // todo: this needs to check for hierarchies...
-            // todo: what this needed:  #form=\"ngForm\"
-            s.Add($"<div *ngIf=\"route.children.length === 0\">");
-            s.Add($"");
-            s.Add($"    <form name=\"form\" (submit)=\"save(form)\" novalidate #form=\"ngForm\" [ngClass]=\"{{ 'was-validated': form.submitted }}\">");
-            s.Add($"");
-            s.Add($"        <fieldset class=\"group\">");
-            s.Add($"");
-            s.Add($"            <legend>{CurrentEntity.FriendlyName}</legend>");
-            s.Add($"");
-            s.Add($"            <div class=\"form-row\">");
-            s.Add($"");
             var t = string.Empty;
+            if (hasChildRoutes)
+            {
+                s.Add($"<div *ngIf=\"route.children.length === 0\">");
+                s.Add($"");
+                t = "   ";
+            }
+            s.Add(t + $"<form name=\"form\" (submit)=\"save(form)\" novalidate #form=\"ngForm\" [ngClass]=\"{{ 'was-validated': form.submitted }}\">");
+            s.Add(t + $"");
+            s.Add(t + $"    <fieldset class=\"group\">");
+            s.Add(t + $"");
+            s.Add(t + $"        <legend>{CurrentEntity.FriendlyName}</legend>");
+            s.Add(t + $"");
+            s.Add(t + $"        <div class=\"form-row\">");
+            s.Add(t + $"");
+
             // not really a bootstrap3 issue - old projects will be affected by this now being commented
             //if (CurrentEntity.Project.Bootstrap3)
             //{
-            //    s.Add($"                <div class=\"col-sm-12\">");
-            //    s.Add($"");
+            //    s.Add(t + $"            <div class=\"col-sm-12\">");
+            //    s.Add(t + $"");
             //    t = "    ";
             //}
             #region form fields
             if (CurrentEntity.EntityType == EntityType.User)
             {
-                s.Add(t + $"                <div class=\"col-sm-6 col-md-4\">");
-                s.Add(t + $"                    <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': email.invalid }}\">");
+                s.Add(t + $"            <div class=\"col-sm-6 col-md-4\">");
+                s.Add(t + $"                <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': email.invalid }}\">");
                 s.Add(t + $"");
-                s.Add(t + $"                        <label for=\"email\">");
-                s.Add(t + $"                            Email:");
-                s.Add(t + $"                        </label>");
+                s.Add(t + $"                    <label for=\"email\">");
+                s.Add(t + $"                        Email:");
+                s.Add(t + $"                    </label>");
                 s.Add(t + $"");
-                s.Add(t + $"                        <input type=\"email\" id=\"email\" name=\"email\" [(ngModel)]=\"user.email\" #email=\"ngModel\" maxlength=\"256\" class=\"form-control\" required />");
+                s.Add(t + $"                    <input type=\"email\" id=\"email\" name=\"email\" [(ngModel)]=\"user.email\" #email=\"ngModel\" maxlength=\"256\" class=\"form-control\" required />");
                 s.Add(t + $"");
-                s.Add(t + $"                        <div *ngIf=\"email.errors?.required\" class=\"invalid-feedback\">");
-                s.Add(t + $"                            Email is required");
-                s.Add(t + $"                        </div>");
-                s.Add(t + $"");
-                s.Add(t + $"                        <div *ngIf=\"email.errors?.maxlength\" class=\"invalid-feedback\">");
-                s.Add(t + $"                            Email must be at most 50 characters long");
-                s.Add(t + $"                        </div>");
-                s.Add(t + $"");
+                s.Add(t + $"                    <div *ngIf=\"email.errors?.required\" class=\"invalid-feedback\">");
+                s.Add(t + $"                        Email is required");
                 s.Add(t + $"                    </div>");
+                s.Add(t + $"");
+                s.Add(t + $"                    <div *ngIf=\"email.errors?.maxlength\" class=\"invalid-feedback\">");
+                s.Add(t + $"                        Email must be at most 50 characters long");
+                s.Add(t + $"                    </div>");
+                s.Add(t + $"");
                 s.Add(t + $"                </div>");
-                s.Add($"");
+                s.Add(t + $"            </div>");
+                s.Add(t + $"");
             }
 
             foreach (var field in CurrentEntity.Fields.OrderBy(o => o.FieldOrder))
@@ -1722,19 +1801,19 @@ namespace WEB.Models
                         tagType = relationship.ParentEntity.Name.Hyphenated() + "-select";
                         if (attributes.ContainsKey("type")) attributes.Remove("type");
                         if (attributes.ContainsKey("class")) attributes.Remove("class");
-                        attributes.Add($"[{relationship.ParentEntity.Name.ToCamelCase()}]", $"{relationship.ChildEntity.Name.ToCamelCase()}.{relationship.ParentEntity.Name.ToCamelCase()}");
+                        attributes.Add(t + $"[{relationship.ParentEntity.Name.ToCamelCase()}]", $"{relationship.ChildEntity.Name.ToCamelCase()}.{relationship.ParentName.ToCamelCase()}");
                         if (field.EditPageType == EditPageType.ReadOnly)
                             attributes.Add("disabled", null);
                     }
                 }
 
 
-                s.Add(t + $"                <div class=\"{controlSize}\">");
-                s.Add(t + $"                    <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': {fieldName}.invalid }}\">");
+                s.Add(t + $"            <div class=\"{controlSize}\">");
+                s.Add(t + $"                <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': {fieldName}.invalid }}\">");
                 s.Add(t + $"");
-                s.Add(t + $"                        <label for=\"{fieldName.ToCamelCase()}\">");
-                s.Add(t + $"                            {field.Label}:");
-                s.Add(t + $"                        </label>");
+                s.Add(t + $"                    <label for=\"{fieldName.ToCamelCase()}\">");
+                s.Add(t + $"                        {field.Label}:");
+                s.Add(t + $"                    </label>");
                 s.Add(t + $"");
 
                 var controlHtml = $"<{tagType}";
@@ -1757,15 +1836,15 @@ namespace WEB.Models
 
                 if (attributes.ContainsKey("type") && attributes["type"] == "checkbox")
                 {
-                    s.Add(t + $"                        <div class=\"form-check\">");
-                    s.Add(t + $"                           {controlHtml}");
-                    s.Add(t + $"                           <label class=\"form-check-label\" for=\"{field.Name}\">");
-                    s.Add(t + $"                              {field.Label}");
-                    s.Add(t + $"                           </label>");
-                    s.Add(t + $"                        </div>");
+                    s.Add(t + $"                    <div class=\"form-check\">");
+                    s.Add(t + $"                       {controlHtml}");
+                    s.Add(t + $"                       <label class=\"form-check-label\" for=\"{field.Name}\">");
+                    s.Add(t + $"                          {field.Label}");
+                    s.Add(t + $"                       </label>");
+                    s.Add(t + $"                    </div>");
                 }
                 else
-                    s.Add(t + $"                        {controlHtml}");
+                    s.Add(t + $"                    {controlHtml}");
 
 
                 s.Add(t + $"");
@@ -1777,44 +1856,44 @@ namespace WEB.Models
 
                 foreach (var validationError in validationErrors)
                 {
-                    s.Add(t + $"                        <div *ngIf=\"{fieldName}.errors?.{validationError.Key}\" class=\"invalid-feedback\">");
-                    s.Add(t + $"                           {validationError.Value}");
-                    s.Add(t + $"                        </div>");
+                    s.Add(t + $"                    <div *ngIf=\"{fieldName}.errors?.{validationError.Key}\" class=\"invalid-feedback\">");
+                    s.Add(t + $"                       {validationError.Value}");
+                    s.Add(t + $"                    </div>");
                     s.Add(t + $"");
                 }
 
-                s.Add(t + $"                    </div>");
                 s.Add(t + $"                </div>");
-                s.Add($"");
+                s.Add(t + $"            </div>");
+                s.Add(t + $"");
 
 
                 //if (field.EditPageType == EditPageType.ReadOnly)
                 //{
-                //    //s.Add(t + $"                <div class=\"col-sm-6 col-md-4\">");
-                //    //s.Add(t + $"                    <div class=\"form-group\">");
-                //    //s.Add(t + $"                        <label for=\"{field.Name.ToCamelCase()}\">");
-                //    //s.Add(t + $"                            {field.Label}:");
-                //    //s.Add(t + $"                        </label>");
+                //    //s.Add(t + $"            <div class=\"col-sm-6 col-md-4\">");
+                //    //s.Add(t + $"                <div class=\"form-group\">");
+                //    //s.Add(t + $"                    <label for=\"{field.Name.ToCamelCase()}\">");
+                //    //s.Add(t + $"                        {field.Label}:");
+                //    //s.Add(t + $"                    </label>");
                 //    //if (field.CustomType == CustomType.Date)
                 //    //{
-                //    //    s.Add(t + $"                        <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"form-control\" ng-disabled=\"true\" value=\"{{{{{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()} ? vm.moment({CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}).format('DD MMMM YYYY{(field.FieldType == FieldType.Date ? string.Empty : " HH:mm" + (field.FieldType == FieldType.SmallDateTime ? "" : ":ss"))}') : ''}}}}\" />");
+                //    //    s.Add(t + $"                    <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"form-control\" ng-disabled=\"true\" value=\"{{{{{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()} ? vm.moment({CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}).format('DD MMMM YYYY{(field.FieldType == FieldType.Date ? string.Empty : " HH:mm" + (field.FieldType == FieldType.SmallDateTime ? "" : ":ss"))}') : ''}}}}\" />");
                 //    //}
                 //    //else if (field.CustomType == CustomType.Boolean)
                 //    //{
-                //    //    s.Add(t + $"                        <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"form-control\" ng-disabled=\"true\" value=\"{{{{{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()} ? 'Yes' : 'No'}}}}\" />");
+                //    //    s.Add(t + $"                    <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"form-control\" ng-disabled=\"true\" value=\"{{{{{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()} ? 'Yes' : 'No'}}}}\" />");
                 //    //}
                 //    //else if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
                 //    //{
                 //    //    var relationship = CurrentEntity.GetParentSearchRelationship(field);
-                //    //    s.Add(t + $"                        <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"form-control\" ng-disabled=\"true\" value=\"{{{{{CurrentEntity.ViewModelObject}.{relationship.ParentName.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}\" />");
+                //    //    s.Add(t + $"                    <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"form-control\" ng-disabled=\"true\" value=\"{{{{{CurrentEntity.ViewModelObject}.{relationship.ParentName.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}\" />");
                 //    //}
                 //    //else
                 //    //{
-                //    //    s.Add(t + $"                        <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"form-control\" ng-disabled=\"true\" value=\"{{{{{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}}}}}\" />");
+                //    //    s.Add(t + $"                    <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"form-control\" ng-disabled=\"true\" value=\"{{{{{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}}}}}\" />");
                 //    //}
-                //    //s.Add(t + $"                    </div>");
                 //    //s.Add(t + $"                </div>");
-                //    //s.Add($"");
+                //    //s.Add(t + $"            </div>");
+                //    //s.Add(t + $"");
                 //}
                 //else if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
                 //{
@@ -1824,125 +1903,125 @@ namespace WEB.Models
 
                 //    if (relationship.UseSelectorDirective)
                 //    {
-                //        s.Add(t + $"                <div class=\"col-sm-6 col-md-4\">");
-                //        s.Add(t + $"                    <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid}}\">");
-                //        s.Add(t + $"                        <label>");
-                //        s.Add(t + $"                            {field.Label}:");
-                //        s.Add(t + $"                        </label>");
-                //        s.Add(t + $"                        <{CurrentEntity.Project.AngularDirectivePrefix}-select-{relationship.ParentEntity.Name.Hyphenated().Replace(" ", "-")} id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} placeholder=\"Select {field.Label.ToLower()}\" singular=\"{relationship.ParentFriendlyName}\" plural=\"{relationship.ParentEntity.PluralFriendlyName}\" {relationship.ParentEntity.Name.Hyphenated()}=\"{CurrentEntity.ViewModelObject}.{relationship.ParentName.ToCamelCase()}\"></{CurrentEntity.Project.AngularDirectivePrefix}-select-{relationship.ParentEntity.Name.Hyphenated().Replace(" ", "-")}>");
-                //        s.Add(t + $"                    </div>");
+                //        s.Add(t + $"            <div class=\"col-sm-6 col-md-4\">");
+                //        s.Add(t + $"                <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid}}\">");
+                //        s.Add(t + $"                    <label>");
+                //        s.Add(t + $"                        {field.Label}:");
+                //        s.Add(t + $"                    </label>");
+                //        s.Add(t + $"                    <{CurrentEntity.Project.AngularDirectivePrefix}-select-{relationship.ParentEntity.Name.Hyphenated().Replace(" ", "-")} id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} placeholder=\"Select {field.Label.ToLower()}\" singular=\"{relationship.ParentFriendlyName}\" plural=\"{relationship.ParentEntity.PluralFriendlyName}\" {relationship.ParentEntity.Name.Hyphenated()}=\"{CurrentEntity.ViewModelObject}.{relationship.ParentName.ToCamelCase()}\"></{CurrentEntity.Project.AngularDirectivePrefix}-select-{relationship.ParentEntity.Name.Hyphenated().Replace(" ", "-")}>");
                 //        s.Add(t + $"                </div>");
+                //        s.Add(t + $"            </div>");
                 //        s.Add(t + $"");
                 //    }
                 //    else
                 //    {
-                //        s.Add(t + $"                <div class=\"col-sm-6 col-md-4\">");
-                //        s.Add(t + $"                    <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid}}\">");
-                //        s.Add(t + $"                        <label>");
-                //        s.Add(t + $"                            {field.Label}:");
-                //        s.Add(t + $"                        </label>");
-                //        s.Add(t + $"                        <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} data-live-search=\"true\" data-size=\"10\"{(field.KeyField ? " disabled=\"!vm.isNew\"" : string.Empty)}>");
-                //        s.Add(t + $"                            <li nya-bs-option=\"{relationship.ParentEntity.Name.ToCamelCase()} in vm.{relationship.ParentEntity.PluralName.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"{relationship.ParentEntity.Name.ToCamelCase()}.{relationshipField.ParentField.Name.ToCamelCase()}\">");
-                //        s.Add(t + $"                                <a>{{{{{relationship.ParentEntity.Name.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}<span class=\"fas fa-check check-mark\"></span></a>");
-                //        s.Add(t + $"                            </li>");
-                //        s.Add(t + $"                        </ol>");
-                //        s.Add(t + $"                    </div>");
+                //        s.Add(t + $"            <div class=\"col-sm-6 col-md-4\">");
+                //        s.Add(t + $"                <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid}}\">");
+                //        s.Add(t + $"                    <label>");
+                //        s.Add(t + $"                        {field.Label}:");
+                //        s.Add(t + $"                    </label>");
+                //        s.Add(t + $"                    <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} data-live-search=\"true\" data-size=\"10\"{(field.KeyField ? " disabled=\"!vm.isNew\"" : string.Empty)}>");
+                //        s.Add(t + $"                        <li nya-bs-option=\"{relationship.ParentEntity.Name.ToCamelCase()} in vm.{relationship.ParentEntity.PluralName.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"{relationship.ParentEntity.Name.ToCamelCase()}.{relationshipField.ParentField.Name.ToCamelCase()}\">");
+                //        s.Add(t + $"                            <a>{{{{{relationship.ParentEntity.Name.ToCamelCase()}.{relationship.ParentField.Name.ToCamelCase()}}}}}<span class=\"fas fa-check check-mark\"></span></a>");
+                //        s.Add(t + $"                        </li>");
+                //        s.Add(t + $"                    </ol>");
                 //        s.Add(t + $"                </div>");
-                //        s.Add($"");
+                //        s.Add(t + $"            </div>");
+                //        s.Add(t + $"");
                 //    }
                 //}
                 //else if (field.CustomType == CustomType.Enum)
                 //{
-                //    s.Add(t + $"                <div class=\"col-sm-6 col-md-4\">");
-                //    s.Add(t + $"                    <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid }}\">");
-                //    s.Add(t + $"                        <label for=\"{field.Name.ToCamelCase()}\">");
-                //    s.Add(t + $"                            {field.Label}:");
-                //    s.Add(t + $"                        </label>");
-                //    s.Add(t + $"                        <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} data-live-search=\"true\" data-size=\"10\">");
+                //    s.Add(t + $"            <div class=\"col-sm-6 col-md-4\">");
+                //    s.Add(t + $"                <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid }}\">");
+                //    s.Add(t + $"                    <label for=\"{field.Name.ToCamelCase()}\">");
+                //    s.Add(t + $"                        {field.Label}:");
+                //    s.Add(t + $"                    </label>");
+                //    s.Add(t + $"                    <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} data-live-search=\"true\" data-size=\"10\">");
                 //    // todo: replace with lookups
-                //    s.Add(t + $"                            <li nya-bs-option=\"{field.Name.ToCamelCase()} in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"{field.Name.ToCamelCase()}.id\">");
-                //    s.Add(t + $"                                <a>{{{{{field.Name.ToCamelCase()}.label}}}}<span class=\"fas fa-check check-mark\"></span></a>");
-                //    s.Add(t + $"                            </li>");
-                //    s.Add(t + $"                        </ol>");
-                //    s.Add(t + $"                    </div>");
+                //    s.Add(t + $"                        <li nya-bs-option=\"{field.Name.ToCamelCase()} in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"{field.Name.ToCamelCase()}.id\">");
+                //    s.Add(t + $"                            <a>{{{{{field.Name.ToCamelCase()}.label}}}}<span class=\"fas fa-check check-mark\"></span></a>");
+                //    s.Add(t + $"                        </li>");
+                //    s.Add(t + $"                    </ol>");
                 //    s.Add(t + $"                </div>");
-                //    s.Add($"");
+                //    s.Add(t + $"            </div>");
+                //    s.Add(t + $"");
                 //}
                 //else if (field.CustomType == CustomType.String)
                 //{
                 //var isTextArea = field.FieldType == FieldType.Text || field.FieldType == FieldType.nText || field.Length == 0;
-                //s.Add(t + $"                <div class=\"{(isTextArea ? "col-sm-12" : "col-sm-6 col-md-4")}\">");
-                //s.Add(t + $"                    <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': {field.Name.ToCamelCase()}.invalid }}\">");
+                //s.Add(t + $"            <div class=\"{(isTextArea ? "col-sm-12" : "col-sm-6 col-md-4")}\">");
+                //s.Add(t + $"                <div class=\"form-group\" [ngClass]=\"{{ 'is-invalid': {field.Name.ToCamelCase()}.invalid }}\">");
                 //s.Add(t + $"");
-                //s.Add(t + $"                        <label for=\"{field.Name.ToCamelCase()}\">");
-                //s.Add(t + $"                            {field.Label}:");
-                //s.Add(t + $"                        </label>");
+                //s.Add(t + $"                    <label for=\"{field.Name.ToCamelCase()}\">");
+                //s.Add(t + $"                        {field.Label}:");
+                //s.Add(t + $"                    </label>");
                 //s.Add(t + $"");
                 //if (isTextArea)
                 //{
-                //    s.Add(t + $"                        <textarea id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" class=\"form-control\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} rows=\"6\"" + (field.Length == 0 ? string.Empty : $" maxlength=\"{field.Length}\"") + (field.MinLength > 0 ? " ng-minlength=\"" + field.MinLength + "\"" : "") + $"></textarea>");
+                //    s.Add(t + $"                    <textarea id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" class=\"form-control\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} rows=\"6\"" + (field.Length == 0 ? string.Empty : $" maxlength=\"{field.Length}\"") + (field.MinLength > 0 ? " ng-minlength=\"" + field.MinLength + "\"" : "") + $"></textarea>");
                 //}
                 //else
                 //{
-                //    s.Add(t + $"                        <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" #{field.Name.ToCamelCase()}=\"ngModel\" class=\"form-control\"{(field.IsNullable ? string.Empty : " required")} [ngClass]=\"{{ 'is-invalid': form.submitted && name.invalid }}\" " + (field.Length == 0 ? string.Empty : $" maxlength=\"{field.Length}\"") + (field.MinLength > 0 ? " ng-minlength=\"" + field.MinLength + "\"" : "") + (field.RegexValidation != null ? " ng-pattern=\"/" + field.RegexValidation + "/\"" : "") + " />");
+                //    s.Add(t + $"                    <input type=\"text\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" #{field.Name.ToCamelCase()}=\"ngModel\" class=\"form-control\"{(field.IsNullable ? string.Empty : " required")} [ngClass]=\"{{ 'is-invalid': form.submitted && name.invalid }}\" " + (field.Length == 0 ? string.Empty : $" maxlength=\"{field.Length}\"") + (field.MinLength > 0 ? " ng-minlength=\"" + field.MinLength + "\"" : "") + (field.RegexValidation != null ? " ng-pattern=\"/" + field.RegexValidation + "/\"" : "") + " />");
                 //}
 
                 //if(!field.IsNullable)
 
                 //s.Add(t + $"");
-                //s.Add(t + $"                    </div>");
                 //s.Add(t + $"                </div>");
-                //s.Add($"");
+                //s.Add(t + $"            </div>");
+                //s.Add(t + $"");
                 //}
                 //{
-                //    s.Add(t + $"                <div class=\"col-sm-4 col-md-3 col-lg-2\">");
-                //    s.Add(t + $"                    <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid }}\">");
-                //    s.Add(t + $"                        <label for=\"{field.Name.ToCamelCase()}\">");
-                //    s.Add(t + $"                            {field.Label}:");
-                //    s.Add(t + $"                        </label>");
+                //    s.Add(t + $"            <div class=\"col-sm-4 col-md-3 col-lg-2\">");
+                //    s.Add(t + $"                <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid }}\">");
+                //    s.Add(t + $"                    <label for=\"{field.Name.ToCamelCase()}\">");
+                //    s.Add(t + $"                        {field.Label}:");
+                //    s.Add(t + $"                    </label>");
                 //else if (field.CustomType == CustomType.Number)
-                //    s.Add(t + $"                        <input type=\"number\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" class=\"form-control\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} />");
-                //    s.Add(t + $"                    </div>");
+                //    s.Add(t + $"                    <input type=\"number\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" class=\"form-control\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} />");
                 //    s.Add(t + $"                </div>");
-                //    s.Add($"");
+                //    s.Add(t + $"            </div>");
+                //    s.Add(t + $"");
                 //}
                 //else if (field.CustomType == CustomType.Boolean)
                 //{
-                //    s.Add(t + $"                <div class=\"col-sm-4 col-md-3 col-lg-2\">");
-                //    s.Add(t + $"                    <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid }}\">");
-                //    s.Add(t + $"                        <label for=\"{field.Name.ToCamelCase()}\">");
-                //    s.Add(t + $"                            {field.Label}:");
-                //    s.Add(t + $"                        </label>");
-                //    //s.Add(t + $"                        <div class=\"checkbox\">");
-                //    //s.Add(t + $"                            <label>");
-                //    //s.Add(t + $"                                <input type=\"checkbox\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" />");
-                //    //s.Add(t + $"                                {field.Label}");
-                //    //s.Add(t + $"                            </label>");
-                //    //s.Add(t + $"                        </div>");
-                //    s.Add(t + $"                        <div class=\"custom-control custom-checkbox\">");
-                //    s.Add(t + $"                            <input type=\"checkbox\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" class=\"custom-control-input\" />");
-                //    s.Add(t + $"                            <label class=\"custom-control-label\" for=\"{field.Name.ToCamelCase()}\">{field.Label}</label>");
-                //    s.Add(t + $"                        </div>");
+                //    s.Add(t + $"            <div class=\"col-sm-4 col-md-3 col-lg-2\">");
+                //    s.Add(t + $"                <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid }}\">");
+                //    s.Add(t + $"                    <label for=\"{field.Name.ToCamelCase()}\">");
+                //    s.Add(t + $"                        {field.Label}:");
+                //    s.Add(t + $"                    </label>");
+                //    //s.Add(t + $"                    <div class=\"checkbox\">");
+                //    //s.Add(t + $"                        <label>");
+                //    //s.Add(t + $"                            <input type=\"checkbox\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" />");
+                //    //s.Add(t + $"                            {field.Label}");
+                //    //s.Add(t + $"                        </label>");
+                //    //s.Add(t + $"                    </div>");
+                //    s.Add(t + $"                    <div class=\"custom-control custom-checkbox\">");
+                //    s.Add(t + $"                        <input type=\"checkbox\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\" class=\"custom-control-input\" />");
+                //    s.Add(t + $"                        <label class=\"custom-control-label\" for=\"{field.Name.ToCamelCase()}\">{field.Label}</label>");
                 //    s.Add(t + $"                    </div>");
                 //    s.Add(t + $"                </div>");
-                //    s.Add($"");
+                //    s.Add(t + $"            </div>");
+                //    s.Add(t + $"");
                 //}
                 //else if (field.CustomType == CustomType.Date)
                 //{
-                //    s.Add(t + $"                <div class=\"col-sm-6 col-md-4\">");
-                //    s.Add(t + $"                    <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid }}\">");
-                //    s.Add(t + $"                        <label for=\"{field.Name.ToCamelCase()}\">");
-                //    s.Add(t + $"                            {field.Label}:");
-                //    s.Add(t + $"                        </label>");
-                //    s.Add(t + $"                        <input type=\"{(field.FieldType == FieldType.Date ? "date" : "datetime-local")}\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\"{(field.FieldType == FieldType.Date ? " ng-model-options=\"{timezone: 'utc'}\" " : "")}class=\"form-control\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} />");
-                //    s.Add(t + $"                    </div>");
+                //    s.Add(t + $"            <div class=\"col-sm-6 col-md-4\">");
+                //    s.Add(t + $"                <div class=\"form-group\" ng-class=\"{{ 'has-error':  form.$submitted && form.{field.Name.ToCamelCase()}.$invalid }}\">");
+                //    s.Add(t + $"                    <label for=\"{field.Name.ToCamelCase()}\">");
+                //    s.Add(t + $"                        {field.Label}:");
+                //    s.Add(t + $"                    </label>");
+                //    s.Add(t + $"                    <input type=\"{(field.FieldType == FieldType.Date ? "date" : "datetime-local")}\" id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"{CurrentEntity.ViewModelObject}.{field.Name.ToCamelCase()}\"{(field.FieldType == FieldType.Date ? " ng-model-options=\"{timezone: 'utc'}\" " : "")}class=\"form-control\"{(field.IsNullable ? string.Empty : " ng-required=\"true\"")} />");
                 //    s.Add(t + $"                </div>");
-                //    s.Add($"");
+                //    s.Add(t + $"            </div>");
+                //    s.Add(t + $"");
                 //}
                 //else
                 //{
                 //    s.Add(t + $"NOT IMPLEMENTED: CustomType " + field.CustomType.ToString());
-                //    s.Add($"");
+                //    s.Add(t + $"");
                 //    //throw new NotImplementedException("GenerateEditHtml: NetType: " + field.NetType.ToString());
                 //}
             }
@@ -1950,52 +2029,52 @@ namespace WEB.Models
 
             if (CurrentEntity.EntityType == EntityType.User)
             {
-                s.Add(t + $"                <div class=\"col-sm-6 col-md-4\">");
-                s.Add(t + $"                    <div class=\"form-group\">");
-                s.Add($"");
-                s.Add(t + $"                        <label>");
-                s.Add(t + $"                            Roles:");
-                s.Add(t + $"                        </label>");
-                s.Add($"");
-                s.Add(t + $"                        <select id=\"roles\" name=\"roles\" [multiple]=\"true\" class=\"form-control\" [(ngModel)]=\"user.roles\">");
-                s.Add(t + $"                            <option *ngFor=\"let role of roles\" [ngValue]=\"role.name\">{{{{role.label}}}}</option>");
-                s.Add(t + $"                        </select>");
-                s.Add($"");
-                s.Add(t + $"                    </div>");
+                s.Add(t + $"            <div class=\"col-sm-6 col-md-4\">");
+                s.Add(t + $"                <div class=\"form-group\">");
+                s.Add(t + $"");
+                s.Add(t + $"                    <label>");
+                s.Add(t + $"                        Roles:");
+                s.Add(t + $"                    </label>");
+                s.Add(t + $"");
+                s.Add(t + $"                    <select id=\"roles\" name=\"roles\" [multiple]=\"true\" class=\"form-control\" [(ngModel)]=\"user.roles\">");
+                s.Add(t + $"                        <option *ngFor=\"let role of roles\" [ngValue]=\"role.name\">{{{{role.label}}}}</option>");
+                s.Add(t + $"                    </select>");
+                s.Add(t + $"");
                 s.Add(t + $"                </div>");
+                s.Add(t + $"            </div>");
                 s.Add(t + $"");
             }
 
             // not really a bootstrap3 issue - old projects will be affected by this now being commented
             //if (CurrentEntity.Project.Bootstrap3)
-            //    s.Add(t + $"            </div>");
-            s.Add($"            </div>");
-            s.Add($"");
-            s.Add($"        </fieldset>");
-            s.Add($"");
-            //s.Add($"        <div class=\"alert alert-danger\" *ngIf=\"form.submitted && form.invalid\">");
-            //s.Add($"");
-            //s.Add($"            <div>");
-            //s.Add($"                    Please correct the following errors:");
-            //s.Add($"            </div>");
-            //s.Add($"");
-            //s.Add($"            <div *ngIf=\"name.invalid\">");
-            //s.Add($"");
+            //    s.Add(t + $"        </div>");
+            s.Add(t + $"        </div>");
+            s.Add(t + $"");
+            s.Add(t + $"    </fieldset>");
+            s.Add(t + $"");
+            //s.Add(t + $"    <div class=\"alert alert-danger\" *ngIf=\"form.submitted && form.invalid\">");
+            //s.Add(t + $"");
+            //s.Add(t + $"        <div>");
+            //s.Add(t + $"                Please correct the following errors:");
+            //s.Add(t + $"        </div>");
+            //s.Add(t + $"");
+            //s.Add(t + $"        <div *ngIf=\"name.invalid\">");
+            //s.Add(t + $"");
             #region form validation
             if (CurrentEntity.EntityType == EntityType.User)
             {
-                //s.Add($"                <li class=\"help-block has-error\" ng-messages=\"form.email.$error\">");
-                //s.Add($"                    <span ng-message=\"required\">");
-                //s.Add($"                        Email address is required.");
-                //s.Add($"                    </span>");
-                //s.Add($"                    <span ng-message=\"minlength\">");
-                //s.Add($"                        Email address is too short.");
-                //s.Add($"                    </span>");
-                //s.Add($"                    <span ng-message=\"email\">");
-                //s.Add($"                        Email address is not valid.");
-                //s.Add($"                    </span>");
-                //s.Add($"                </li>");
-                //s.Add($"");
+                //s.Add(t + $"            <li class=\"help-block has-error\" ng-messages=\"form.email.$error\">");
+                //s.Add(t + $"                <span ng-message=\"required\">");
+                //s.Add(t + $"                    Email address is required.");
+                //s.Add(t + $"                </span>");
+                //s.Add(t + $"                <span ng-message=\"minlength\">");
+                //s.Add(t + $"                    Email address is too short.");
+                //s.Add(t + $"                </span>");
+                //s.Add(t + $"                <span ng-message=\"email\">");
+                //s.Add(t + $"                    Email address is not valid.");
+                //s.Add(t + $"                </span>");
+                //s.Add(t + $"            </li>");
+                //s.Add(t + $"");
             }
             foreach (var field in CurrentEntity.Fields
                 .Where(f => f.EditPageType != EditPageType.ReadOnly && f.EditPageType != EditPageType.Exclude && f.EditPageType != EditPageType.SortField && f.EditPageType != EditPageType.CalculatedField)
@@ -2009,12 +2088,12 @@ namespace WEB.Models
                 //    var relationship = CurrentEntity.GetParentSearchRelationship(field);
                 //    if (relationship.Hierarchy) continue;
 
-                //    s.Add($"                <li class=\"help-block has-error\" ng-messages=\"form.{field.Name.ToCamelCase()}.$error\">");
-                //    s.Add($"                    <span ng-message=\"required\">");
-                //    s.Add($"                        {field.Label} is required.");
-                //    s.Add($"                    </span>");
-                //    s.Add($"                </li>");
-                //    s.Add($"");
+                //    s.Add(t + $"            <li class=\"help-block has-error\" ng-messages=\"form.{field.Name.ToCamelCase()}.$error\">");
+                //    s.Add(t + $"                <span ng-message=\"required\">");
+                //    s.Add(t + $"                    {field.Label} is required.");
+                //    s.Add(t + $"                </span>");
+                //    s.Add(t + $"            </li>");
+                //    s.Add(t + $"");
                 //}
                 //else if (field.CustomType == CustomType.Enum || field.CustomType == CustomType.String || field.CustomType == CustomType.Number)
                 //{
@@ -2023,71 +2102,70 @@ namespace WEB.Models
                 //        && (field.MinLength ?? 0) == 0
                 //        && field.RegexValidation == null) continue;
 
-                //    s.Add($"                <li class=\"help-block has-error\" ng-messages=\"form.{field.Name.ToCamelCase()}.$error\">");
+                //    s.Add(t + $"            <li class=\"help-block has-error\" ng-messages=\"form.{field.Name.ToCamelCase()}.$error\">");
                 //    if (!field.IsNullable)
                 //    {
-                //        s.Add($"                    <div *ngIf=\"name.errors.required\">");
-                //        s.Add($"                        {field.Label} is required.");
-                //        s.Add($"                    </div>");
+                //        s.Add(t + $"                <div *ngIf=\"name.errors.required\">");
+                //        s.Add(t + $"                    {field.Label} is required.");
+                //        s.Add(t + $"                </div>");
                 //    }
                 //    if (field.CustomType == CustomType.Number)
                 //    {
-                //        s.Add($"                    <span ng-message=\"number\">");
-                //        s.Add($"                        {field.Label} is not a valid number.");
-                //        s.Add($"                    </span>");
+                //        s.Add(t + $"                <span ng-message=\"number\">");
+                //        s.Add(t + $"                    {field.Label} is not a valid number.");
+                //        s.Add(t + $"                </span>");
                 //    }
                 //    if (field.MinLength > 0)
                 //    {
-                //        s.Add($"                    <span ng-message=\"minlength\">");
-                //        s.Add($"                        {field.Label} is too short.");
-                //        s.Add($"                    </span>");
+                //        s.Add(t + $"                <span ng-message=\"minlength\">");
+                //        s.Add(t + $"                    {field.Label} is too short.");
+                //        s.Add(t + $"                </span>");
                 //    }
                 //    if (field.Length > 0)
                 //    {
-                //        s.Add($"                    <div *ngIf=\"name.errors.maxlength\">");
-                //        s.Add($"                        {field.Label} must be at most {field.Length} characters long.");
-                //        s.Add($"                    </div>");
+                //        s.Add(t + $"                <div *ngIf=\"name.errors.maxlength\">");
+                //        s.Add(t + $"                    {field.Label} must be at most {field.Length} characters long.");
+                //        s.Add(t + $"                </div>");
                 //    }
                 //    if (field.RegexValidation != null)
                 //    {
-                //        s.Add($"                    <span ng-message=\"pattern\">");
-                //        s.Add($"                        {field.Label} is not valid.");
-                //        s.Add($"                    </span>");
+                //        s.Add(t + $"                <span ng-message=\"pattern\">");
+                //        s.Add(t + $"                    {field.Label} is not valid.");
+                //        s.Add(t + $"                </span>");
                 //    }
-                //    s.Add($"                </li>");
-                //    s.Add($"");
+                //    s.Add(t + $"            </li>");
+                //    s.Add(t + $"");
                 //}
                 //else if (field.CustomType == CustomType.Date)
                 //{
-                //    s.Add($"                <li class=\"help-block has-error\" ng-messages=\"form.{field.Name.ToCamelCase()}.$error\">");
-                //    s.Add($"                    <span ng-message=\"date\">");
-                //    s.Add($"                        {field.Label} is not a valid date.");
-                //    s.Add($"                    </span>");
+                //    s.Add(t + $"            <li class=\"help-block has-error\" ng-messages=\"form.{field.Name.ToCamelCase()}.$error\">");
+                //    s.Add(t + $"                <span ng-message=\"date\">");
+                //    s.Add(t + $"                    {field.Label} is not a valid date.");
+                //    s.Add(t + $"                </span>");
                 //    if (!field.IsNullable)
                 //    {
-                //        s.Add($"                    <span ng-message=\"required\">");
-                //        s.Add($"                        {field.Label} is required.");
-                //        s.Add($"                    </span>");
+                //        s.Add(t + $"                <span ng-message=\"required\">");
+                //        s.Add(t + $"                    {field.Label} is required.");
+                //        s.Add(t + $"                </span>");
                 //    }
-                //    s.Add($"                </li>");
-                //    s.Add($"");
+                //    s.Add(t + $"            </li>");
+                //    s.Add(t + $"");
                 //}
                 //if (field.IsNullable) continue;
 
             }
             #endregion
-            //s.Add($"            </div>");
-            //s.Add($"");
-            //s.Add($"        </div>");
-            //s.Add($"");
+            //s.Add(t + $"        </div>");
+            //s.Add(t + $"");
+            //s.Add(t + $"    </div>");
+            //s.Add(t + $"");
 
-            s.Add($"        <fieldset>");
-            s.Add($"            <button type=\"submit\" class=\"btn btn-success\">Save<i class=\"fas fa-check{(CurrentEntity.Project.Bootstrap3 ? string.Empty : " ml-1")}\"></i></button>");
-            s.Add($"            <button type=\"button\" *ngIf=\"!isNew\" class=\"btn btn-outline-danger ml-1\" (click)=\"delete()\">Delete<i class=\"fas fa-times{(CurrentEntity.Project.Bootstrap3 ? string.Empty : " ml-1")}\"></i></button>");
-            s.Add($"        </fieldset>");
-            s.Add($"");
-            s.Add($"    </form>");
-            s.Add($"");
+            s.Add(t + $"    <fieldset>");
+            s.Add(t + $"        <button type=\"submit\" class=\"btn btn-success\">Save<i class=\"fas fa-check{(CurrentEntity.Project.Bootstrap3 ? string.Empty : " ml-1")}\"></i></button>");
+            s.Add(t + $"        <button type=\"button\" *ngIf=\"!isNew\" class=\"btn btn-outline-danger ml-1\" (click)=\"delete()\">Delete<i class=\"fas fa-times{(CurrentEntity.Project.Bootstrap3 ? string.Empty : " ml-1")}\"></i></button>");
+            s.Add(t + $"    </fieldset>");
+            s.Add(t + $"");
+            s.Add(t + $"</form>");
 
             #region child lists
             if (CurrentEntity.RelationshipsAsParent.Any(r => !r.ChildEntity.Exclude && r.DisplayListOnParent))
@@ -2095,30 +2173,31 @@ namespace WEB.Models
                 var relationships = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent).OrderBy(r => r.SortOrder);
                 var counter = 0;
 
-                s.Add($"    <div *ngIf=\"!isNew\">");
-                s.Add($"");
-                s.Add($"        <hr />");
-                s.Add($"");
-                s.Add($"        <ngb-tabset>");
-                s.Add($"");
+                s.Add(t + $"");
+                s.Add(t + $"<div *ngIf=\"!isNew\">");
+                s.Add(t + $"");
+                s.Add(t + $"    <hr />");
+                s.Add(t + $"");
+                s.Add(t + $"    <ngb-tabset>");
+                s.Add(t + $"");
                 foreach (var relationship in relationships)
                 {
                     counter++;
 
-                    s.Add($"            <ngb-tab>");
-                    s.Add($"");
-                    s.Add($"                <ng-template ngbTabTitle>{relationship.CollectionFriendlyName}</ng-template>");
-                    s.Add($"");
-                    s.Add($"                <ng-template ngbTabContent>");
-                    s.Add($"");
+                    s.Add(t + $"        <ngb-tab>");
+                    s.Add(t + $"");
+                    s.Add(t + $"            <ng-template ngbTabTitle>{relationship.CollectionFriendlyName}</ng-template>");
+                    s.Add(t + $"");
+                    s.Add(t + $"            <ng-template ngbTabContent>");
+                    s.Add(t + $"");
 
 
                     var childEntity = relationship.ChildEntity;
 
                     if (relationship.UseMultiSelect)
                     {
-                        s.Add($"                    <button class=\"btn btn-primary\" (click)=\"add{relationship.CollectionName}()\">Add {relationship.CollectionFriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></button><br />");
-                        s.Add($"");
+                        s.Add(t + $"                <button class=\"btn btn-primary\" (click)=\"add{relationship.CollectionName}()\">Add {relationship.CollectionFriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></button><br />");
+                        s.Add(t + $"");
                     }
                     else if (relationship.Hierarchy)
                     {
@@ -2134,74 +2213,79 @@ namespace WEB.Models
                         //            href += "/{{vm." + entity.Name.ToCamelCase() + "." + field.Name.ToCamelCase() + "}}";
                         //    }
                         //}
-                        //s.Add($"                    <a class=\"btn btn-primary\" href=\"{href}\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
+                        //s.Add(t + $"                <a class=\"btn btn-primary\" href=\"{href}\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
 
-                        s.Add($"                    <a [routerLink]=\"['./{childEntity.PluralName.ToLower()}'{relationship.ChildEntity.KeyFields.Select(o => ", 'add'").Aggregate((current, next) => { return current + next; })}]\" class=\"btn btn-primary my-3\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
-                        s.Add($"");
+                        s.Add(t + $"                <a [routerLink]=\"['./{childEntity.PluralName.ToLower()}'{relationship.ChildEntity.KeyFields.Select(o => ", 'add'").Aggregate((current, next) => { return current + next; })}]\" class=\"btn btn-primary my-3\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
+                        s.Add(t + $"");
                     }
 
                     #region table
-                    s.Add($"                    <table class=\"table table-bordered table-striped table-hover table-sm row-navigation\">");
-                    s.Add($"                        <thead>");
-                    s.Add($"                            <tr>");
+                    s.Add(t + $"                <table class=\"table table-bordered table-striped table-hover table-sm row-navigation\">");
+                    s.Add(t + $"                    <thead>");
+                    s.Add(t + $"                        <tr>");
                     if (relationship.Hierarchy && childEntity.HasASortField)
-                        s.Add($"                                <th scope=\"col\" *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
+                        s.Add(t + $"                            <th scope=\"col\" *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
                     foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
                     {
-                        s.Add($"                                <th scope=\"col\">{column.Header}</th>");
+                        s.Add(t + $"                            <th scope=\"col\">{column.Header}</th>");
                     }
-                    s.Add($"                                <th scope=\"col\" class=\"fa-col-width text-center\"><i class=\"fas fa-times\"></i></th>");
-                    s.Add($"                            </tr>");
-                    s.Add($"                        </thead>");
-                    s.Add($"                        <tbody>");// + (relationship.Hierarchy && childEntity.HasASortField ? $" ui-sortable=\"{childEntity.PluralName.ToCamelCase()}SortOptions\" [(ngModel)]=\"{childEntity.PluralName.ToCamelCase()}\"" : string.Empty) + ">");
+                    s.Add(t + $"                            <th scope=\"col\" class=\"fa-col-width text-center\"><i class=\"fas fa-times\"></i></th>");
+                    s.Add(t + $"                        </tr>");
+                    s.Add(t + $"                    </thead>");
+                    s.Add(t + $"                    <tbody>");// + (relationship.Hierarchy && childEntity.HasASortField ? $" ui-sortable=\"{childEntity.PluralName.ToCamelCase()}SortOptions\" [(ngModel)]=\"{childEntity.PluralName.ToCamelCase()}\"" : string.Empty) + ">");
                     // todo: click
-                    s.Add($"                            <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\" (click)=\"goTo{childEntity.Name}({childEntity.Name.ToCamelCase()})\">");
+                    s.Add(t + $"                        <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\" (click)=\"goTo{childEntity.Name}({childEntity.Name.ToCamelCase()})\">");
                     if (relationship.Hierarchy && childEntity.HasASortField)
-                        s.Add($"                                <td *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" (click)=\"$event.stopPropagation();\"></i></td>");
+                        s.Add(t + $"                            <td *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" (click)=\"$event.stopPropagation();\"></i></td>");
                     foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
                     {
-                        s.Add($"                                <td>{column.Value}</td>");
+                        s.Add(t + $"                            <td>{column.Value}</td>");
                     }
-                    s.Add($"                                <td class=\"text-center\"><i class=\"fas fa-times clickable p-1 text-danger\" (click)=\"delete{relationship.CollectionName}({relationship.ChildEntity.Name.ToCamelCase()}, $event)\"></i></td>");
-                    s.Add($"                            </tr>");
-                    s.Add($"                        </tbody>");
-                    s.Add($"                    </table>");
-                    s.Add($"");
-                    s.Add($"                    <pager [headers]=\"{relationship.ChildEntity.PluralName.ToCamelCase()}Headers\" (pageChanged)=\"load{relationship.CollectionName}($event)\"></pager>");
-                    s.Add($"");
+                    s.Add(t + $"                            <td class=\"text-center\"><i class=\"fas fa-times clickable p-1 text-danger\" (click)=\"delete{relationship.CollectionName}({relationship.ChildEntity.Name.ToCamelCase()}, $event)\"></i></td>");
+                    s.Add(t + $"                        </tr>");
+                    s.Add(t + $"                    </tbody>");
+                    s.Add(t + $"                </table>");
+                    s.Add(t + $"");
+                    s.Add(t + $"                <pager [headers]=\"{relationship.ChildEntity.PluralName.ToCamelCase()}Headers\" (pageChanged)=\"load{relationship.CollectionName}($event)\"></pager>");
+                    s.Add(t + $"");
                     #endregion
 
                     // entities with sort fields need to show all (pageSize = 0) for sortability, so no paging needed
                     if (!childEntity.HasASortField)
                     {
-                        //s.Add($"                <div class=\"row\">");
-                        //s.Add($"                    <div class=\"col-sm-7\">");
-                        //s.Add($"                       <{CurrentEntity.Project.AngularDirectivePrefix}-pager headers=\"{relationship.ChildEntity.PluralName.ToCamelCase()}Headers\" callback=\"load{relationship.CollectionName}\"></{CurrentEntity.Project.AngularDirectivePrefix}-pager>");
-                        //s.Add($"                    </div>");
-                        //s.Add($"                    <div class=\"col-sm-5 text-right resultsInfo\">");
-                        //s.Add($"                       <{CurrentEntity.Project.AngularDirectivePrefix}-pager-info headers=\"{relationship.ChildEntity.PluralName.ToCamelCase()}Headers\"></{CurrentEntity.Project.AngularDirectivePrefix}-pager-info>");
-                        //s.Add($"                    </div>");
-                        //s.Add($"                </div>");
-                        //s.Add($"");
+                        //s.Add(t + $"            <div class=\"row\">");
+                        //s.Add(t + $"                <div class=\"col-sm-7\">");
+                        //s.Add(t + $"                   <{CurrentEntity.Project.AngularDirectivePrefix}-pager headers=\"{relationship.ChildEntity.PluralName.ToCamelCase()}Headers\" callback=\"load{relationship.CollectionName}\"></{CurrentEntity.Project.AngularDirectivePrefix}-pager>");
+                        //s.Add(t + $"                </div>");
+                        //s.Add(t + $"                <div class=\"col-sm-5 text-right resultsInfo\">");
+                        //s.Add(t + $"                   <{CurrentEntity.Project.AngularDirectivePrefix}-pager-info headers=\"{relationship.ChildEntity.PluralName.ToCamelCase()}Headers\"></{CurrentEntity.Project.AngularDirectivePrefix}-pager-info>");
+                        //s.Add(t + $"                </div>");
+                        //s.Add(t + $"            </div>");
+                        //s.Add(t + $"");
                     }
 
-                    s.Add($"                </ng-template>");
-                    s.Add($"");
-                    s.Add($"            </ngb-tab>");
-                    s.Add($"");
+                    s.Add(t + $"            </ng-template>");
+                    s.Add(t + $"");
+                    s.Add(t + $"        </ngb-tab>");
+                    s.Add(t + $"");
                 }
-                s.Add($"        </ngb-tabset>");
-                s.Add($"");
-                s.Add($"    </div>");
-                s.Add($"");
+                s.Add(t + $"    </ngb-tabset>");
+                s.Add(t + $"");
+                s.Add(t + $"</div>");
             }
             #endregion
 
-            s.Add($"</div>");
-            s.Add($"");
+            if (hasChildRoutes)
+            {
+                s.Add(t + $"");
+                s.Add($"</div>");
+            }
 
             if (hasChildRoutes)
+            {
+                s.Add($"");
                 s.Add($"<router-outlet></router-outlet>");
+            }
 
             return RunCodeReplacements(s.ToString(), CodeType.EditHtml);
         }
@@ -2212,7 +2296,7 @@ namespace WEB.Models
             var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent).OrderBy(r => r.SortOrder);
             var relationshipsAsChildHierarchy = CurrentEntity.RelationshipsAsChild.FirstOrDefault(r => r.Hierarchy);
             var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).Select(o => o.Lookup).Distinct().ToList();
-            var hasChildRoutes = relationshipsAsParent.Any();
+            var hasChildRoutes = relationshipsAsParent.Any(o => o.Hierarchy);
 
             var s = new StringBuilder();
 
@@ -2220,12 +2304,12 @@ namespace WEB.Models
             s.Add($"import {{ Router, ActivatedRoute{(hasChildRoutes ? ", NavigationEnd" : "")} }} from '@angular/router';");
             s.Add($"import {{ ToastrService }} from 'ngx-toastr';");
             s.Add($"import {{ NgForm }} from '@angular/forms';");
-            if (hasChildRoutes)
-                s.Add($"import {{ Observable, Subscription }} from 'rxjs';");
+            if (relationshipsAsParent.Any())
+                s.Add($"import {{ Observable{(hasChildRoutes ? ", Subscription" : "")} }} from 'rxjs';");
             s.Add($"import {{ HttpErrorResponse }} from '@angular/common/http';");
             s.Add($"import {{ BreadcrumbService }} from 'angular-crumbs';");
             s.Add($"import {{ ErrorService }} from '../common/services/error.service';");
-            if (hasChildRoutes)
+            if (relationshipsAsParent.Any())
                 s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             s.Add($"import {{ {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
             s.Add($"import {{ {CurrentEntity.Name}Service }} from '../common/services/{CurrentEntity.Name.ToLower()}.service';");
@@ -2248,14 +2332,14 @@ namespace WEB.Models
 
             s.Add($"export class {CurrentEntity.Name}EditComponent implements OnInit{(hasChildRoutes ? ", OnDestroy" : "")} {{");
             s.Add($"");
-            s.Add($"   private {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
-            s.Add($"   private isNew: boolean = true;");
+            s.Add($"   public {CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name} = new {CurrentEntity.Name}();");
+            s.Add($"   public isNew: boolean = true;");
             if (hasChildRoutes)
                 s.Add($"   private routerSubscription: Subscription;");
             foreach (var enumLookup in enumLookups)
-                s.Add($"   private {enumLookup.PluralName.ToCamelCase()}: Enum[] = Enums.{enumLookup.PluralName};");
+                s.Add($"   public {enumLookup.PluralName.ToCamelCase()}: Enum[] = Enums.{enumLookup.PluralName};");
             if (CurrentEntity.EntityType == EntityType.User)
-                s.Add($"   private roles = Roles.List;");
+                s.Add($"   public roles = Roles.List;");
             s.Add($"");
             foreach (var rel in relationshipsAsParent)
             {
@@ -2267,14 +2351,14 @@ namespace WEB.Models
 
             s.Add($"   constructor(");
             s.Add($"      private router: Router,");
-            s.Add($"      private route: ActivatedRoute,");
+            s.Add($"      {(hasChildRoutes ? "public" : "private")} route: ActivatedRoute,");
             s.Add($"      private toastr: ToastrService,");
             s.Add($"      private breadcrumbService: BreadcrumbService,");
             s.Add($"      private {CurrentEntity.Name.ToCamelCase()}Service: {CurrentEntity.Name}Service,");
             var relChildEntities = relationshipsAsParent.Where(o => o.ChildEntityId != CurrentEntity.EntityId).Select(o => o.ChildEntity).Distinct().OrderBy(o => o.Name);
             foreach (var relChildEntity in relChildEntities)
             {
-                s.Add($"      private {relChildEntity.Name.ToCamelCase()}Service: {relChildEntity.Name}Service" + (relChildEntity == relChildEntities.Last() ? "" : ","));
+                s.Add($"      private {relChildEntity.Name.ToCamelCase()}Service: {relChildEntity.Name}Service,");
             }
             s.Add($"      private errorService: ErrorService");
             s.Add($"   ) {{");
@@ -3067,6 +3151,9 @@ namespace WEB.Models
 
                 var code = codeGenerator.GenerateBundleConfig();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, "generated.module.ts"), code);
+
+                code = codeGenerator.GenerateSharedModule();
+                if (code != string.Empty) File.WriteAllText(Path.Combine(path, "shared.module.ts"), code);
             }
             #endregion
 
