@@ -296,6 +296,20 @@
                           </div>
                        </div>
 
+                       <div class="col-sm-4 col-md-3 col-lg-2">
+                          <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.useChildRoutes.$invalid }">
+                             <label for="useChildRoutes" class="control-label">
+                                Use Child Routes:
+                             </label>
+                             <div class="checkbox">
+                                <label>
+                                   <input type="checkbox" id="useChildRoutes" name="returnOnSave" ng-model="vm.entity.useChildRoutes" />
+                                   Use Child Routes
+                                </label>
+                             </div>
+                          </div>
+                       </div>
+
                     </div>
 
                 </div>

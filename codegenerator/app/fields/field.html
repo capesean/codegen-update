@@ -117,6 +117,20 @@
                         </div>
                     </div>
 
+                    <div class="col-sm-4 col-md-3 col-lg-2" ng-if="!vm.field.keyField && vm.field.isUnique">
+                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.isUniqueOnHierarchy.$invalid }">
+                            <label for="isUniqueOnHierarchy" class="control-label">
+                                Is Unique on Hierarchy:
+                            </label>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="isUniqueOnHierarchy" name="isUniqueOnHierarchy" ng-model="vm.field.isUniqueOnHierarchy" />
+                                    Is Unique on Hierarchy
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="col-sm-4 col-md-3 col-lg-2" ng-if="!vm.field.keyField">
                         <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.isNullable.$invalid }">
                             <label for="isNullable" class="control-label">

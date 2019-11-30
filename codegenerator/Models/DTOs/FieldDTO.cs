@@ -40,6 +40,9 @@ namespace WEB.Models
         public bool IsUnique { get; set; }
 
         [Required]
+        public bool IsUniqueOnHierarchy { get; set; }
+
+        [Required]
         public bool IsNullable { get; set; }
 
         [Required]
@@ -101,6 +104,7 @@ namespace WEB.Models
             fieldDTO.Scale = field.Scale;
             fieldDTO.KeyField = field.KeyField;
             fieldDTO.IsUnique = field.IsUnique;
+            fieldDTO.IsUniqueOnHierarchy = field.IsUniqueOnHierarchy;
             fieldDTO.IsNullable = field.IsNullable;
             fieldDTO.ShowInSearchResults = field.ShowInSearchResults;
             fieldDTO.SearchType = field.SearchType;
@@ -132,6 +136,7 @@ namespace WEB.Models
             field.Scale = fieldDTO.Scale;
             field.KeyField = fieldDTO.KeyField;
             field.IsUnique = fieldDTO.IsUnique;
+            field.IsUniqueOnHierarchy = fieldDTO.IsUniqueOnHierarchy;
             field.IsNullable = fieldDTO.IsNullable;
             field.ShowInSearchResults = fieldDTO.ShowInSearchResults;
             field.SearchType = fieldDTO.SearchType;

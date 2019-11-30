@@ -43,6 +43,9 @@ namespace WEB.Models
         public bool IsUnique { get; set; }
 
         [Required]
+        public bool IsUniqueOnHierarchy { get; set; }
+
+        [Required]
         public bool IsNullable { get; set; }
 
         [Required]

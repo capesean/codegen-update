@@ -179,7 +179,7 @@ namespace WEB.Models
             }
 
             // parent entities
-            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(r => !r.ParentEntity.Exclude).OrderBy(o => o.ParentEntity.Name))
+            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(r => !r.ParentEntity.Exclude).OrderBy(o => o.ParentEntity.Name).ThenBy(o => o.CollectionName))
             {
                 if (relationship.RelationshipFields.Count() == 1)
                     s.Add($"        [ForeignKey(\"" + relationship.RelationshipFields.Single().ChildField.Name + "\")]");
@@ -243,7 +243,7 @@ namespace WEB.Models
             {
                 s.Add($"   {field.Name.ToCamelCase()}: {field.JavascriptType};");
             }
-            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(r => !r.ParentEntity.Exclude).OrderBy(o => o.ParentEntity.Name))
+            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(r => !r.ParentEntity.Exclude).OrderBy(o => o.ParentEntity.Name).ThenBy(o => o.CollectionName))
             {
                 s.Add($"   {relationship.ParentName.ToCamelCase()}: {relationship.ParentEntity.Name};");
             }
@@ -255,11 +255,10 @@ namespace WEB.Models
             s.Add($"");
 
             s.Add($"   constructor() {{");
-            foreach (var field in CurrentEntity.KeyFields.OrderBy(f => f.FieldOrder))
-            {
-                if (field.CustomType == CustomType.Guid)
-                    s.Add($"      this.{field.Name.ToCamelCase()} = \"00000000-0000-0000-0000-000000000000\";");
-            }
+            // can't do this for composite key fields, else they all get set to a value (000-000-000) and 
+            // then the angular/typescript validation always passes as the value is not-undefined
+            if (CurrentEntity.KeyFields.Count() == 1 && CurrentEntity.KeyFields.First().CustomType == CustomType.Guid)
+                s.Add($"      this.{CurrentEntity.KeyFields.First().Name.ToCamelCase()} = \"00000000-0000-0000-0000-000000000000\";");
             s.Add($"   }}");
             s.Add($"}}");
             s.Add($"");
@@ -495,7 +494,7 @@ namespace WEB.Models
                 s.Add($"");
             }
             // sort order on relationships is for parents. for childre, just use name
-            foreach (var relationship in CurrentEntity.RelationshipsAsChild.OrderBy(r => r.ParentEntity.Name))
+            foreach (var relationship in CurrentEntity.RelationshipsAsChild.OrderBy(r => r.ParentEntity.Name).ThenBy(o => o.ParentName))
             {
                 // using exclude to avoid circular references. example: KTU-PACK: version => localisation => contentset => version (UpdateFromVersion)
                 if (relationship.RelationshipAncestorLimit == RelationshipAncestorLimits.Exclude) continue;
@@ -595,12 +594,30 @@ namespace WEB.Models
                 var needsBreak = false;
                 if (entity.KeyFields.Count > 1)
                 {
-                    s.Add($"            modelBuilder.Entity<{entity.Name}>().HasKey(o => new {{ {entity.KeyFields.Select(o => "o." + o.Name).Aggregate((current, next) => current + ", " + next)} }}).HasName(\"PK_{entity.Name}\");");
-                }
-                foreach (var field in entity.Fields.Where(o => o.IsUnique && !o.IsNullable))
-                {
-                    s.Add($"            modelBuilder.Entity<{entity.Name}>().HasIndex(o => o.{field.Name}).HasName(\"IX_{entity.Name}_{field.Name}\").IsUnique();");
+                    s.Add($"            modelBuilder.Entity<{entity.Name}>()");
+                    s.Add($"                .HasKey(o => new {{ {entity.KeyFields.Select(o => "o." + o.Name).Aggregate((current, next) => current + ", " + next)} }})");
+                    s.Add($"                .HasName(\"PK_{entity.Name}\");");
                     needsBreak = true;
+                }
+                foreach (var field in entity.Fields.Where(o => !o.IsNullable && o.IsUnique).OrderBy(f => f.FieldOrder))
+                {
+                    if (field.IsUniqueOnHierarchy)
+                    {
+                        var rel = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy);
+                        s.Add($"            modelBuilder.Entity<{entity.Name}>()");
+                        s.Add($"                .HasIndex(o => new {{ o.{rel.RelationshipFields.First().ChildField.Name}, o.{field.Name} }})");
+                        s.Add($"                .HasName(\"IX_{entity.Name}_{field.Name}\")");
+                        s.Add($"                .IsUnique();");
+                        needsBreak = true;
+                    }
+                    else if (field.IsUnique)
+                    {
+                        s.Add($"            modelBuilder.Entity<{entity.Name}>()");
+                        s.Add($"                .HasIndex(o => o.{field.Name})");
+                        s.Add($"                .HasName(\"IX_{entity.Name}_{field.Name}\")");
+                        s.Add($"                .IsUnique();");
+                        needsBreak = true;
+                    }
                 }
                 if (needsBreak) s.Add($"");
             }
@@ -675,7 +692,7 @@ namespace WEB.Models
             s.Add($"");
             s.Add($"namespace {CurrentEntity.Project.Namespace}.Controllers");
             s.Add($"{{");
-            s.Add($"    [Route(\"api/[Controller]\"), Authorize{(CurrentEntity.AuthorizationType == AuthorizationType.ProtectAll ? (CurrentEntity.Project.UseStringAuthorizeAttributes ? "(Roles = \"Administrator\")" : "Roles(Roles.Administrator)") : string.Empty)}]");
+            s.Add($"    [Route(\"api/[Controller]\"), Authorize]");
             s.Add($"    public {(CurrentEntity.PartialControllerClass ? "partial " : string.Empty)}class {CurrentEntity.PluralName}Controller : BaseApiController");
             s.Add($"    {{");
             if (CurrentEntity.EntityType == EntityType.User)
@@ -693,7 +710,7 @@ namespace WEB.Models
             s.Add($"");
 
             #region search
-            s.Add($"        [HttpGet]");
+            s.Add($"        [HttpGet{ (CurrentEntity.AuthorizationType == AuthorizationType.ProtectAll ? ", AuthorizeRoles(Roles.Administrator)" : string.Empty)}]");
 
             var fieldsToSearch = new List<Field>();
             foreach (var relationship in CurrentEntity.RelationshipsAsChild.OrderBy(r => r.RelationshipFields.Min(f => f.ChildField.FieldOrder)))
@@ -787,7 +804,7 @@ namespace WEB.Models
             #endregion
 
             #region get
-            s.Add($"        [HttpGet(\"{CurrentEntity.RoutePath}\")]");
+            s.Add($"        [HttpGet(\"{CurrentEntity.RoutePath}\"){ (CurrentEntity.AuthorizationType == AuthorizationType.ProtectAll ? ", AuthorizeRoles(Roles.Administrator)" : string.Empty)}]");
             s.Add($"        public async Task<IActionResult> Get({CurrentEntity.ControllerParameters})");
             s.Add($"        {{");
             if (CurrentEntity.EntityType == EntityType.User)
@@ -827,26 +844,26 @@ namespace WEB.Models
             #endregion
 
             #region save
-            s.Add($"        [HttpPost(\"{CurrentEntity.RoutePath}\"){(CurrentEntity.AuthorizationType == AuthorizationType.ProtectChanges ? (CurrentEntity.Project.UseStringAuthorizeAttributes ? ", Authorize(Roles = \"Administrator\")" : ", AuthorizeRoles(Roles.Administrator)") : string.Empty)}]");
+            s.Add($"        [HttpPost(\"{CurrentEntity.RoutePath}\"){ (CurrentEntity.AuthorizationType == AuthorizationType.None ? "" : ", AuthorizeRoles(Roles.Administrator)")}]");
             s.Add($"        public async Task<IActionResult> Save({CurrentEntity.ControllerParameters}, [FromBody]{CurrentEntity.DTOName} {CurrentEntity.DTOName.ToCamelCase()})");
             s.Add($"        {{");
             s.Add($"            if (!ModelState.IsValid) return BadRequest(ModelState);");
             s.Add($"");
             s.Add($"            if ({GetKeyFieldLinq(CurrentEntity.DTOName.ToCamelCase(), null, "!=", "||")}) return BadRequest(\"Id mismatch\");");
             s.Add($"");
-            foreach (var field in CurrentEntity.Fields.Where(f => f.IsUnique))
+            foreach (var field in CurrentEntity.Fields.Where(f => f.IsUnique).OrderBy(f => f.FieldOrder))
             {
                 if (field.EditPageType == EditPageType.ReadOnly) continue;
 
                 string hierarchyFields = string.Empty;
-                if (ParentHierarchyRelationship != null)
+                if (field.IsUniqueOnHierarchy)
                 {
                     foreach (var relField in ParentHierarchyRelationship.RelationshipFields)
                         hierarchyFields += (hierarchyFields == string.Empty ? "" : " && ") + "o." + relField.ChildField.Name + " == " + CurrentEntity.DTOName.ToCamelCase() + "." + relField.ChildField.Name;
                     hierarchyFields += " && ";
                 }
                 s.Add($"            if (" + (field.IsNullable ? field.NotNullCheck(CurrentEntity.DTOName.ToCamelCase() + "." + field.Name) + " && " : "") + $"await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.AnyAsync(o => {hierarchyFields}o.{field.Name} == {CurrentEntity.DTOName.ToCamelCase()}.{field.Name} && {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase(), "!=", "||", true)}))");
-                s.Add($"                return BadRequest(\"{field.Label} already exists{(ParentHierarchyRelationship == null ? string.Empty : " on this " + ParentHierarchyRelationship.ParentEntity.FriendlyName)}.\");");
+                s.Add($"                return BadRequest(\"{field.Label} already exists{(field.IsUniqueOnHierarchy ? " on this " + ParentHierarchyRelationship.ParentEntity.FriendlyName : string.Empty)}.\");");
                 s.Add($"");
             }
             if (CurrentEntity.HasCompositePrimaryKey)
@@ -859,11 +876,11 @@ namespace WEB.Models
                 s.Add($"            {{");
                 s.Add($"                {CurrentEntity.CamelCaseName} = new {CurrentEntity.Name}();");
                 s.Add($"");
-                foreach (var field in CurrentEntity.Fields.Where(f => f.KeyField && f.Entity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(rf => rf.ChildFieldId == f.FieldId))))
+                foreach (var field in CurrentEntity.Fields.Where(f => f.KeyField && f.Entity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(rf => rf.ChildFieldId == f.FieldId))).OrderBy(f => f.FieldOrder))
                 {
                     s.Add($"                {CurrentEntity.CamelCaseName}.{field.Name} = {CurrentEntity.DTOName.ToCamelCase() + "." + field.Name};");
                 }
-                foreach (var field in CurrentEntity.Fields.Where(f => !string.IsNullOrWhiteSpace(f.ControllerInsertOverride)))
+                foreach (var field in CurrentEntity.Fields.Where(f => !string.IsNullOrWhiteSpace(f.ControllerInsertOverride)).OrderBy(f => f.FieldOrder))
                 {
                     s.Add($"                {CurrentEntity.CamelCaseName}.{field.Name} = {field.ControllerInsertOverride};");
                 }
@@ -912,7 +929,7 @@ namespace WEB.Models
                 if (CurrentEntity.EntityType == EntityType.User)
                     s.Add($"                password = Utilities.General.GenerateRandomPassword(opts.Value);");
                 s.Add($"");
-                foreach (var field in CurrentEntity.Fields.Where(f => !string.IsNullOrWhiteSpace(f.ControllerInsertOverride)))
+                foreach (var field in CurrentEntity.Fields.Where(f => !string.IsNullOrWhiteSpace(f.ControllerInsertOverride)).OrderBy(f => f.FieldOrder))
                 {
                     s.Add($"                {CurrentEntity.CamelCaseName}.{field.Name} = {field.ControllerInsertOverride};");
                 }
@@ -948,7 +965,7 @@ namespace WEB.Models
                 s.Add($"                if ({CurrentEntity.CamelCaseName} == null)");
                 s.Add($"                    return NotFound();");
                 s.Add($"");
-                foreach (var field in CurrentEntity.Fields.Where(f => !string.IsNullOrWhiteSpace(f.ControllerUpdateOverride)))
+                foreach (var field in CurrentEntity.Fields.Where(f => !string.IsNullOrWhiteSpace(f.ControllerUpdateOverride)).OrderBy(f => f.FieldOrder))
                 {
                     s.Add($"                {CurrentEntity.CamelCaseName}.{field.Name} = {field.ControllerUpdateOverride};");
                 }
@@ -999,7 +1016,7 @@ namespace WEB.Models
             #endregion
 
             #region delete
-            s.Add($"        [HttpDelete(\"{CurrentEntity.RoutePath}\"){(CurrentEntity.AuthorizationType == AuthorizationType.ProtectChanges ? (CurrentEntity.Project.UseStringAuthorizeAttributes ? ", Authorize(Roles = \"Administrator\")" : ", AuthorizeRoles(Roles.Administrator)") : string.Empty)}]");
+            s.Add($"        [HttpDelete(\"{CurrentEntity.RoutePath}\"){ (CurrentEntity.AuthorizationType == AuthorizationType.None ? "" : ", AuthorizeRoles(Roles.Administrator)")}]");
             s.Add($"        public async Task<IActionResult> Delete({CurrentEntity.ControllerParameters})");
             s.Add($"        {{");
             s.Add($"            var {CurrentEntity.CamelCaseName} = await {(CurrentEntity.EntityType == EntityType.User ? "userManager" : CurrentEntity.Project.DbContextVariable)}.{CurrentEntity.PluralName}.FirstOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
@@ -1046,7 +1063,7 @@ namespace WEB.Models
             #region sort
             if (CurrentEntity.HasASortField)
             {
-                s.Add($"        [HttpPost(\"sort\"){(CurrentEntity.AuthorizationType == AuthorizationType.ProtectChanges ? (CurrentEntity.Project.UseStringAuthorizeAttributes ? ", Authorize(Roles = \"Administrator\"), " : ", AuthorizeRoles(Roles.Administrator)") : "")}]");
+                s.Add($"        [HttpPost(\"sort\"){ (CurrentEntity.AuthorizationType == AuthorizationType.None ? "" : ", AuthorizeRoles(Roles.Administrator)")}]");
                 s.Add($"        public async Task<IActionResult> Sort([FromBody]Guid[] sortedIds)");
                 s.Add($"        {{");
                 // if it's a child entity, just sort the id's that were sent
@@ -1079,7 +1096,7 @@ namespace WEB.Models
                 var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
                 var reverseRelationshipField = reverseRel.RelationshipFields.Single();
 
-                s.Add($"        [HttpPost(\"{CurrentEntity.RoutePath}/{rel.ChildEntity.PluralName.ToLower()}\"){(CurrentEntity.AuthorizationType == AuthorizationType.ProtectChanges ? (CurrentEntity.Project.UseStringAuthorizeAttributes ? ", Authorize(Roles = \"Administrator\")" : ", AuthorizeRoles(Roles.Administrator)") : "")}]");
+                s.Add($"        [HttpPost(\"{CurrentEntity.RoutePath}/{rel.ChildEntity.PluralName.ToLower()}\"){ (CurrentEntity.AuthorizationType == AuthorizationType.None ? "" : ", AuthorizeRoles(Roles.Administrator)")}]");
                 s.Add($"        public async Task<IActionResult> Save{rel.ChildEntity.Name}({CurrentEntity.ControllerParameters}, [FromBody]{rel.ChildEntity.DTOName}[] {rel.ChildEntity.DTOName.ToCamelCase()}s)");
                 s.Add($"        {{");
                 s.Add($"            if (!ModelState.IsValid) return BadRequest(ModelState);");
@@ -1410,16 +1427,14 @@ namespace WEB.Models
                 {
                     if (field.CustomType == CustomType.Enum)
                     {
-                        //s.Add(t + $"        <div class=\"col-sm-6 col-md-4 col-lg-3\">");
-                        //s.Add(t + $"            <div class=\"form-group\">");
-                        //s.Add(t + $"                <ol id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" title=\"{field.Label}\" class=\"nya-bs-select form-control\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" data-live-search=\"true\" data-size=\"10\">");
-                        //s.Add(t + $"                    <li nya-bs-option=\"item in vm.appSettings.{field.Lookup.Name.ToCamelCase()}\" class=\"nya-bs-option{(CurrentEntity.Project.Bootstrap3 ? "" : " dropdown-item")}\" data-value=\"item.id\">");
-                        //s.Add(t + $"                        <a>{{{{item.label}}}}<span class=\"fas fa-check check-mark\"></span></a>");
-                        //s.Add(t + $"                    </li>");
-                        //s.Add(t + $"                </ol>");
-                        //s.Add(t + $"            </div>");
-                        //s.Add(t + $"        </div>");
-                        //s.Add($"");
+                        s.Add(t + $"        <div class=\"col-sm-6 col-md-4 col-lg-3\">");
+                        s.Add(t + $"            <div class=\"form-group\">");
+                        s.Add(t + $"                <select id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" #{field.Name.ToCamelCase()}=\"ngModel\" class=\"form-control\">");
+                        s.Add(t + $"                    <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Name.ToCamelCase()}.value\">{{{{ {field.Name.ToCamelCase()}.label }}}}</option>");
+                        s.Add(t + $"                </select>");
+                        s.Add(t + $"            </div>");
+                        s.Add(t + $"        </div>");
+                        s.Add($"");
                     }
                     else if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
                     {
@@ -1536,7 +1551,7 @@ namespace WEB.Models
                     includeEntities = true;
                     break;
                 }
-            var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum && o.ShowInSearchResults).Select(o => o.Lookup).Distinct().ToList();
+            var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum && (o.ShowInSearchResults || o.SearchType == SearchType.Exact)).Select(o => o.Lookup).Distinct().ToList();
             var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent && r.Hierarchy).OrderBy(r => r.SortOrder);
             var hasChildRoutes = relationshipsAsParent.Any();
             if (!CurrentEntity.RelationshipsAsChild.Any(o => o.Hierarchy && !o.ParentEntity.Exclude))
@@ -1684,7 +1699,7 @@ namespace WEB.Models
         public string GenerateEditHtml()
         {
             var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent && r.Hierarchy).OrderBy(r => r.SortOrder);
-            var hasChildRoutes = relationshipsAsParent.Any();
+            var hasChildRoutes = relationshipsAsParent.Any() || CurrentEntity.UseChildRoutes;
 
             var s = new StringBuilder();
 
@@ -1838,7 +1853,7 @@ namespace WEB.Models
                 {
                     s.Add(t + $"                    <div class=\"form-check\">");
                     s.Add(t + $"                       {controlHtml}");
-                    s.Add(t + $"                       <label class=\"form-check-label\" for=\"{field.Name}\">");
+                    s.Add(t + $"                       <label class=\"form-check-label\" for=\"{field.Name.ToCamelCase()}\">");
                     s.Add(t + $"                          {field.Label}");
                     s.Add(t + $"                       </label>");
                     s.Add(t + $"                    </div>");
@@ -2233,7 +2248,7 @@ namespace WEB.Models
                     s.Add(t + $"                        </tr>");
                     s.Add(t + $"                    </thead>");
                     s.Add(t + $"                    <tbody>");// + (relationship.Hierarchy && childEntity.HasASortField ? $" ui-sortable=\"{childEntity.PluralName.ToCamelCase()}SortOptions\" [(ngModel)]=\"{childEntity.PluralName.ToCamelCase()}\"" : string.Empty) + ">");
-                    // todo: click
+                                                              // todo: click
                     s.Add(t + $"                        <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\" (click)=\"goTo{childEntity.Name}({childEntity.Name.ToCamelCase()})\">");
                     if (relationship.Hierarchy && childEntity.HasASortField)
                         s.Add(t + $"                            <td *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort sortable-handle mt-1\" (click)=\"$event.stopPropagation();\"></i></td>");
@@ -2295,8 +2310,8 @@ namespace WEB.Models
             var multiSelectRelationships = CurrentEntity.RelationshipsAsParent.Where(r => r.UseMultiSelect && !r.ChildEntity.Exclude).OrderBy(o => o.SortOrder);
             var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent).OrderBy(r => r.SortOrder);
             var relationshipsAsChildHierarchy = CurrentEntity.RelationshipsAsChild.FirstOrDefault(r => r.Hierarchy);
-            var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).Select(o => o.Lookup).Distinct().ToList();
-            var hasChildRoutes = relationshipsAsParent.Any(o => o.Hierarchy);
+            var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).OrderBy(o => o.FieldOrder).Select(o => o.Lookup).Distinct().ToList();
+            var hasChildRoutes = relationshipsAsParent.Any(o => o.Hierarchy) || CurrentEntity.UseChildRoutes;
 
             var s = new StringBuilder();
 
@@ -2496,10 +2511,10 @@ namespace WEB.Models
             if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First()?.ChildFieldId == CurrentEntity.PrimaryField.FieldId))
             {
                 var rel = CurrentEntity.RelationshipsAsChild.Single(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First().ChildFieldId == CurrentEntity.PrimaryField.FieldId);
-                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")} : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")}.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
             }
             else
-                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField?.Name.ToCamelCase() + (CurrentEntity.PrimaryField?.JavascriptType == "string" ? "" : ".toString()")} : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField?.Name.ToCamelCase() + (CurrentEntity.PrimaryField?.JavascriptType == "string" ? "" : ".toString()")}.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
             s.Add($"   }}");
             s.Add($"");
 
@@ -2600,7 +2615,7 @@ namespace WEB.Models
             var inputs = string.Empty;
             var imports = string.Empty;
 
-            foreach (var field in CurrentEntity.Fields.Where(o => o.SearchType == SearchType.Exact && (o.FieldType == FieldType.Enum || CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == o.FieldId)))))
+            foreach (var field in CurrentEntity.Fields.Where(o => o.SearchType == SearchType.Exact && (o.FieldType == FieldType.Enum || CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == o.FieldId)))).OrderBy(f => f.FieldOrder))
             {
                 var name = field.Name.ToCamelCase();
 
@@ -2739,7 +2754,7 @@ namespace WEB.Models
                 //properties += $"   {lookup.Name.ToCamelCase()}: Enum;" + Environment.NewLine;
             }
 
-            foreach (var field in CurrentEntity.Fields.Where(o => o.SearchType == SearchType.Exact))
+            foreach (var field in CurrentEntity.Fields.Where(o => o.SearchType == SearchType.Exact).OrderBy(f => f.FieldOrder))
             {
                 Relationship relationship = null;
                 if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
@@ -2802,7 +2817,7 @@ namespace WEB.Models
             if (String.IsNullOrWhiteSpace(entity.IconClass)) return string.Empty;
 
             string html = $@"<span class=""input-group-btn"" *ngIf=""!multiple && !!{entity.Name.ToLower()}"">
-        <a href=""{GetHierarchyString(entity)}"" class=""btn btn-secondary"" ng-disabled=""disabled"">
+        <a routerLink=""{GetHierarchyString(entity)}"" class=""btn btn-secondary"" ng-disabled=""disabled"">
             <i class=""fas {entity.IconClass}""></i>
         </a>
     </span>
