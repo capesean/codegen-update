@@ -20,8 +20,8 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
    @Input() CAMELCASENAME: NAME;
    @Output() CAMELCASENAMEChange = new EventEmitter<NAME>();
    @Input() canRemoveFilters: boolean = false;
+   @Input() multiple: boolean = false;
 /*INPUTS*/
-   multiple: boolean = false;
    showAddNew: boolean = false;
    disabled: boolean = false;
    placeholder = "Select a FRIENDLYNAME_LOWER";
