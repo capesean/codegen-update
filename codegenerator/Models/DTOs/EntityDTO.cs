@@ -101,6 +101,9 @@ namespace WEB.Models
         [MaxLength(20)]
         public string IconClass { get; set; }
 
+        [MaxLength(100)]
+        public string UserFilterFieldPath { get; set; }
+
         public FieldDTO PrimaryField { get; set; }
 
         public ProjectDTO Project { get; set; }
@@ -146,6 +149,7 @@ namespace WEB.Models
             entityDTO.UseChildRoutes = entity.UseChildRoutes;
             entityDTO.PrimaryFieldId = entity.PrimaryFieldId;
             entityDTO.IconClass = entity.IconClass;
+            entityDTO.UserFilterFieldPath = entity.UserFilterFieldPath;
             entityDTO.PrimaryField = null;
             entityDTO.Project = Create(entity.Project);
 
@@ -184,6 +188,7 @@ namespace WEB.Models
             entity.UseChildRoutes = entityDTO.UseChildRoutes;
             entity.PrimaryFieldId = entityDTO.PrimaryFieldId;
             entity.IconClass = entityDTO.IconClass;
+            entity.UserFilterFieldPath = entityDTO.UserFilterFieldPath;
         }
     }
 }

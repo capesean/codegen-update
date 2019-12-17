@@ -115,7 +115,7 @@
                         </div>
                     </div>
 
-                    <div class="col-sm-6 col-md-4">
+                    <div class="col-sm-6 col-md-4 col-lg-3">
                         <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.routeViewName.$invalid }">
                             <label for="routeViewName" class="control-label">
                                 Route View Name:
@@ -123,7 +123,16 @@
                             <input type="text" id="routeViewName" name="routeViewName" ng-model="vm.project.routeViewName" maxlength="20" class="form-control" />
                         </div>
                     </div>
-                    
+
+                    <div class="col-sm-6 col-md-4 col-lg-3">
+                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.userFilterFieldName.$invalid }">
+                            <label for="userFilterFieldName" class="control-label">
+                                User Filter Field Name:
+                            </label>
+                            <input type="text" id="userFilterFieldName" name="userFilterFieldName" ng-model="vm.project.userFilterFieldName" maxlength="50" class="form-control" />
+                        </div>
+                    </div>
+
                     <div class="col-sm-12">
                         <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.notes.$invalid }">
                             <label for="notes" class="control-label">

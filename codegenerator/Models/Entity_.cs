@@ -64,6 +64,12 @@ namespace WEB.Models
         }
 
         [NotMapped]
+        public bool HasUserFilterField
+        {
+            get { return !string.IsNullOrWhiteSpace(UserFilterFieldPath) && !string.IsNullOrWhiteSpace(Project.UserFilterFieldName); }
+        }
+
+        [NotMapped]
         public string ReturnRoute
         {
             get

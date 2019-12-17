@@ -41,6 +41,9 @@ namespace WEB.Models
         [MaxLength(20)]
         public string DbContextVariable { get; set; }
 
+        [MaxLength(50)]
+        public string UserFilterFieldName { get; set; }
+
         public string Notes { get; set; }
 
         [MaxLength(20)]
@@ -64,6 +67,7 @@ namespace WEB.Models
             projectDTO.AngularDirectivePrefix = project.AngularDirectivePrefix;
             projectDTO.Bootstrap3 = project.Bootstrap3;
             projectDTO.UrlPrefix = project.UrlPrefix;
+            projectDTO.UserFilterFieldName = project.UserFilterFieldName;
             projectDTO.UseStringAuthorizeAttributes = project.UseStringAuthorizeAttributes;
             projectDTO.DbContextVariable = project.DbContextVariable;
             projectDTO.Notes = project.Notes;
@@ -81,6 +85,7 @@ namespace WEB.Models
             project.AngularDirectivePrefix = projectDTO.AngularDirectivePrefix;
             project.Bootstrap3 = projectDTO.Bootstrap3;
             project.UrlPrefix = projectDTO.UrlPrefix;
+            project.UserFilterFieldName = projectDTO.UserFilterFieldName;
             project.UseStringAuthorizeAttributes = projectDTO.UseStringAuthorizeAttributes;
             project.DbContextVariable = projectDTO.DbContextVariable;
             project.Notes = projectDTO.Notes;

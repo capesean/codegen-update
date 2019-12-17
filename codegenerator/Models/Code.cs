@@ -730,6 +730,8 @@ namespace WEB.Models
             if (CurrentEntity.EntityType == EntityType.User)
             {
                 s.Add($"            IQueryable<User> results = userManager.Users;");
+                if (CurrentEntity.HasUserFilterField)
+                    s.Add($"            results = results.Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName});");
                 s.Add($"            results = results.Include(o => o.Roles);");
                 s.Add($"");
                 s.Add($"            if (roleId != null) results = results.Where(o => o.Roles.Any(r => r.RoleId == roleId));");
@@ -737,7 +739,10 @@ namespace WEB.Models
             }
             else
             {
-                s.Add($"            IQueryable<{CurrentEntity.Name}> results = {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName};");
+                s.Add($"            IQueryable<{CurrentEntity.Name}> results = {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}{(CurrentEntity.HasUserFilterField ? "" : ";")}");
+                if (CurrentEntity.HasUserFilterField)
+                    s.Add($"                .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName});");
+                s.Add($"");
             }
 
             if (CurrentEntity.RelationshipsAsChild.Where(r => r.RelationshipAncestorLimit != RelationshipAncestorLimits.Exclude).Any())
@@ -824,6 +829,8 @@ namespace WEB.Models
                 foreach (var result in GetTopAncestors(new List<string>(), "o", relationship, relationship.RelationshipAncestorLimit, includeIfHierarchy: true))
                     s.Add($"                .Include(o => {result})");
             }
+            if (CurrentEntity.HasUserFilterField)
+                s.Add($"                .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
             s.Add($"                .FirstOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
             s.Add($"");
             s.Add($"            if ({CurrentEntity.CamelCaseName} == null)");
@@ -869,7 +876,10 @@ namespace WEB.Models
             if (CurrentEntity.HasCompositePrimaryKey)
             {
                 // composite keys don't use the insert method, they use the update for both inserts & updates
-                s.Add($"            var {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.FirstOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
+                s.Add($"            var {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}");
+                if (CurrentEntity.HasUserFilterField)
+                    s.Add($"                .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
+                s.Add($"                .FirstOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
                 s.Add($"            var isNew = {CurrentEntity.CamelCaseName} == null;");
                 s.Add($"");
                 s.Add($"            if (isNew)");
@@ -954,12 +964,17 @@ namespace WEB.Models
                 if (CurrentEntity.EntityType == EntityType.User)
                 {
                     s.Add($"                user = await userManager.Users");
+                    if (CurrentEntity.HasUserFilterField)
+                        s.Add($"                    .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
                     s.Add($"                    .Include(o => o.Roles)");
                     s.Add($"                    .FirstOrDefaultAsync(o => o.Id == userDTO.Id);");
                 }
                 else
                 {
-                    s.Add($"                {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.FirstOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
+                    s.Add($"                {CurrentEntity.CamelCaseName} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}");
+                    if (CurrentEntity.HasUserFilterField)
+                        s.Add($"                    .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
+                    s.Add($"                    .FirstOrDefaultAsync(o => {GetKeyFieldLinq("o", CurrentEntity.DTOName.ToCamelCase())});");
                 }
                 s.Add($"");
                 s.Add($"                if ({CurrentEntity.CamelCaseName} == null)");
@@ -1019,7 +1034,10 @@ namespace WEB.Models
             s.Add($"        [HttpDelete(\"{CurrentEntity.RoutePath}\"){ (CurrentEntity.AuthorizationType == AuthorizationType.None ? "" : ", AuthorizeRoles(Roles.Administrator)")}]");
             s.Add($"        public async Task<IActionResult> Delete({CurrentEntity.ControllerParameters})");
             s.Add($"        {{");
-            s.Add($"            var {CurrentEntity.CamelCaseName} = await {(CurrentEntity.EntityType == EntityType.User ? "userManager" : CurrentEntity.Project.DbContextVariable)}.{CurrentEntity.PluralName}.FirstOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
+            s.Add($"            var {CurrentEntity.CamelCaseName} = await {(CurrentEntity.EntityType == EntityType.User ? "userManager" : CurrentEntity.Project.DbContextVariable)}.{CurrentEntity.PluralName}");
+            if (CurrentEntity.HasUserFilterField)
+                s.Add($"                .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
+            s.Add($"                .FirstOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
             s.Add($"");
             s.Add($"            if ({CurrentEntity.CamelCaseName} == null)");
             s.Add($"                return NotFound();");
@@ -1068,9 +1086,15 @@ namespace WEB.Models
                 s.Add($"        {{");
                 // if it's a child entity, just sort the id's that were sent
                 if (CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy))
-                    s.Add($"            var {CurrentEntity.PluralName.ToCamelCase()} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.Where(o => sortedIds.Contains(o.{CurrentEntity.KeyFields[0].Name})).ToListAsync();");
+                {
+                    s.Add($"            var {CurrentEntity.PluralName.ToCamelCase()} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}");
+                    s.Add($"                .Where(o => sortedIds.Contains(o.{CurrentEntity.KeyFields[0].Name}))");
+                }
                 else
-                    s.Add($"            var {CurrentEntity.PluralName.ToCamelCase()} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}.ToListAsync();");
+                    s.Add($"            var {CurrentEntity.PluralName.ToCamelCase()} = await {CurrentEntity.Project.DbContextVariable}.{CurrentEntity.PluralName}");
+                if (CurrentEntity.HasUserFilterField)
+                    s.Add($"                .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
+                s.Add($"                .ToListAsync();");
                 s.Add($"            if ({CurrentEntity.PluralName.ToCamelCase()}.Count != sortedIds.Length) return BadRequest(\"Some of the {CurrentEntity.PluralFriendlyName.ToLower()} could not be found\");");
                 s.Add($"");
                 //s.Add($"            var sortOrder = 0;");
@@ -1101,7 +1125,11 @@ namespace WEB.Models
                 s.Add($"        {{");
                 s.Add($"            if (!ModelState.IsValid) return BadRequest(ModelState);");
                 s.Add($"");
-                s.Add($"            var {rel.ChildEntity.PluralName.ToCamelCase()} = await db.{rel.ChildEntity.PluralName}.Where(o => o.{rel.RelationshipFields.First().ChildField.Name} == {rel.RelationshipFields.First().ParentField.Name.ToCamelCase()}).ToListAsync();");
+                s.Add($"            var {rel.ChildEntity.PluralName.ToCamelCase()} = await db.{rel.ChildEntity.PluralName}");
+                s.Add($"                .Where(o => o.{rel.RelationshipFields.First().ChildField.Name} == {rel.RelationshipFields.First().ParentField.Name.ToCamelCase()})");
+                if (CurrentEntity.HasUserFilterField)
+                    s.Add($"                .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
+                s.Add($"                .ToListAsync();");
                 s.Add($"");
                 s.Add($"            foreach (var {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()} in {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()}s)");
                 s.Add($"            {{");

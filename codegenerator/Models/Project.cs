@@ -45,6 +45,9 @@ namespace WEB.Models
         [MaxLength(20)]
         public string DbContextVariable { get; set; }
 
+        [MaxLength(50)]
+        public string UserFilterFieldName { get; set; }
+        
         public string Notes { get; set; }
 
         [Required]

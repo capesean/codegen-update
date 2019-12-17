@@ -104,6 +104,9 @@ namespace WEB.Models
         [MaxLength(20)]
         public string IconClass { get; set; }
 
+        [MaxLength(100)]
+        public string UserFilterFieldPath { get; set; }
+
         public virtual ICollection<Relationship> RelationshipsAsParent { get; set; } = new List<Relationship>();
 
         public virtual ICollection<Field> Fields { get; set; } = new List<Field>();
