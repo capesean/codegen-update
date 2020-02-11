@@ -38,7 +38,7 @@ export class NAMEModalComponent implements OnInit {
    }
 
    open() {
-      this.selectedItems = [];
+      //this.selectedItems = []; <-- allow multiple selects to re-open with selection in tact
 /*SEARCHOPTIONS*/      this.modal = this.modalService.open(this.content, { size: 'xl', centered: true, scrollable: true });
       this.runSearch();
       this.modal.result.then((CAMELCASENAME: NAME) => {

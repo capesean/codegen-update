@@ -34,7 +34,7 @@ APP_SELECT_FILTERS
             <thead>
                 <tr>
 FIELD_HEADERS
-                    <th scope="col" class="text-center fa-col-width" *ngIf="multiple"><i class="fa fa-fw clickable" [ngClass]="{ 'fa-check-square': allSelected, 'fa-square': !allSelected }" (click)="toggleAll()"></i></th>
+                    <th class="text-center fa-col-width" *ngIf="multiple"><i class="fa fa-fw clickable" [ngClass]="{ 'fa-check-square': allSelected, 'fa-square': !allSelected }" (click)="toggleAll()"></i></th>
                 </tr>
             </thead>
             <tbody>
@@ -52,9 +52,9 @@ FIELD_LIST
         <div class="w-100">
             <button type="button" class="btn btn-info mr-2" *ngIf="multiple">{{selectedItems.length}} <span *ngIf="selectedItems.length === 1">{{singular}}</span><span *ngIf="selectedItems.length !== 1">{{plural}}</span> selected</button>
             <button type="button" class="btn btn-info" (click)="addNew()" target="_blank" *ngIf="showAddNew">Add New</button>
-            <button type="button" class="btn btn-outline-dark float-right" (click)="close()">Close</button>
+            <button type="button" class="btn btn-outline-dark float-right" (click)="close()">{{(multiple ? "Select Checked" : "Close")}}</button>
+            <button type="button" class="btn btn-outline-dark float-right mr-2" (click)="selectAll()" *ngIf="multiple">Select All</button>
             <button type="button" class="btn btn-secondary float-right mr-2" (click)="clear()">Clear</button>
-            <button type="button" class="btn btn-secondary float-right mr-2" (click)="selectAll()" *ngIf="multiple">Select All</button>
         </div>
     </div>
 </ng-template>

@@ -144,7 +144,7 @@ namespace WEB.Models
                 case CodeType.AppSelectTypeScript:
                     return "App-Select TypeScript";
                 case CodeType.SelectModalHtml:
-                    return "Select Model Html";
+                    return "Select Modal Html";
                 case CodeType.SelectModalTypeScript:
                     return "Select Modal TypeScript";
                 case CodeType.TypeScriptModel:

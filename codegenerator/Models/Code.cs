@@ -232,6 +232,11 @@ namespace WEB.Models
             {
                 s.Add($"import {{ {relationshipParentEntity.Name} }} from './{ relationshipParentEntity.Name.ToLower() }.model';");
             }
+            if (CurrentEntity.Fields.Any(o => o.FieldType == FieldType.Enum))
+            {
+                var lookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).Select(o => o.Lookup.PluralName).Distinct().Aggregate((current, next) => { return current + ", " + next; });
+                s.Add($"import {{ {lookups} }} from './enums.model';");
+            }
             if (CurrentEntity.EntityType == EntityType.User)
                 s.Add($"import {{ Role }} from './roles.model';");
             s.Add($"");
@@ -431,18 +436,18 @@ namespace WEB.Models
             s.Add($"{{");
             s.Add($"    public partial class SettingsDTO");
             s.Add($"    {{");
-            foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
-                s.Add($"        public List<EnumDTO> {lookup.Name} {{ get; set; }}");
+            //foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
+            //    s.Add($"        public List<EnumDTO> {lookup.Name} {{ get; set; }}");
             s.Add($"");
             s.Add($"        public SettingsDTO()");
             s.Add($"        {{");
-            foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
-            {
-                s.Add($"            {lookup.Name} = new List<EnumDTO>();");
-                s.Add($"            foreach ({lookup.Name} type in Enum.GetValues(typeof({lookup.Name})))");
-                s.Add($"                {lookup.Name}.Add(new EnumDTO {{ Id = (int)type, Name = type.ToString(), Label = type.Label() }});");
-                s.Add($"");
-            }
+            //foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
+            //{
+            //    s.Add($"            {lookup.Name} = new List<EnumDTO>();");
+            //    s.Add($"            foreach ({lookup.Name} type in Enum.GetValues(typeof({lookup.Name})))");
+            //    s.Add($"                {lookup.Name}.Add(new EnumDTO {{ Id = (int)type, Name = type.ToString(), Label = type.Label() }});");
+            //    s.Add($"");
+            //}
             s.Add($"        }}");
             s.Add($"    }}");
             s.Add($"}}");
@@ -604,6 +609,7 @@ namespace WEB.Models
                     if (field.IsUniqueOnHierarchy)
                     {
                         var rel = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy);
+                        if (rel == null) throw new Exception($"Field has IsUniqueOnHierarchy but no hierarchy: {entity.Name}.{field.Name}");
                         s.Add($"            modelBuilder.Entity<{entity.Name}>()");
                         s.Add($"                .HasIndex(o => new {{ o.{rel.RelationshipFields.First().ChildField.Name}, o.{field.Name} }})");
                         s.Add($"                .HasName(\"IX_{entity.Name}_{field.Name}\")");
@@ -688,7 +694,8 @@ namespace WEB.Models
             s.Add($"using Microsoft.AspNetCore.Authorization;");
             s.Add($"using Microsoft.EntityFrameworkCore;");
             s.Add($"using {CurrentEntity.Project.Namespace}.Models;");
-            s.Add($"using Microsoft.Extensions.Options;");
+            if (CurrentEntity.EntityType == EntityType.User)
+                s.Add($"using Microsoft.Extensions.Options;");
             s.Add($"");
             s.Add($"namespace {CurrentEntity.Project.Namespace}.Controllers");
             s.Add($"{{");
@@ -1131,11 +1138,11 @@ namespace WEB.Models
                     s.Add($"                .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
                 s.Add($"                .ToListAsync();");
                 s.Add($"");
-                s.Add($"            foreach (var {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()} in {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()}s)");
+                s.Add($"            foreach (var {reverseRel.RelationshipFields.First().ChildField.Name.ToCamelCase()} in {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()}s)");
                 s.Add($"            {{");
-                s.Add($"                if (!{rel.ChildEntity.PluralName.ToCamelCase()}.Any(o => o.{reverseRel.RelationshipFields.First().ParentField.Name} == {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()}))");
+                s.Add($"                if (!{rel.ChildEntity.PluralName.ToCamelCase()}.Any(o => o.{reverseRel.RelationshipFields.First().ChildField.Name} == {reverseRel.RelationshipFields.First().ChildField.Name.ToCamelCase()}))");
                 s.Add($"                {{");
-                s.Add($"                    var {rel.ChildEntity.Name.ToCamelCase()} = new {rel.ChildEntity.Name} {{ {rel.RelationshipFields.First().ChildField.Name} = {rel.RelationshipFields.First().ParentField.Name.ToCamelCase()}, {reverseRel.RelationshipFields.First().ParentField.Name} = {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()} }};");
+                s.Add($"                    var {rel.ChildEntity.Name.ToCamelCase()} = new {rel.ChildEntity.Name} {{ {rel.RelationshipFields.First().ChildField.Name} = {rel.RelationshipFields.First().ParentField.Name.ToCamelCase()}, {reverseRel.RelationshipFields.First().ChildField.Name} = {reverseRel.RelationshipFields.First().ChildField.Name.ToCamelCase()} }};");
                 s.Add($"                    db.Entry({rel.ChildEntity.Name.ToCamelCase()}).State = EntityState.Added;");
                 s.Add($"                }}");
                 s.Add($"            }}");
@@ -1836,6 +1843,12 @@ namespace WEB.Models
                     tagType = "select";
                     attributes.Remove("type");
                 }
+                else if (field.CustomType == CustomType.String && (field.FieldType == FieldType.Text || field.FieldType == FieldType.nText || field.Length == 0))
+                {
+                    tagType = "textarea";
+                    attributes.Remove("type");
+                    attributes.Add("rows", "5");
+                }
                 else if (field.FieldType == FieldType.Date || field.FieldType == FieldType.SmallDateTime || field.FieldType == FieldType.DateTime)
                 {
                     attributes.Add("placeholder", "yyyy-mm-dd");
@@ -1882,8 +1895,8 @@ namespace WEB.Models
                 else if (tagType == "select")
                 {
                     controlHtml += $">" + Environment.NewLine;
-                    controlHtml += $"                           <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Lookup.Name.ToCamelCase()}.value\">{{{{ {field.Lookup.Name.ToCamelCase()}.label }}}}</option>" + Environment.NewLine;
-                    controlHtml += $"                       </{tagType}>";
+                    controlHtml += $"                       <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Lookup.Name.ToCamelCase()}.value\">{{{{ {field.Lookup.Name.ToCamelCase()}.label }}}}</option>" + Environment.NewLine;
+                    controlHtml += $"                   </{tagType}>";
                 }
                 //";
                 else
@@ -1921,7 +1934,7 @@ namespace WEB.Models
                 foreach (var validationError in validationErrors)
                 {
                     s.Add(t + $"                    <div *ngIf=\"{fieldName}.errors?.{validationError.Key}\" class=\"invalid-feedback\">");
-                    s.Add(t + $"                       {validationError.Value}");
+                    s.Add(t + $"                        {validationError.Value}");
                     s.Add(t + $"                    </div>");
                     s.Add($"");
                 }
@@ -2130,12 +2143,12 @@ namespace WEB.Models
                     s.Add(t + $"                    <thead>");
                     s.Add(t + $"                        <tr>");
                     if (relationship.Hierarchy && childEntity.HasASortField)
-                        s.Add(t + $"                            <th scope=\"col\" *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
+                        s.Add(t + $"                            <th *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
                     foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
                     {
-                        s.Add(t + $"                            <th scope=\"col\">{column.Header}</th>");
+                        s.Add(t + $"                            <th>{column.Header}</th>");
                     }
-                    s.Add(t + $"                            <th scope=\"col\" class=\"fa-col-width text-center\"><i class=\"fas fa-times\"></i></th>");
+                    s.Add(t + $"                            <th class=\"fa-col-width text-center\"><i class=\"fas fa-times\"></i></th>");
                     s.Add(t + $"                        </tr>");
                     s.Add(t + $"                    </thead>");
                     s.Add(t + $"                    <tbody>");// + (relationship.Hierarchy && childEntity.HasASortField ? $" ui-sortable=\"{childEntity.PluralName.ToCamelCase()}SortOptions\" [(ngModel)]=\"{childEntity.PluralName.ToCamelCase()}\"" : string.Empty) + ">");
@@ -2152,7 +2165,7 @@ namespace WEB.Models
                     s.Add(t + $"                    </tbody>");
                     s.Add(t + $"                </table>");
                     s.Add($"");
-                    s.Add(t + $"                <pager [headers]=\"{relationship.ChildEntity.PluralName.ToCamelCase()}Headers\" (pageChanged)=\"load{relationship.CollectionName}($event)\"></pager>");
+                    s.Add(t + $"                <pager [headers]=\"{relationship.CollectionName.ToCamelCase()}Headers\" (pageChanged)=\"load{relationship.CollectionName}($event)\"></pager>");
                     s.Add($"");
                     #endregion
 
@@ -2243,7 +2256,7 @@ namespace WEB.Models
                 var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
 
                 s.Add($"import {{ {reverseRel.ParentEntity.Name}ModalComponent }} from '../{reverseRel.ParentEntity.PluralName.ToLower()}/{reverseRel.ParentEntity.Name.ToLower()}.modal.component';");
-                s.Add($"import {{ {reverseRel.ParentEntity.Name} }} from '../common/models/{reverseRel.ParentEntity.Name.ToLower()}.model';");
+                if (reverseRel.ParentEntity != CurrentEntity) s.Add($"import {{ {reverseRel.ParentEntity.Name} }} from '../common/models/{reverseRel.ParentEntity.Name.ToLower()}.model';");
             }
             s.Add($"");
 
@@ -2425,7 +2438,7 @@ namespace WEB.Models
             if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First()?.ChildFieldId == CurrentEntity.PrimaryField.FieldId))
             {
                 var rel = CurrentEntity.RelationshipsAsChild.Single(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First().ChildFieldId == CurrentEntity.PrimaryField.FieldId);
-                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")}.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+                s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentName.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentName.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")}.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
             }
             else
                 s.Add($"      this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()} != undefined ? this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField?.Name.ToCamelCase() + (CurrentEntity.PrimaryField?.JavascriptType == "string" ? "" : ".toString()")}.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
@@ -2468,7 +2481,7 @@ namespace WEB.Models
                 {
                     var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
 
-                    s.Add($"   add{rel.ChildEntity.PluralName}(): void {{");
+                    s.Add($"   add{rel.CollectionName}(): void {{");
                     s.Add($"      this.{reverseRel.ParentEntity.Name.ToCamelCase()}Modal.open();");
                     s.Add($"   }}");
                     s.Add($"");
@@ -2480,7 +2493,7 @@ namespace WEB.Models
                     s.Add($"         .subscribe(");
                     s.Add($"            () => {{");
                     s.Add($"               this.toastr.success(\"The {rel.ChildEntity.PluralFriendlyName.ToLower()} have been saved\", \"Save {rel.ChildEntity.PluralFriendlyName}\");");
-                    s.Add($"               this.load{rel.ChildEntity.PluralName}(this.{rel.ChildEntity.PluralName.ToCamelCase()}Headers.pageIndex);");
+                    s.Add($"               this.load{rel.CollectionName}(this.{rel.CollectionName.ToCamelCase()}Headers.pageIndex);");
                     s.Add($"            }},");
                     s.Add($"            err => {{");
                     s.Add($"               this.errorService.handleError(err, \"{rel.ChildEntity.PluralFriendlyName}\", \"Save\");");
@@ -2624,7 +2637,7 @@ namespace WEB.Models
                     }
                 }
 
-                fieldHeaders += (fieldHeaders == string.Empty ? string.Empty : Environment.NewLine) + $"                    <th scope=\"col\"{ngIf}>{field.Label}</th>";
+                fieldHeaders += (fieldHeaders == string.Empty ? string.Empty : Environment.NewLine) + $"                    <th{ngIf}>{field.Label}</th>";
                 fieldList += (fieldList == string.Empty ? string.Empty : Environment.NewLine);
 
                 fieldList += $"                    <td{ngIf}>{field.ListFieldHtml}</td>";
@@ -2713,12 +2726,12 @@ namespace WEB.Models
                 if (field.FieldType == FieldType.Enum)
                 {
                     inputs += $"   @Input() {field.Name.ToCamelCase()}: Enum;" + Environment.NewLine;
-                    searchOptions += $"      if (this.{field.Name.ToCamelCase()}) this.searchOptions.{field.Name.ToCamelCase()} = this.{field.Name.ToCamelCase()}.value;" + Environment.NewLine;
+                    searchOptions += $"      this.searchOptions.{field.Name.ToCamelCase()} = this.{field.Name.ToCamelCase()} ? this.{field.Name.ToCamelCase()}.value : undefined;" + Environment.NewLine;
                 }
                 else if (relationship != null)
                 {
                     inputs += $"   @Input() {relationship.ParentName.ToCamelCase()}: {relationship.ParentEntity.Name};" + Environment.NewLine;
-                    searchOptions += $"      if (this.{relationship.ParentName.ToCamelCase()}) this.searchOptions.{field.Name.ToCamelCase()} = this.{relationship.ParentName.ToCamelCase()}.{relationship.ParentEntity.KeyFields.First().Name.ToCamelCase()};" + Environment.NewLine;
+                    searchOptions += $"      this.searchOptions.{field.Name.ToCamelCase()} = this.{relationship.ParentName.ToCamelCase()} ? this.{relationship.ParentName.ToCamelCase()}.{relationship.ParentEntity.KeyFields.First().Name.ToCamelCase()} : undefined;" + Environment.NewLine;
 
                     if (relationship.ParentEntity != CurrentEntity && !imported.Contains(relationship.ParentEntity.Name))
                     {
@@ -2743,7 +2756,7 @@ namespace WEB.Models
 
         private string RunTemplateReplacements(string input)
         {
-            if (CurrentEntity.KeyFields.Count > 1) throw new Exception("Unable to run key field replacements (multiple keys): " + CurrentEntity.Name);
+            if (CurrentEntity.KeyFields.Count > 1) throw new Exception("Unable to run key field replacements (multiple keys). Disable app-selects? " + CurrentEntity.Name);
 
             return input
                 .Replace("PLURALNAME_TOCAMELCASE", CurrentEntity.PluralName.ToCamelCase())
@@ -2757,6 +2770,7 @@ namespace WEB.Models
                 .Replace("HYPHENATEDNAME", CurrentEntity.Name.Hyphenated())
                 .Replace("KEYFIELD", CurrentEntity.KeyFields.Single().Name.ToCamelCase())
                 .Replace("NAME", CurrentEntity.Name)
+                .Replace("STARTSWITHVOWEL", new Regex("^[aeiou]").IsMatch(CurrentEntity.Name.ToLower()) ? "n" : "")
                 .Replace("ICONLINK", GetIconLink(CurrentEntity))
                 .Replace("ADDNEWURL", CurrentEntity.PluralName.ToLower() + "/add")
                 .Replace("// <reference", "/// <reference");

@@ -93,7 +93,6 @@ namespace WEB.Models
                     case FieldType.TinyInt:
                     case FieldType.SmallInt:
                     case FieldType.Decimal:
-                    case FieldType.Enum:
                         return "number";
                     case FieldType.nVarchar:
                     case FieldType.nText:
@@ -102,6 +101,8 @@ namespace WEB.Models
                     case FieldType.Guid:
                     case FieldType.Geometry:
                         return "string";
+                    case FieldType.Enum:
+                        return Lookup.PluralName;
                 }
                 throw new NotImplementedException("JavascriptType: " + FieldType.ToString());
             }

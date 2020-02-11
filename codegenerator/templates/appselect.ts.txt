@@ -16,15 +16,15 @@ import { Enum } from '../common/models/enums.model';
 })
 export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
-   @Input() KEYFIELD: string;
-   @Input() CAMELCASENAME: NAME;
-   @Output() CAMELCASENAMEChange = new EventEmitter<NAME>();
+   @Input() KEYFIELD: string | string[];
+   @Input() CAMELCASENAME: NAME | NAME[];
+   @Output() CAMELCASENAMEChange = new EventEmitter<NAME | NAME[]>();
    @Input() canRemoveFilters: boolean = false;
    @Input() multiple: boolean = false;
 /*INPUTS*/
    showAddNew: boolean = false;
    disabled: boolean = false;
-   placeholder = "Select a FRIENDLYNAME_LOWER";
+   placeholder = this.multiple ? "Select PLURALFRIENDLYNAME_TOLOWER" : "Select aSTARTSWITHVOWEL FRIENDLYNAME_LOWER";
 
    @ViewChild('modal', { static: false }) modal: NAMEModalComponent;
 
@@ -37,7 +37,7 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
    propagateChange = (_: any) => { };
 
-   writeValue(KEYFIELD: string): void {
+   writeValue(KEYFIELD: string | string[]): void {
       if (KEYFIELD !== undefined) {
          this.KEYFIELD = KEYFIELD;
          this.propagateChange(this.KEYFIELD);
@@ -55,15 +55,23 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
       this.disabled = isDisabled;
    }
 
-   change(CAMELCASENAME: NAME) {
+   change(CAMELCASENAME: NAME | NAME[]) {
       if (this.disabled) return;
       this.CAMELCASENAME = CAMELCASENAME;
       this.CAMELCASENAMEChange.emit(CAMELCASENAME);
-      this.writeValue(CAMELCASENAME ? CAMELCASENAME.KEYFIELD : null);
+      if (this.multiple)
+        this.writeValue(CAMELCASENAME ? (<NAME[]><unknown>CAMELCASENAME).map(o => o.KEYFIELD) : null);
+      else
+        this.writeValue(CAMELCASENAME ? (<NAME>CAMELCASENAME).KEYFIELD : null);
    }
 
    getLabel() {
-      return this.CAMELCASENAME ? this.CAMELCASENAME.LABELFIELD : "";
+        if (this.multiple) {
+            let label = "";
+            (<NAME[]><unknown>this.CAMELCASENAME).forEach(CAMELCASENAME => label += (label == "" ? "" : ", ") + CAMELCASENAME.LABELFIELD);
+            return label;
+        }
+        return this.CAMELCASENAME ? (<NAME>this.CAMELCASENAME).LABELFIELD : "";
    }
 
    openModal() {
