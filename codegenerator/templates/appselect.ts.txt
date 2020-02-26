@@ -5,77 +5,77 @@ import { NAME } from '../common/models/NAME_TOLOWER.model';
 import { Enum } from '../common/models/enums.model';
 /*IMPORTS*/
 @Component({
-   selector: 'HYPHENATEDNAME-select',
-   templateUrl: './NAME_TOLOWER.select.component.html',
-   providers: [{
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => NAMESelectComponent),
-      multi: true
-   }],
-   host: { 'class': 'app-select' }
+    selector: 'HYPHENATEDNAME-select',
+    templateUrl: './NAME_TOLOWER.select.component.html',
+    providers: [{
+        provide: NG_VALUE_ACCESSOR,
+        useExisting: forwardRef(() => NAMESelectComponent),
+        multi: true
+    }],
+    host: { 'class': 'app-select' }
 })
 export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
-   @Input() KEYFIELD: string | string[];
-   @Input() CAMELCASENAME: NAME | NAME[];
-   @Output() CAMELCASENAMEChange = new EventEmitter<NAME | NAME[]>();
-   @Input() canRemoveFilters: boolean = false;
-   @Input() multiple: boolean = false;
+    @Input() KEYFIELD: string | string[];
+    @Input() CAMELCASENAME: NAME | NAME[];
+    @Output() CAMELCASENAMEChange = new EventEmitter<NAME | NAME[]>();
+    @Input() canRemoveFilters: boolean = false;
+    @Input() multiple: boolean = false;
 /*INPUTS*/
-   showAddNew: boolean = false;
-   disabled: boolean = false;
-   placeholder = this.multiple ? "Select PLURALFRIENDLYNAME_TOLOWER" : "Select aSTARTSWITHVOWEL FRIENDLYNAME_LOWER";
+    showAddNew: boolean = false;
+    disabled: boolean = false;
+    placeholder = this.multiple ? "Select PLURALFRIENDLYNAME_TOLOWER" : "Select aSTARTSWITHVOWEL FRIENDLYNAME_LOWER";
 
-   @ViewChild('modal', { static: false }) modal: NAMEModalComponent;
+    @ViewChild('modal', { static: false }) modal: NAMEModalComponent;
 
-   constructor(
-   ) {
-   }
+    constructor(
+    ) {
+    }
 
-   ngOnInit(): void {
-   }
+    ngOnInit(): void {
+    }
 
-   propagateChange = (_: any) => { };
+    propagateChange = (_: any) => { };
 
-   writeValue(KEYFIELD: string | string[]): void {
-      if (KEYFIELD !== undefined) {
-         this.KEYFIELD = KEYFIELD;
-         this.propagateChange(this.KEYFIELD);
-      }
-   }
+    writeValue(KEYFIELD: string | string[]): void {
+        if (KEYFIELD !== undefined) {
+            this.KEYFIELD = KEYFIELD;
+            this.propagateChange(this.KEYFIELD);
+        }
+    }
 
-   registerOnChange(fn: any): void {
-      this.propagateChange = fn;
-   }
+    registerOnChange(fn: any): void {
+        this.propagateChange = fn;
+    }
 
-   registerOnTouched(fn: any): void {
-   }
+    registerOnTouched(fn: any): void {
+    }
 
-   setDisabledState?(isDisabled: boolean): void {
-      this.disabled = isDisabled;
-   }
+    setDisabledState?(isDisabled: boolean): void {
+        this.disabled = isDisabled;
+    }
 
-   change(CAMELCASENAME: NAME | NAME[]) {
-      if (this.disabled) return;
-      this.CAMELCASENAME = CAMELCASENAME;
-      this.CAMELCASENAMEChange.emit(CAMELCASENAME);
-      if (this.multiple)
-        this.writeValue(CAMELCASENAME ? (<NAME[]><unknown>CAMELCASENAME).map(o => o.KEYFIELD) : null);
-      else
-        this.writeValue(CAMELCASENAME ? (<NAME>CAMELCASENAME).KEYFIELD : null);
-   }
+    change(CAMELCASENAME: NAME | NAME[]) {
+        if (this.disabled) return;
+        this.CAMELCASENAME = CAMELCASENAME;
+        this.CAMELCASENAMEChange.emit(CAMELCASENAME);
+        if (this.multiple)
+            this.writeValue(CAMELCASENAME ? (<NAME[]><unknown>CAMELCASENAME).map(o => o.KEYFIELD) : null);
+        else
+            this.writeValue(CAMELCASENAME ? (<NAME>CAMELCASENAME).KEYFIELD : null);
+    }
 
-   getLabel() {
+    getLabel() {
         if (this.multiple) {
             let label = "";
             (<NAME[]><unknown>this.CAMELCASENAME).forEach(CAMELCASENAME => label += (label == "" ? "" : ", ") + CAMELCASENAME.LABELFIELD);
             return label;
         }
         return this.CAMELCASENAME ? (<NAME>this.CAMELCASENAME).LABELFIELD : "";
-   }
+    }
 
-   openModal() {
-      if (this.disabled) return;
-      this.modal.open();
-   }
+    openModal() {
+        if (this.disabled) return;
+        this.modal.open();
+    }
 }

@@ -41,7 +41,8 @@ namespace WEB.Models
         ReadOnly,
         EditWhenNew,
         SortField,
-        CalculatedField
+        CalculatedField,
+        EditOnly
     }
 
     public enum EntityType
@@ -178,6 +179,8 @@ namespace WEB.Models
                     return "Sort Field";
                 case EditPageType.CalculatedField:
                     return "Calculated Field";
+                case EditPageType.EditOnly:
+                    return "Edit Only";
                 default:
                     return null;
             }

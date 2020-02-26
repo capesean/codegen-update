@@ -482,6 +482,18 @@
             <br />
         </fieldset>
 
+        <div class="row">
+            <div class="col-sm-6 col-md-4">
+                <div class="form-group">
+                    <ol id="codeType" name="codeType" class="nya-bs-select form-control" ng-model="vm.codeType" ng-required="true" data-live-search="true">
+                        <li nya-bs-option="codeType in vm.appSettings.codeType" class="nya-bs-option" value="codeType.id">
+                            <a>{{codeType.label}}<span class="fa fa-check check-mark"></span></a>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
         <table class="table table-striped table-hover table-bordered row-navigation ">
             <thead>
                 <tr>
@@ -491,8 +503,8 @@
                 </tr>
             </thead>
             <tbody ui-sortable="vm.codeReplacementsSortOptions" ng-model="vm.codeReplacements">
-                <tr ng-repeat="codeReplacement in vm.codeReplacements" ng-click="vm.goToCodeReplacement(codeReplacement.entity.project.projectId, codeReplacement.entity.entityId, codeReplacement.codeReplacementId)">
-                    <td><i class="fa fa-sort sortable-handle" ng-click="$event.stopPropagation();"></i>{{ codeReplacement.purpose }}</td>
+                <tr ng-repeat="codeReplacement in vm.codeReplacements | filter:{codeType:vm.codeType}" ng-click="vm.goToCodeReplacement(codeReplacement.entity.project.projectId, codeReplacement.entity.entityId, codeReplacement.codeReplacementId)">
+                    <td><i class="fa fa-sort sortable-handle" ng-click="$event.stopPropagation();"></i><a href="/projects/{{codeReplacement.entity.project.projectId}}/entities/{{codeReplacement.entity.entityId}}/codereplacements/{{codeReplacement.codeReplacementId}}">{{ codeReplacement.purpose }}</a></td>
                     <td>{{ vm.appSettings.find(vm.appSettings.codeType, codeReplacement.codeType).label }}</td>
                     <td>{{ codeReplacement.disabled ? "Yes" : "No" }}</td>
                 </tr>

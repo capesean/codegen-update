@@ -16,6 +16,7 @@ namespace WEB
         {
             if (input.All(char.IsUpper)) return input.ToLower();
             if (input.Length < 2) return input.ToLower();
+            if (input == "pH") return "pH";
             if (char.IsLower(input, 1)) return input.Substring(0, 1).ToLower() + input.Substring(1);
 
             var result = string.Empty;
