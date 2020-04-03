@@ -234,7 +234,7 @@ namespace WEB.Models
             }
             if (CurrentEntity.Fields.Any(o => o.FieldType == FieldType.Enum))
             {
-                var lookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).Select(o => o.Lookup.PluralName).Distinct().Aggregate((current, next) => { return current + ", " + next; });
+                var lookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).Select(o => o.Lookup.PluralName).OrderBy(o => o).Distinct().Aggregate((current, next) => { return current + ", " + next; });
                 s.Add($"import {{ {lookups} }} from './enums.model';");
             }
             if (CurrentEntity.EntityType == EntityType.User)
@@ -255,7 +255,7 @@ namespace WEB.Models
             }
             if (CurrentEntity.EntityType == EntityType.User)
             {
-                s.Add($"    roles: Role[] = [];");
+                s.Add($"    roles: string[] = [];");
                 s.Add($"    email: string;");
             }
             s.Add($"");
@@ -265,6 +265,9 @@ namespace WEB.Models
             // then the angular/typescript validation always passes as the value is not-undefined
             if (CurrentEntity.KeyFields.Count() == 1 && CurrentEntity.KeyFields.First().CustomType == CustomType.Guid)
                 s.Add($"        this.{CurrentEntity.KeyFields.First().Name.ToCamelCase()} = \"00000000-0000-0000-0000-000000000000\";");
+            foreach(var field in CurrentEntity.Fields)
+                if(!string.IsNullOrWhiteSpace(field.EditPageDefault))
+                    s.Add($"        this.{field.Name.ToCamelCase()} = {field.EditPageDefault};");
             s.Add($"    }}");
             s.Add($"}}");
             s.Add($"");
@@ -400,7 +403,7 @@ namespace WEB.Models
                     s.Add($"   static {option.Name}: Role = {{ value: {(option.Value.HasValue ? option.Value : counter)}, name: '{option.Name}', label: '{option.FriendlyName}' }};");
                     counter++;
                 }
-                s.Add($"   static List: Roles[] = [{(roleLookup.LookupOptions.Select(o => "Roles." + o.Name).OrderBy(o => o).Aggregate((current, next) => { return current + ", " + next; }))}];");
+                s.Add($"   static List: Role[] = [{(roleLookup.LookupOptions.Select(o => "Roles." + o.Name).OrderBy(o => o).Aggregate((current, next) => { return current + ", " + next; }))}];");
             }
             s.Add($"}}");
 
@@ -767,18 +770,18 @@ namespace WEB.Models
                         s.Add($"                results = results.Include(o => {result});");
                 }
                 s.Add($"            }}");
+                s.Add($"");
             }
 
             if (CurrentEntity.TextSearchFields.Count > 0)
             {
-                s.Add($"");
                 s.Add($"            if (!string.IsNullOrWhiteSpace(q))");
-                s.Add($"                results = results.Where(o => {(CurrentEntity.EntityType == EntityType.User ? "o.Email.Contains(q) && " : "")}{CurrentEntity.TextSearchFields.Select(o => $"o.{o.Name + (o.CustomType == CustomType.String ? string.Empty : ".toString()")}.Contains(q)").Aggregate((current, next) => current + " || " + next) });");
+                s.Add($"                results = results.Where(o => {(CurrentEntity.EntityType == EntityType.User ? "o.Email.Contains(q) || " : "")}{CurrentEntity.TextSearchFields.Select(o => $"o.{o.Name + (o.CustomType == CustomType.String ? string.Empty : ".toString()")}.Contains(q)").Aggregate((current, next) => current + " || " + next) });");
+                s.Add($"");
             }
 
             if (fieldsToSearch.Count > 0)
             {
-                s.Add($"");
                 foreach (var field in fieldsToSearch)
                 {
                     if (field.SearchType == SearchType.Range && field.CustomType == CustomType.Date)
@@ -791,9 +794,9 @@ namespace WEB.Models
                         s.Add($"            if ({field.Name.ToCamelCase()}{(field.CustomType == CustomType.String ? " != null" : ".HasValue")}) results = results.Where(o => o.{field.Name} == {field.Name.ToCamelCase()});");
                     }
                 }
+                s.Add($"");
             }
 
-            s.Add($"");
             if (CurrentEntity.SortOrderFields.Count > 0)
                 s.Add($"            results = results.Order{CurrentEntity.SortOrderFields.Select(f => "By" + (f.SortDescending ? "Descending" : string.Empty) + "(o => o." + f.Name + ")").Aggregate((current, next) => current + ".Then" + next)};");
 
@@ -1475,7 +1478,7 @@ namespace WEB.Models
                         s.Add(t + $"        <div class=\"col-sm-6 col-md-4 col-lg-3\">");
                         s.Add(t + $"            <div class=\"form-group\">");
                         s.Add(t + $"                <select id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" #{field.Name.ToCamelCase()}=\"ngModel\" class=\"form-control\">");
-                        s.Add(t + $"                    <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Name.ToCamelCase()}.value\">{{{{ {field.Name.ToCamelCase()}.label }}}}</option>");
+                        s.Add(t + $"                    <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Lookup.Name.ToCamelCase()}.value\">{{{{ {field.Lookup.Name.ToCamelCase()}.label }}}}</option>");
                         s.Add(t + $"                </select>");
                         s.Add(t + $"            </div>");
                         s.Add(t + $"        </div>");
@@ -1723,14 +1726,16 @@ namespace WEB.Models
             if (entity.RelationshipsAsChild.Any(r => r.Hierarchy))
             {
                 var prefix = string.Empty;
+                Relationship previousRelationship = null;
                 while (entity != null)
                 {
                     var nextEntity = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy)?.ParentEntity;
 
-                    routerLink = $"'{(nextEntity == null ? "/" : "")}{entity.PluralName.ToLower()}', {entity.KeyFields.Select(o => $"{prefix + entity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}" + (routerLink == "" ? "" : ", ") + routerLink;
+                    routerLink = $"'{(nextEntity == null ? "/" : "")}{entity.PluralName.ToLower()}', {entity.KeyFields.Select(o => $"{prefix + (previousRelationship == null ? entity.Name.ToCamelCase() : previousRelationship.ParentName.ToCamelCase())}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}" + (routerLink == "" ? "" : ", ") + routerLink;
 
-                    prefix += entity.Name.ToCamelCase() + ".";
+                    prefix += (previousRelationship == null ? entity.Name.ToCamelCase() : previousRelationship.ParentName.ToCamelCase()) + ".";
 
+                    previousRelationship = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy);
                     entity = nextEntity;
                 }
             }
@@ -1824,7 +1829,7 @@ namespace WEB.Models
                 attributes.Add("[(ngModel)]", CurrentEntity.Name.ToCamelCase() + "." + fieldName);
                 attributes.Add("#" + fieldName, "ngModel");
                 attributes.Add("class", "form-control");
-                if (!field.IsNullable)
+                if (!field.IsNullable && field.EditPageType != EditPageType.ReadOnly)
                     attributes.Add("required", null);
                 if (field.FieldId == CurrentEntity.PrimaryFieldId)
                     attributes.Add("(ngModelChange)", $"changeBreadcrumb()");
@@ -1932,7 +1937,7 @@ namespace WEB.Models
                 s.Add($"");
 
                 var validationErrors = new Dictionary<string, string>();
-                if (!field.IsNullable && field.CustomType != CustomType.Boolean) validationErrors.Add("required", $"{field.Label} is required");
+                if (!field.IsNullable && field.CustomType != CustomType.Boolean && field.EditPageType != EditPageType.ReadOnly) validationErrors.Add("required", $"{field.Label} is required");
                 if (field.MinLength > 0) validationErrors.Add("minlength", $"{field.Label} must be at least {field.MinLength} characters long");
                 if (field.Length > 0) validationErrors.Add("maxlength", $"{field.Label} must be at most {field.Length} characters long");
 
@@ -2256,7 +2261,7 @@ namespace WEB.Models
             }
             if (CurrentEntity.EntityType == EntityType.User)
             {
-                s.Add($"import {{ Roles }} from '../common/models/roles.model';");
+                s.Add($"import {{ Roles, Role }} from '../common/models/roles.model';");
                 s.Add($"import {{ AuthService }} from '../common/auth/auth.service';");
                 s.Add($"import {{ ProfileModel }} from '../common/auth/auth.models';");
             }
@@ -2284,7 +2289,7 @@ namespace WEB.Models
                 s.Add($"    public {enumLookup.PluralName.ToCamelCase()}: Enum[] = Enums.{enumLookup.PluralName};");
             if (CurrentEntity.EntityType == EntityType.User)
             {
-                s.Add($"    public roles = Roles.List;");
+                s.Add($"    public roles: Role[] = Roles.List;");
                 s.Add($"    private profile: ProfileModel;");
             }
             s.Add($"");
@@ -2689,7 +2694,7 @@ namespace WEB.Models
                     {
                         appSelectFilters += $"                    <div class=\"col-sm-6 col-md-6 col-lg-4\" *ngIf=\"!{field.Name.ToCamelCase()}\">" + Environment.NewLine;
                         appSelectFilters += $"                        <select id=\"{field.Name.ToCamelCase()}\" name=\"{field.Name.ToCamelCase()}\" [(ngModel)]=\"searchOptions.{field.Name.ToCamelCase()}\" #{field.Name.ToCamelCase()}=\"ngModel\" class=\"form-control\">" + Environment.NewLine;
-                        appSelectFilters += $"                            <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Name.ToCamelCase()}.value\">{{{{ {field.Name.ToCamelCase()}.label }}}}</option>" + Environment.NewLine;
+                        appSelectFilters += $"                            <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Lookup.Name.ToCamelCase()}.value\">{{{{ {field.Lookup.Name.ToCamelCase()}.label }}}}</option>" + Environment.NewLine;
                         appSelectFilters += $"                        </select>" + Environment.NewLine;
                         appSelectFilters += $"                    </div>" + Environment.NewLine;
                     }
