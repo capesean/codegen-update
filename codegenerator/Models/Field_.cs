@@ -222,7 +222,7 @@ namespace WEB.Models
                         return $"{{{{ {Lookup.PluralName.ToCamelCase()}[{ Entity.Name.ToCamelCase()}.{Lookup.Name.ToCamelCase()}].label }}}}";
                     //return $"{{{{ vm.appSettings.findById(vm.appSettings.{Lookup.Name.ToCamelCase()}, {Entity.CamelCaseName}.{Name.ToCamelCase()}).label }}}}";
                     else if (FieldType == FieldType.Date)
-                        return $"{{{{ { Entity.Name.ToCamelCase()}.{ Name.ToCamelCase() } | toLocaleDateString }}}}";
+                        return $"{{{{ { Entity.Name.ToCamelCase()}.{ Name.ToCamelCase() } | momentPipe: 'DD MMM YYYY' }}}}";
                     else if (FieldType == FieldType.Bit)
                         return $"{{{{ { Entity.Name.ToCamelCase()}.{ Name.ToCamelCase() } ? \"Yes\" : \"No\" }}}}";
                     else

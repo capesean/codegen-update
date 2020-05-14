@@ -178,7 +178,7 @@ namespace WEB.Models
                     else if (field.FieldType == FieldType.Bit)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } ? \"Yes\" : \"No\" }}}}";
                     else if (field.FieldType == FieldType.Date)
-                        column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | toLocaleDateString }}}}";
+                        column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | momentPipe: 'DD MMM YYYY' }}}}";
                     else
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } }}}}";
                     result.Add(column);

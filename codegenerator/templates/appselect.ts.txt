@@ -19,11 +19,11 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
     @Input() KEYFIELD: string | string[];
     @Input() CAMELCASENAME: NAME | NAME[];
     @Output() CAMELCASENAMEChange = new EventEmitter<NAME | NAME[]>();
-    @Input() canRemoveFilters: boolean = false;
-    @Input() multiple: boolean = false;
+    @Input() canRemoveFilters = false;
+    @Input() multiple = false;
+    @Input() showAddNew = false;
 /*INPUTS*/
-    showAddNew: boolean = false;
-    disabled: boolean = false;
+    disabled = false;
     placeholder = this.multiple ? "Select PLURALFRIENDLYNAME_TOLOWER" : "Select aSTARTSWITHVOWEL FRIENDLYNAME_LOWER";
 
     @ViewChild('modal', { static: false }) modal: NAMEModalComponent;
@@ -35,7 +35,7 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
     ngOnInit(): void {
     }
 
-    propagateChange = (_: any) => { };
+    propagateChange = (_) => { };
 
     writeValue(KEYFIELD: string | string[]): void {
         if (KEYFIELD !== undefined) {
@@ -44,34 +44,34 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
         }
     }
 
-    registerOnChange(fn: any): void {
+    registerOnChange(fn): void {
         this.propagateChange = fn;
     }
 
-    registerOnTouched(fn: any): void {
+    registerOnTouched(): void {
     }
 
     setDisabledState?(isDisabled: boolean): void {
         this.disabled = isDisabled;
     }
 
-    change(CAMELCASENAME: NAME | NAME[]) {
+    changed(CAMELCASENAME: NAME | NAME[]) {
         if (this.disabled) return;
         this.CAMELCASENAME = CAMELCASENAME;
         this.CAMELCASENAMEChange.emit(CAMELCASENAME);
         if (this.multiple)
-            this.writeValue(CAMELCASENAME ? (<NAME[]><unknown>CAMELCASENAME).map(o => o.KEYFIELD) : null);
+            this.writeValue(CAMELCASENAME ? (CAMELCASENAME as NAME[]).map(o => o.KEYFIELD) : null);
         else
-            this.writeValue(CAMELCASENAME ? (<NAME>CAMELCASENAME).KEYFIELD : null);
+            this.writeValue(CAMELCASENAME ? (CAMELCASENAME as NAME).KEYFIELD : null);
     }
 
     getLabel() {
         if (this.multiple) {
             let label = "";
-            (<NAME[]><unknown>this.CAMELCASENAME).forEach(CAMELCASENAME => label += (label == "" ? "" : ", ") + CAMELCASENAME.LABELFIELD);
+            (this.CAMELCASENAME as NAME[]).forEach(CAMELCASENAME => label += (label == "" ? "" : ", ") + CAMELCASENAME.LABELFIELD);
             return label;
         }
-        return this.CAMELCASENAME ? (<NAME>this.CAMELCASENAME).LABELFIELD : "";
+        return this.CAMELCASENAME ? (this.CAMELCASENAME as NAME).LABELFIELD : "";
     }
 
     openModal() {

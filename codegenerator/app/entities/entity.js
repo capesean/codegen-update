@@ -2,6 +2,7 @@
     "use strict";
     angular
         .module("app")
+        .filter("crFilter", crFilter)
         .controller("entity", entity);
     entity.$inject = ["$scope", "$state", "$stateParams", "entityResource", "notifications", "appSettings", "$q", "errorService", "projectResource", "relationshipResource", "fieldResource", "codeReplacementResource"];
     function entity($scope, $state, $stateParams, entityResource, notifications, appSettings, $q, errorService, projectResource, relationshipResource, fieldResource, codeReplacementResource) {
@@ -210,5 +211,19 @@
         }
     }
     ;
+    function crFilter() {
+        return function (items, codeType, query) {
+            if (!items)
+                return [];
+            var filtered = [];
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                if ((codeType === undefined || codeType === item.codeType) && (query === undefined || item.findCode.toLowerCase().indexOf(query.toLowerCase()) >= 0 || item.replacementCode.toLowerCase().indexOf(query.toLowerCase()) >= 0)) {
+                    filtered.push(item);
+                }
+            }
+            return filtered;
+        };
+    }
 }());
 //# sourceMappingURL=entity.js.map

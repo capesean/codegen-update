@@ -1,6 +1,5 @@
 ﻿<div class="input-group" [ngClass]="{ 'disabled': disabled }">
-    ICONLINK<input placeholder="{{placeholder}}" (click)="openModal()" type="text"
-                   class="form-control" readonly="readonly" value="{{getLabel()}}" [disabled]="disabled" />
+    ICONLINK<input placeholder="{{placeholder}}" (click)="openModal()" type="text" tabindex="-1" class="form-control" readonly value="{{getLabel()}}" [disabled]="disabled" />
     <input type="hidden" [(ngModel)]="KEYFIELD" />
     <div class="input-group-append">
         <button type="button" class="btn btn-secondary" (click)="openModal()">
@@ -9,4 +8,4 @@
     </div>
 </div>
 
-<HYPHENATEDNAME-modal #modal (change)="change($event)" [multiple]="multiple" [canRemoveFilters]="canRemoveFilters"/*FILTER-FIELDS*/></HYPHENATEDNAME-modal>
+<HYPHENATEDNAME-modal #modal (change)="changed($event)" [multiple]="multiple" [canRemoveFilters]="canRemoveFilters"/*FILTER-FIELDS*/ [showAddNew]="showAddNew"></HYPHENATEDNAME-modal>

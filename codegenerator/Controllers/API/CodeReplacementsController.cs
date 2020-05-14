@@ -20,7 +20,7 @@ namespace WEB.Controllers
             }
 
             if (!string.IsNullOrWhiteSpace(q))
-                results = results.Where(o => o.Purpose.Contains(q));
+                results = results.Where(o => o.Purpose.Contains(q) || o.FindCode.Contains(q) || o.ReplacementCode.StartsWith(q));
 
             if (entityId.HasValue) results = results.Where(o => o.EntityId == entityId);
             if (findCode != null) results = results.Where(o => o.FindCode == findCode);
