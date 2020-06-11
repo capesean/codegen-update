@@ -139,4 +139,8 @@ export class NAMEModalComponent implements OnInit {
             );
 
     }
+
+    addNew() {
+        window.open("ADDNEWURL", "_blank");
+    }
 }

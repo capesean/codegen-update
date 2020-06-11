@@ -68,10 +68,10 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
     getLabel() {
         if (this.multiple) {
             let label = "";
-            (this.CAMELCASENAME as NAME[]).forEach(CAMELCASENAME => label += (label == "" ? "" : ", ") + CAMELCASENAME.LABELFIELD);
+            (this.CAMELCASENAME as NAME[]).forEach(CAMELCASENAME => label += (label === "" ? "" : ", ") + LABEL_OUTPUT_MULTI);
             return label;
         }
-        return this.CAMELCASENAME ? (this.CAMELCASENAME as NAME).LABELFIELD : "";
+        return this.CAMELCASENAME ? LABEL_OUTPUT_SINGLE : "";
     }
 
     openModal() {
