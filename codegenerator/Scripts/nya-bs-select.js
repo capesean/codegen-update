@@ -422,7 +422,7 @@
         var DROPDOWN_CONTAINER = '<div class="dropdown-menu open"></div>';
 
         var SEARCH_BOX = '<div class="bs-searchbox">' +
-            '<input type="text" class="form-control">' +
+            '<input type="text" class="form-control" autocomplete="off">' +
             '</div>';
 
         var DROPDOWN_MENU = '<ul class="dropdown-menu inner"></ul>';
@@ -702,6 +702,13 @@
 
                                     ngCtrl.$setViewValue(modelValue);
 
+                                    updateButtonContent();
+                                } else {
+                                    // Added by Sean Walsh: 3 April 2018
+                                    // if loading list after model value is set, the list of values (valuesForSelect)
+                                    // now contains the modelValue, so we need to set it to the view and update the 
+                                    // button text
+                                    ngCtrl.$setViewValue(modelValue);
                                     updateButtonContent();
                                 }
                             }
@@ -1269,9 +1276,10 @@
 
                             } else {
                                 dropdownMenu.children().removeClass('selected');
-                                viewValue = value;
-                                nyaBsOption.addClass('selected');
-
+                                if (ngCtrl.$viewValue !== value) {
+                                    viewValue = value;
+                                    nyaBsOption.addClass('selected');
+                                }
                             }
                         }
                         // update view value regardless
