@@ -1322,33 +1322,46 @@ namespace WEB.Models
             s.Add($"import {{ AccessGuard }} from './common/auth/accessguard';");
 
             var allEntities = AllEntities.Where(e => !e.Exclude).OrderBy(o => o.Name);
-            foreach (var e in allEntities)
+            foreach (var entity in allEntities)
             {
-                s.Add($"import {{ {e.Name}ListComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.list.component';");
-                s.Add($"import {{ {e.Name}EditComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.edit.component';");
+                s.Add($"import {{ {entity.Name}ListComponent }} from './{entity.PluralName.ToLower()}/{entity.Name.ToLower()}.list.component';");
+                s.Add($"import {{ {entity.Name}EditComponent }} from './{entity.PluralName.ToLower()}/{entity.Name.ToLower()}.edit.component';");
             }
             //s.Add($"import {{ NotFoundComponent }} from './common/notfound.component';");
             s.Add($"");
 
             s.Add($"export const GeneratedRoutes: Route[] = [");
 
-            foreach (var e in allEntities.OrderBy(o => o.Name))
+            foreach (var entity in allEntities.OrderBy(o => o.Name))
             {
-                var hasChildren = !e.RelationshipsAsChild.Any(r => r.Hierarchy);
+                var editOnRoot = !entity.RelationshipsAsChild.Any(r => r.Hierarchy);
+                var childRelationships = entity.RelationshipsAsParent.Where(r => r.Hierarchy);
 
                 s.Add($"    {{");
-                s.Add($"        path: '{e.PluralName.ToLower()}',");
+                s.Add($"        path: '{entity.PluralName.ToLower()}',");
                 s.Add($"        canActivate: [AccessGuard],");
                 s.Add($"        canActivateChild: [AccessGuard],");
-                s.Add($"        component: {e.Name}ListComponent,");
-                s.Add($"        data: {{ breadcrumb: '{e.PluralFriendlyName}' }}" + (hasChildren ? "," : ""));
-                if (hasChildren)
+                s.Add($"        component: {entity.Name}ListComponent,");
+                s.Add($"        data: {{ breadcrumb: '{entity.PluralFriendlyName}' }}" + (editOnRoot ? "," : ""));
+                if (editOnRoot)
                 {
                     s.Add($"        children: [");
-                    WriteEditRoute(new List<Entity> { e }, s, 0);
+                    if (editOnRoot)
+                    {
+                        s.Add($"            {{");
+                        s.Add($"                path: '{entity.KeyFields.Select(o => ":" + o.Name.ToCamelCase()).Aggregate((current, next) => { return current + "/" + next; })}',");
+                        s.Add($"                component: {entity.Name}EditComponent,");
+                        s.Add($"                canActivate: [AccessGuard],");
+                        s.Add($"                canActivateChild: [AccessGuard],");
+                        s.Add($"                data: {{");
+                        s.Add($"                    breadcrumb: 'Add {entity.FriendlyName}'");
+                        s.Add($"                }}" + (childRelationships.Any() ? "," : ""));
+                    }
+                    WriteChildRoutes(childRelationships, s, 0);
+                    s.Add($"            }}");
                     s.Add($"        ]");
                 }
-                s.Add($"    }}" + (e == allEntities.Last() ? "" : ","));
+                s.Add($"    }}" + (entity == allEntities.Last() ? "" : ","));
             }
 
             s.Add($"];");
@@ -1357,31 +1370,33 @@ namespace WEB.Models
 
         }
 
-        private void WriteEditRoute(IEnumerable<Entity> entities, StringBuilder s, int level)
+        private void WriteChildRoutes(IEnumerable<Relationship> relationships, StringBuilder s, int level)
         {
+            if (!relationships.Any()) return;
             var tabs = String.Concat(Enumerable.Repeat("        ", level));
 
-            foreach (var entity in entities.OrderBy(o => o.Name))
+            s.Add(tabs + $"                children: [");
+            foreach (var relationship in relationships.OrderBy(o => o.ChildEntity.Name))
             {
-                var childEntities = entity.RelationshipsAsParent.Where(r => r.Hierarchy).Select(o => o.ChildEntity);
+                var entity = relationship.ChildEntity;
+                var childRelationships = entity.RelationshipsAsParent.Where(r => r.Hierarchy);
+                var keyfields = entity.GetNonHierarchicalKeyFields();
 
-                s.Add(tabs + $"            {{");
-                s.Add(tabs + $"                path: '{(level == 0 ? "" : entity.PluralName.ToLower() + "/")}{entity.KeyFields.Select(o => ":" + o.Name.ToCamelCase()).Aggregate((current, next) => { return current + "/" + next; })}',");
-                s.Add(tabs + $"                component: {entity.Name}EditComponent,");
-                s.Add(tabs + $"                canActivate: [AccessGuard],");
-                s.Add(tabs + $"                canActivateChild: [AccessGuard],");
-                s.Add(tabs + $"                data: {{");
-                s.Add(tabs + $"                    breadcrumb: 'Add {entity.FriendlyName}'");
-                s.Add(tabs + $"                }}" + (childEntities.Any() ? "," : ""));
-                if (childEntities.Any())
+                s.Add(tabs + $"                    {{");
+                s.Add(tabs + $"                        path: '{entity.PluralName.ToLower() + "/"}{keyfields.Select(o => ":" + o.Name.ToCamelCase()).Aggregate((current, next) => { return current + "/" + next; })}',");
+                s.Add(tabs + $"                        component: {entity.Name}EditComponent,");
+                s.Add(tabs + $"                        canActivate: [AccessGuard],");
+                s.Add(tabs + $"                        canActivateChild: [AccessGuard],");
+                s.Add(tabs + $"                        data: {{");
+                s.Add(tabs + $"                            breadcrumb: 'Add {entity.FriendlyName}'");
+                s.Add(tabs + $"                        }}" + (childRelationships.Any() ? "," : ""));
+                if (childRelationships.Any())
                 {
-                    s.Add(tabs + $"                children: [");
-                    WriteEditRoute(childEntities, s, level + 1);
-                    s.Add(tabs + $"                ]");
+                    WriteChildRoutes(childRelationships, s, level + 1);
                 }
-
-                s.Add(tabs + $"            }}" + (entity == entities.OrderBy(o => o.Name).Last() ? "" : ","));
+                s.Add(tabs + $"                    }}" + (relationship == relationships.OrderBy(o => o.ChildEntity.Name).Last() ? "" : ","));
             }
+            s.Add(tabs + $"                ]");
         }
 
         public string GenerateApiResource()
@@ -1773,8 +1788,9 @@ namespace WEB.Models
                 while (entity != null)
                 {
                     var nextEntity = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy)?.ParentEntity;
+                    var keyFields = entity.GetNonHierarchicalKeyFields();
 
-                    routerLink = $"'{(nextEntity == null ? "/" : "")}{entity.PluralName.ToLower()}', {entity.KeyFields.Select(o => $"{prefix + (previousRelationship == null ? entity.Name.ToCamelCase() : previousRelationship.ParentName.ToCamelCase())}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}" + (routerLink == "" ? "" : ", ") + routerLink;
+                    routerLink = $"'{(nextEntity == null ? "/" : "")}{entity.PluralName.ToLower()}', {keyFields.Select(o => $"{prefix + (previousRelationship == null ? entity.Name.ToCamelCase() : previousRelationship.ParentName.ToCamelCase())}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}" + (routerLink == "" ? "" : ", ") + routerLink;
 
                     prefix += (previousRelationship == null ? entity.Name.ToCamelCase() : previousRelationship.ParentName.ToCamelCase()) + ".";
 
@@ -1852,6 +1868,8 @@ namespace WEB.Models
                 if (field.EditPageType == EditPageType.SortField) continue;
                 if (field.EditPageType == EditPageType.CalculatedField) continue;
 
+                var isAppSelect = CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)) && CurrentEntity.GetParentSearchRelationship(field).UseSelectorDirective;
+
                 if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
                 {
                     var relationship = CurrentEntity.GetParentSearchRelationship(field);
@@ -1866,23 +1884,74 @@ namespace WEB.Models
                 var tagType = "input";
                 var attributes = new Dictionary<string, string>();
 
-                attributes.Add("type", "text");
                 attributes.Add("id", fieldName);
                 attributes.Add("name", fieldName);
+                attributes.Add("class", "form-control");
+
+                // default = text
+                attributes.Add("type", "text");
+
+                if (field.EditPageType != EditPageType.ReadOnly || isAppSelect)
+                    attributes.Add("[(ngModel)]", CurrentEntity.Name.ToCamelCase() + "." + fieldName);
+
                 if (field.EditPageType != EditPageType.ReadOnly)
                 {
                     attributes.Add("#" + fieldName, "ngModel");
+                    if (!field.IsNullable)
+                        attributes.Add("required", null);
+                    if (field.FieldId == CurrentEntity.PrimaryFieldId)
+                        attributes.Add("(ngModelChange)", $"changeBreadcrumb()");
+                    if (field.CustomType == CustomType.Number && field.Scale > 0)
+                        attributes.Add("step", "any");
+
+                    if (field.CustomType == CustomType.Number)
+                    {
+                        attributes["type"] = "number";
+                    }
+                    else if (field.CustomType == CustomType.Enum)
+                    {
+                        tagType = "select";
+                        attributes.Remove("type");
+                    }
+                    else if (field.FieldType == FieldType.Date || field.FieldType == FieldType.SmallDateTime || field.FieldType == FieldType.DateTime)
+                    {
+                        attributes.Add("readonly", null);
+                        //if (field.EditPageType == EditPageType.ReadOnly) attributes.Add("disabled", null);
+                        attributes.Add("placeholder", "yyyy-mm-dd");
+                        attributes.Add("ngbDatepicker", null);
+                        attributes.Add("#dp" + field.Name, "ngbDatepicker");
+                        attributes.Add("tabindex", "-1");
+                        attributes.Add("(click)", "dp" + field.Name + ".toggle()");
+                    }
+                    else
+                    {
+                        if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
+                        if (field.MinLength > 0) attributes.Add("minlength", field.MinLength.ToString());
+                    }
                 }
-                attributes.Add("[(ngModel)]", CurrentEntity.Name.ToCamelCase() + "." + fieldName);
-                attributes.Add("class", "form-control");
-                if (!field.IsNullable && field.EditPageType != EditPageType.ReadOnly)
-                    attributes.Add("required", null);
-                if (field.FieldId == CurrentEntity.PrimaryFieldId)
-                    attributes.Add("(ngModelChange)", $"changeBreadcrumb()");
-                if (field.CustomType == CustomType.Number && field.Scale > 0)
-                    attributes.Add("step", "any");
-                if (field.EditPageType == EditPageType.ReadOnly)
+                else
+                {
+                    // read only field properties:
                     attributes.Add("readonly", null);
+                    if (!isAppSelect)
+                    {
+                        if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
+                        {
+                            var relationship = CurrentEntity.GetParentSearchRelationship(field);
+                            attributes.Add("value", "{{" + CurrentEntity.Name.ToCamelCase() + "." + relationship.ParentName.ToCamelCase() + "?." + relationship.ParentEntity.PrimaryField.Name.ToCamelCase() + "}}");
+                        }
+                        else if (field.FieldType == FieldType.Enum)
+                            attributes.Add("value", $"{{{{{field.Lookup.PluralName.ToCamelCase()}[{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()}]?.label}}}}");
+                        else if (field.CustomType == CustomType.Date)
+                            attributes.Add("value", $"{{{{{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()} | momentPipe: '{field.DateFormatString}'}}}}");
+                        else
+                            attributes.Add("value", $"{{{{{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()}}}}}");
+                    }
+                    else
+                    {
+                        attributes.Add("disabled", null);
+                    }
+                }
 
                 if (field.CustomType == CustomType.Boolean)
                 {
@@ -1890,34 +1959,15 @@ namespace WEB.Models
                     attributes.Remove("required");
                     attributes["class"] = "form-check-input";
                 }
-                else if (field.CustomType == CustomType.Number)
-                {
-                    attributes["type"] = "number";
-                }
-                else if (field.CustomType == CustomType.Enum)
-                {
-                    tagType = "select";
-                    attributes.Remove("type");
-                }
                 else if (field.CustomType == CustomType.String && (field.FieldType == FieldType.Text || field.FieldType == FieldType.nText || field.Length == 0))
                 {
                     tagType = "textarea";
                     attributes.Remove("type");
                     attributes.Add("rows", "5");
                 }
-                else if (field.FieldType == FieldType.Date || field.FieldType == FieldType.SmallDateTime || field.FieldType == FieldType.DateTime)
-                {
-                    if (!attributes.ContainsKey("readonly")) attributes.Add("readonly", null);
-                    if (field.EditPageType == EditPageType.ReadOnly) attributes.Add("disabled", null);
-                    attributes.Add("placeholder", "yyyy-mm-dd");
-                    attributes.Add("ngbDatepicker", null);
-                    attributes.Add("#dp" + field.Name, "ngbDatepicker");
-                    attributes.Add("tabindex", "-1");
-                    attributes.Add("(click)", "dp" + field.Name + ".toggle()");
-                }
 
-                if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
-                if (field.MinLength > 0) attributes.Add("minlength", field.MinLength.ToString());
+
+
                 //(field.RegexValidation != null ? " ng-pattern=\"/" + field.RegexValidation + "/\"" : "") + " 
 
                 if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
@@ -1926,11 +1976,12 @@ namespace WEB.Models
                     var relationshipField = relationship.RelationshipFields.Single(f => f.ChildFieldId == field.FieldId);
                     if (!relationship.UseSelectorDirective)
                     {
-                        if (field.EditPageType == EditPageType.ReadOnly)
-                        {
-                            attributes.Remove("[(ngModel)]");
-                            attributes.Add("value", "{{" + CurrentEntity.Name.ToCamelCase() + "." + relationship.ParentName.ToCamelCase() + "?." + relationship.ParentEntity.PrimaryField.Name.ToCamelCase() + "}}");
-                        }
+                        // this was only for Read only's - needs to go above
+                        //if (field.EditPageType == EditPageType.ReadOnly)
+                        //{
+                        //    attributes.Remove("[(ngModel)]");
+                        //    attributes.Add("value", "{{" + CurrentEntity.Name.ToCamelCase() + "." + relationship.ParentName.ToCamelCase() + "?." + relationship.ParentEntity.PrimaryField.Name.ToCamelCase() + "}}");
+                        //}
                     }
                     else if (!relationship.Hierarchy)
                     {
@@ -1938,16 +1989,12 @@ namespace WEB.Models
                         if (attributes.ContainsKey("type")) attributes.Remove("type");
                         if (attributes.ContainsKey("class")) attributes.Remove("class");
                         attributes.Add($"[({relationship.ParentEntity.Name.ToCamelCase()})]", $"{relationship.ChildEntity.Name.ToCamelCase()}.{relationship.ParentName.ToCamelCase()}");
-                        if (field.EditPageType == EditPageType.ReadOnly)
-                        {
-                            attributes.Add("disabled", null);
-                        }
                     }
                 }
 
 
                 s.Add(t + $"            <div class=\"{controlSize}\">");
-                s.Add(t + $"                <div class=\"form-group\"{(field.EditPageType == EditPageType.ReadOnly ? "" : $" [ngClass] =\"{{ 'is-invalid': {fieldName}.invalid }}\"")}> ");
+                s.Add(t + $"                <div class=\"form-group\"{(field.EditPageType == EditPageType.ReadOnly ? "" : $" [ngClass]=\"{{ 'is-invalid': {fieldName}.invalid }}\"")}>");
                 s.Add($"");
                 s.Add(t + $"                    <label for=\"{fieldName.ToCamelCase()}\">");
                 s.Add(t + $"                        {field.Label}:");
@@ -1981,7 +2028,7 @@ namespace WEB.Models
                     s.Add(t + $"                        </label>");
                     s.Add(t + $"                    </div>");
                 }
-                else if (field.CustomType == CustomType.Date)
+                else if (field.CustomType == CustomType.Date && field.EditPageType != EditPageType.ReadOnly)
                 {
                     s.Add(t + $"                    <div class=\"input-group\">");
                     s.Add(t + $"                        {controlHtml}");
@@ -2204,7 +2251,10 @@ namespace WEB.Models
                         //}
                         //s.Add(t + $"                <a class=\"btn btn-primary\" href=\"{href}\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
 
-                        s.Add(t + $"                <a [routerLink]=\"['./{childEntity.PluralName.ToLower()}'{relationship.ChildEntity.KeyFields.Select(o => ", 'add'").Aggregate((current, next) => { return current + next; })}]\" class=\"btn btn-primary my-3\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
+                        // s.Add(t + $"                <a [routerLink]=\"['./{childEntity.PluralName.ToLower()}'{relationship.ChildEntity.KeyFields.Select(o => ", 'add'").Aggregate((current, next) => { return current + next; })}]\" class=\"btn btn-primary my-3\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
+                        // trying to get this to work for instances like African POT Project->Team hierarchy, where I only want 1 add for the userId
+                        s.Add(t + $"                <a [routerLink]=\"['./{childEntity.PluralName.ToLower()}', 'add']\" class=\"btn btn-primary my-3\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
+
                         s.Add($"");
                     }
 
@@ -2300,6 +2350,7 @@ namespace WEB.Models
             var relationshipsAsParent = CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent).OrderBy(r => r.SortOrder);
             var relationshipsAsChildHierarchy = CurrentEntity.RelationshipsAsChild.FirstOrDefault(r => r.Hierarchy);
             var enumLookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).OrderBy(o => o.FieldOrder).Select(o => o.Lookup).Distinct().ToList();
+            var nonHKeyFields = CurrentEntity.GetNonHierarchicalKeyFields();
             // add lookups for table/search fields on children entities
             foreach (var rel in CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && r.DisplayListOnParent).OrderBy(r => r.SortOrder))
                 foreach (var field in rel.ChildEntity.Fields.Where(o => o.ShowInSearchResults))
@@ -2419,15 +2470,26 @@ namespace WEB.Models
             // use subscribe, so that a save changes url and reloads data
             s.Add($"        this.route.params.subscribe(params => {{");
             s.Add($"");
-            foreach (var keyField in CurrentEntity.KeyFields)
+            //if (relationshipsAsChildHierarchy != null)
+            //    foreach (var rfield in relationshipsAsChildHierarchy.RelationshipFields)
+            //s.Add($"            const {rfield.ParentField.Name.ToCamelCase()} = this.route.snapshot.parent.params.{rfield.ParentField.Name.ToCamelCase()};");
+
+            foreach (var keyField in nonHKeyFields)
             {
                 s.Add($"            const {keyField.Name.ToCamelCase()} = params[\"{keyField.Name.ToCamelCase()}\"];");
             }
-            s.Add($"            this.isNew = {CurrentEntity.KeyFields.Select(o => o.Name.ToCamelCase() + " === \"add\"").Aggregate((current, next) => { return current + " && " + next; })};");
+            if (relationshipsAsChildHierarchy != null)
+            {
+                foreach (var rfield in relationshipsAsChildHierarchy.RelationshipFields)
+                    s.Add($"            this.{CurrentEntity.Name.ToCamelCase()}.{rfield.ChildField.Name.ToCamelCase()} = this.route.snapshot.parent.params.{rfield.ParentField.Name.ToCamelCase()};");
+            }
+            s.Add($"            this.isNew = {CurrentEntity.GetNonHierarchicalKeyFields().Select(o => o.Name.ToCamelCase() + " === \"add\"").Aggregate((current, next) => { return current + " && " + next; })};");
+
             s.Add($"");
+
             s.Add($"            if (!this.isNew) {{");
             s.Add($"");
-            foreach (var keyField in CurrentEntity.KeyFields)
+            foreach (var keyField in nonHKeyFields)
             {
                 s.Add($"                this.{CurrentEntity.Name.ToCamelCase()}.{keyField.Name.ToCamelCase()} = {keyField.Name.ToCamelCase()};");
             }
@@ -2443,13 +2505,6 @@ namespace WEB.Models
             }
 
             s.Add($"            }}");
-            if (relationshipsAsChildHierarchy != null)
-            {
-                s.Add($"            else {{");
-                foreach (var field in relationshipsAsChildHierarchy.RelationshipFields)
-                    s.Add($"                this.{CurrentEntity.Name.ToCamelCase()}.{field.ChildField.Name.ToCamelCase()} = this.route.snapshot.parent.params.{field.ParentField.Name.ToCamelCase()};");
-                s.Add($"            }}");
-            }
             s.Add($"");
             if (hasChildRoutes)
             {
@@ -2512,7 +2567,7 @@ namespace WEB.Models
             if (CurrentEntity.ReturnOnSave)
                 s.Add($"                    {CurrentEntity.ReturnRoute}");
             else
-                s.Add($"                    if (this.isNew) this.router.navigate([\"../\", {CurrentEntity.KeyFields.Select(o => $"{CurrentEntity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}], {{ relativeTo: this.route }});");
+                s.Add($"                    if (this.isNew) this.router.navigate([\"../\", {nonHKeyFields.Select(o => $"{CurrentEntity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}], {{ relativeTo: this.route }});");
             if (CurrentEntity.EntityType == EntityType.User)
             {
                 s.Add($"                    else {{");

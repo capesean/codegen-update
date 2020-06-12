@@ -87,10 +87,7 @@
                 data => {
 
                     notifications.success("The lookup option has been saved.", "Saved");
-                    if (vm.isNew)
-                        $state.go("app.lookupOption", {
-                            lookupOptionId: vm.lookupOption.lookupOptionId
-                        });
+                    $state.go("app.lookup", { projectId: $stateParams.projectId, lookupId: $stateParams.lookupId });
 
                 },
                 err => {

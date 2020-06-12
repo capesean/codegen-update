@@ -51,10 +51,7 @@
             vm.loading = true;
             vm.lookupOption.$save(function (data) {
                 notifications.success("The lookup option has been saved.", "Saved");
-                if (vm.isNew)
-                    $state.go("app.lookupOption", {
-                        lookupOptionId: vm.lookupOption.lookupOptionId
-                    });
+                $state.go("app.lookup", { projectId: $stateParams.projectId, lookupId: $stateParams.lookupId });
             }, function (err) {
                 errorService.handleApiError(err, "lookup option");
             }).finally(function () { return vm.loading = false; });

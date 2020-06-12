@@ -33,6 +33,7 @@ namespace WEB.Models
                 if (FieldType == FieldType.SmallInt) return "0";
                 if (FieldType == FieldType.TinyInt) return "0";
                 if (FieldType == FieldType.Date) return "DateTime.MinValue";
+                if (FieldType == FieldType.DateTime) return "DateTime.MinValue";
                 if (CustomType == CustomType.String) return "string.Empty";
                 throw new NotImplementedException("EmptyValue for Type: " + FieldType);
             }
@@ -216,7 +217,7 @@ namespace WEB.Models
                         if (IsNullable)
                             return $"{{{{ { Entity.CamelCaseName}.{ Name.ToCamelCase()} === null ? \"\" : { Entity.CamelCaseName}.{ Name.ToCamelCase()} | momentPipe: 'DD MMM YYYY{(FieldType == FieldType.Date ? string.Empty : " HH:mm" + (FieldType == FieldType.SmallDateTime ? "" : ":ss"))}' }}}}";
                         else
-                            return $"{{{{ { Entity.CamelCaseName}.{ Name.ToCamelCase()} | momentPipe: 'DD MMM YYYY{(FieldType == FieldType.Date ? string.Empty : " HH:mm" + (FieldType == FieldType.SmallDateTime ? "" : ":ss"))}' }}}}";
+                            return $"{{{{ { Entity.CamelCaseName}.{ Name.ToCamelCase()} | momentPipe: '{DateFormatString}' }}}}";
                     }
                     else if (CustomType == CustomType.Enum)
                         return $"{{{{ {Lookup.PluralName.ToCamelCase()}[{ Entity.Name.ToCamelCase()}.{Name.ToCamelCase()}].label }}}}";
@@ -228,6 +229,14 @@ namespace WEB.Models
                     else
                         return $"{{{{ { Entity.CamelCaseName}.{ Name.ToCamelCase()} }}}}";
                 }
+            }
+        }
+
+        public string DateFormatString
+        {
+            get
+            {
+                return $"DD MMM YYYY{ (FieldType == FieldType.Date ? string.Empty : " HH:mm" + (FieldType == FieldType.SmallDateTime ? "" : ":ss"))}";
             }
         }
 

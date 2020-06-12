@@ -80,8 +80,20 @@ namespace WEB.Models
                 string prefix = "";
                 if (RelationshipsAsChild.Any(o => o.Hierarchy))
                     prefix = "../";
-                return $"this.router.navigate([\"{prefix}{String.Concat(Enumerable.Repeat("../", KeyFields.Count))}\"], {{ relativeTo: this.route }});";
+                return $"this.router.navigate([\"{prefix}{String.Concat(Enumerable.Repeat("../", GetNonHierarchicalKeyFields().Count))}\"], {{ relativeTo: this.route }});";
             }
+        }
+
+        internal List<Field> GetNonHierarchicalKeyFields()
+        {
+            var parentRel = RelationshipsAsChild.SingleOrDefault(o => o.Hierarchy);
+            // exclude parent entity fields
+            // example: in African POT, where the Team entity has a composite key of projectid + userid
+            //          and the team is a hierarchical child on the project: the url should be '/projects/{projectid}/team/{userid}
+            //          without excluding, the url was: '/projects/{projectid}/team/{projectid}/{userid}
+            //          i.e. duplicating projectid
+            if (parentRel == null) return KeyFields;
+            return KeyFields.Where(o => !o.RelationshipFieldsAsChild.Any(rf => rf.ParentField.EntityId == parentRel.ParentEntityId)).ToList();
         }
 
         [NotMapped]

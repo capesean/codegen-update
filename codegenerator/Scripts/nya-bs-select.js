@@ -1,5 +1,5 @@
 /**
- * nya-bootstrap-select v2.0.10
+ * @lordfriend/nya-bootstrap-select v2.5.1
  * Copyright 2014 Nyasoft
  * Licensed under MIT license
  */
@@ -169,6 +169,10 @@
         }
     };
 
+    var setElementIsolateScope = function (element, scope) {
+        element.data('isolateScope', scope);
+    };
+
     var contains = function (array, element) {
         var length = array.length,
             i;
@@ -321,6 +325,7 @@
 
     /**
      * A service for configuration. the configuration is shared globally.
+     * Testing ci build --jpmckearin
      */
     nyaBsSelect.provider('nyaBsConfig', function () {
 
@@ -331,7 +336,7 @@
             'en-us': {
                 defaultNoneSelection: 'Nothing selected',
                 noSearchResult: 'NO SEARCH RESULT',
-                numberItemSelected: '%d item selected',
+                numberItemSelected: '%d items selected',
                 selectAll: 'Select All',
                 deselectAll: 'Deselect All'
             }
@@ -403,12 +408,13 @@
         };
 
     });
-    nyaBsSelect.directive('nyaBsSelect', ['$parse', '$document', '$timeout', 'nyaBsConfig', function ($parse, $document, $timeout, nyaBsConfig) {
+    nyaBsSelect.directive('nyaBsSelect', ['$parse', '$document', '$timeout', '$compile', 'nyaBsConfig', function ($parse, $document, $timeout, $compile, nyaBsConfig) {
 
         var DEFAULT_NONE_SELECTION = 'Nothing selected';
 
         var DROPDOWN_TOGGLE = '<button class="btn btn-default dropdown-toggle" type="button">' +
             '<span class="pull-left filter-option"></span>' +
+            '<span class="pull-left special-title"></span>' +
             '&nbsp;' +
             '<span class="caret"></span>' +
             '</button>';
@@ -416,7 +422,7 @@
         var DROPDOWN_CONTAINER = '<div class="dropdown-menu open"></div>';
 
         var SEARCH_BOX = '<div class="bs-searchbox">' +
-            '<input type="text" class="form-control" autocomplete="off">' +
+            '<input type="text" class="form-control">' +
             '</div>';
 
         var DROPDOWN_MENU = '<ul class="dropdown-menu inner"></ul>';
@@ -425,8 +431,8 @@
 
         var ACTIONS_BOX = '<div class="bs-actionsbox">' +
             '<div class="btn-group btn-group-sm btn-block">' +
-            '<button class="actions-btn bs-select-all btn btn-default">SELECT ALL</button>' +
-            '<button class="actions-btn bs-deselect-all btn btn-default">DESELECT ALL</button>' +
+            '<button type="button" class="actions-btn bs-select-all btn btn-default">SELECT ALL</button>' +
+            '<button type="button" class="actions-btn bs-deselect-all btn btn-default">DESELECT ALL</button>' +
             '</div>' +
             '</div>';
 
@@ -439,7 +445,13 @@
 
                 tElement.addClass('btn-group');
 
-                var getDefaultNoneSelectionContent = function () {
+
+                /**
+                 * get the default text when nothing is selected. can be template
+                 * @param scope, if provided, will try to compile template with given scope, will not attempt to compile the pure text.
+                 * @returns {*}
+                 */
+                var getDefaultNoneSelectionContent = function (scope) {
                     // text node or jqLite element.
                     var content;
 
@@ -459,6 +471,12 @@
                         // use default.
                         content = document.createTextNode(DEFAULT_NONE_SELECTION);
                     }
+
+                    if (scope && (tAttrs.titleTpl || localizedText.defaultNoneSelectionTpl)) {
+
+                        return $compile(content)(scope);
+                    }
+
                     return content;
                 };
 
@@ -474,7 +492,8 @@
                     index,
                     liElement,
                     localizedText = nyaBsConfig,
-                    isMultiple = typeof tAttrs.multiple !== 'undefined';
+                    isMultiple = typeof tAttrs.multiple !== 'undefined',
+                    nyaBsOptionValue;
 
                 classList = getClassList(tElement[0]);
                 classList.forEach(function (className) {
@@ -484,14 +503,14 @@
                         dropdownToggle.addClass(className);
                     }
 
-                    //if(/btn-(?:lg|sm|xs)/.test(className)) {
-                    //  tElement.removeClass(className);
-                    //  dropdownToggle.addClass(className);
-                    //}
-
-                    if (className === 'form-control') {
+                    if (/btn-(?:lg|sm|xs)/.test(className)) {
+                        tElement.removeClass(className);
                         dropdownToggle.addClass(className);
                     }
+
+                    // if(className === 'form-control') {
+                    //   dropdownToggle.addClass(className);
+                    // }
                 });
 
                 dropdownMenu.append(options);
@@ -503,17 +522,30 @@
                     liElement = options.eq(index);
                     if (liElement.hasClass('nya-bs-option') || liElement.attr('nya-bs-option')) {
                         liElement.find('a').attr('tabindex', '0');
+                        // In order to be compatible with old version, we should copy value of value attribute into data-value attribute.
+                        // For the reason we use data-value instead, see http://nya.io/AngularJS/Beware-Of-Using-value-Attribute-On-list-element/
+                        nyaBsOptionValue = liElement.attr('value');
+                        if (angular.isString(nyaBsOptionValue) && nyaBsOptionValue !== '') {
+                            liElement.attr('data-value', nyaBsOptionValue);
+                            liElement.removeAttr('value');
+                        }
                     }
                 }
 
-                if (tAttrs.liveSearch === 'true') {
+                if (typeof tAttrs.liveSearch !== 'undefined') {
                     searchBox = jqLite(SEARCH_BOX);
 
-                    // set localized text
-                    if (localizedText.noSearchResultTpl) {
-                        NO_SEARCH_RESULT = NO_SEARCH_RESULT.replace('NO SEARCH RESULT', localizedText.noSearchResultTpl);
-                    } else if (localizedText.noSearchResult) {
-                        NO_SEARCH_RESULT = NO_SEARCH_RESULT.replace('NO SEARCH RESULT', localizedText.noSearchResult);
+                    if (tAttrs.noSearchTitle) {
+                        NO_SEARCH_RESULT = NO_SEARCH_RESULT.replace('NO SEARCH RESULT', tAttrs.noSearchTitle);
+                    } else if (tAttrs.noSearchTitleTpl) {
+                        NO_SEARCH_RESULT = NO_SEARCH_RESULT.replace('NO SEARCH RESULT', tAttrs.noSearchTitleTpl);
+                    } else {
+                        // set localized text
+                        if (localizedText.noSearchResultTpl) {
+                            NO_SEARCH_RESULT = NO_SEARCH_RESULT.replace('NO SEARCH RESULT', localizedText.noSearchResultTpl);
+                        } else if (localizedText.noSearchResult) {
+                            NO_SEARCH_RESULT = NO_SEARCH_RESULT.replace('NO SEARCH RESULT', localizedText.noSearchResult);
+                        }
                     }
 
                     noSearchResult = jqLite(NO_SEARCH_RESULT);
@@ -521,7 +553,7 @@
                     dropdownMenu.append(noSearchResult);
                 }
 
-                if (tAttrs.actionsBox === 'true' && isMultiple) {
+                if (typeof tAttrs.actionsBox !== 'undefined' && isMultiple) {
                     // set localizedText
                     if (localizedText.selectAllTpl) {
                         ACTIONS_BOX = ACTIONS_BOX.replace('SELECT ALL', localizedText.selectAllTpl);
@@ -540,7 +572,7 @@
                 }
 
                 // set default none selection text
-                dropdownToggle.children().eq(0).append(getDefaultNoneSelectionContent());
+                jqLite(dropdownToggle[0].querySelector('.special-title')).append(getDefaultNoneSelectionContent());
 
                 dropdownContainer.append(dropdownMenu);
 
@@ -559,12 +591,12 @@
                         isMultiple = typeof $attrs.multiple !== 'undefined';
 
                     // find element from current $element root. because the compiled element may be detached from DOM tree by ng-if or ng-switch.
-                    var dropdownToggle = queryChildren($element, ['dropdown-toggle']),
+                    var dropdownToggle = jqLite($element[0].querySelector('.dropdown-toggle')),
                         dropdownContainer = dropdownToggle.next(),
-                        dropdownMenu = queryChildren(dropdownContainer, ['dropdown-menu', 'inner']),
-                        searchBox = queryChildren(dropdownContainer, ['bs-searchbox']),
-                        noSearchResult = queryChildren(dropdownMenu, ['no-search-result']),
-                        actionsBox = queryChildren(dropdownContainer, ['bs-actionsbox']);
+                        dropdownMenu = jqLite(dropdownContainer[0].querySelector('.dropdown-menu.inner')),
+                        searchBox = jqLite(dropdownContainer[0].querySelector('.bs-searchbox')),
+                        noSearchResult = jqLite(dropdownMenu[0].querySelector('.no-search-result')),
+                        actionsBox = jqLite(dropdownContainer[0].querySelector('.bs-actionsbox'));
 
                     if (nyaBsSelectCtrl.valueExp) {
                         valueExpFn = function (scope, locals) {
@@ -583,47 +615,55 @@
                             return !value || value.length === 0;
                         };
                     }
+                    function disabledHandling(disabled) {
+                        if (disabled) {
+                            dropdownToggle.addClass('disabled');
+                            dropdownToggle.attr('disabled', 'disabled');
+                            previousTabIndex = dropdownToggle.attr('tabindex');
+                            dropdownToggle.attr('tabindex', '-1');
+                            isDisabled = true;
+                        } else {
+                            dropdownToggle.removeClass('disabled');
+                            dropdownToggle.removeAttr('disabled');
+                            if (previousTabIndex) {
+                                dropdownToggle.attr('tabindex', previousTabIndex);
+                            } else {
+                                dropdownToggle.removeAttr('tabindex');
+                            }
+                            isDisabled = false;
+                        }
+                    }
                     if (typeof $attrs.disabled !== 'undefined') {
                         $scope.$watch($attrs.disabled, function (disabled) {
-                            if (!!disabled) {
-                                dropdownToggle.addClass('disabled');
-                                previousTabIndex = dropdownToggle.attr('tabindex');
-                                dropdownToggle.attr('tabindex', '-1');
-                                isDisabled = true;
-                            } else {
-                                dropdownToggle.removeClass('disabled');
-                                if (previousTabIndex) {
-                                    dropdownToggle.attr('tabindex', previousTabIndex);
-                                } else {
-                                    dropdownToggle.removeAttr('tabindex');
-                                }
-                                isDisabled = false;
-                            }
+                            disabledHandling(disabled);
+                        });
+                    } else if (typeof $attrs.ngDisabled !== 'undefined') {
+                        $scope.$watch($attrs.ngDisabled, function (disabled) {
+                            disabledHandling(disabled);
                         });
                     }
 
                     /**
                      * Do some check on modelValue. remove no existing value
                      * @param values
+                     * @param deepWatched
                      */
-                    nyaBsSelectCtrl.onCollectionChange = function (values) {
+                    nyaBsSelectCtrl.onCollectionChange = function (values, deepWatched) {
                         var valuesForSelect = [],
                             index,
-                            length,
-                            modelValue = ngCtrl.$modelValue;
+                            modelValueChanged = false,
+                            // Due to ngModelController compare reference with the old modelValue, we must set an new array instead of modifying the old one.
+                            // See: https://github.com/angular/angular.js/issues/1751
+                            modelValue = deepCopy(ngCtrl.$modelValue);
 
                         if (!modelValue) {
                             return;
                         }
 
-                        if (!values || values.length === 0) {
-                            if (isMultiple) {
-                                modelValue = [];
-                            } else {
-                                modelValue = null;
-                            }
-                        } else {
-
+                        /**
+                         * Behavior change, since 2.1.0, we don't want to reset model to null or empty array when options' collection is not prepared.
+                         */
+                        if (Array.isArray(values) && values.length > 0) {
                             if (valueExpFn) {
                                 for (index = 0; index < values.length; index++) {
                                     valuesForSelect.push(valueExpFn($scope, values[index]));
@@ -640,32 +680,42 @@
                             }
 
                             if (isMultiple) {
-                                length = modelValue.length;
                                 for (index = 0; index < modelValue.length; index++) {
                                     if (!contains(valuesForSelect, modelValue[index])) {
+                                        modelValueChanged = true;
                                         modelValue.splice(index, 1);
                                         index--;
                                     }
                                 }
 
-                                if (length !== modelValue.length) {
+                                if (modelValueChanged) {
                                     // modelValue changed.
-                                    // Due to ngModelController compare reference with the old modelValue, we must set an new array instead of modifying the old one.
-                                    // See: https://github.com/angular/angular.js/issues/1751
-                                    modelValue = deepCopy(modelValue);
+
+                                    ngCtrl.$setViewValue(modelValue);
+
+                                    updateButtonContent();
                                 }
 
                             } else {
                                 if (!contains(valuesForSelect, modelValue)) {
                                     modelValue = valuesForSelect[0];
+
+                                    ngCtrl.$setViewValue(modelValue);
+
+                                    updateButtonContent();
                                 }
                             }
 
                         }
 
-                        ngCtrl.$setViewValue(modelValue);
+                        /**
+                         * if we set deep-watch="true" on nyaBsOption directive,
+                         * we need to refresh dropdown button content whenever a change happened in collection.
+                         */
+                        if (deepWatched) {
 
-                        updateButtonContent();
+                            updateButtonContent();
+                        }
 
                     };
 
@@ -692,14 +742,38 @@
                     });
 
                     // if click the outside of dropdown menu, close the dropdown menu
-                    $document.on('click', function (event) {
+                    var outClick = function (event) {
                         if (filterTarget(event.target, $element.parent()[0], $element[0]) === null) {
                             if ($element.hasClass('open')) {
                                 $element.triggerHandler('blur');
                             }
                             $element.removeClass('open');
                         }
-                    });
+                    };
+                    $document.on('click', outClick);
+
+                    function reset_search() {
+                        searchBox.children().eq(0)[0].value = "";
+                        var options = dropdownMenu.children(),
+                            length = options.length,
+                            index,
+                            option,
+                            nyaBsOptionNode;
+                        for (index = 0; index < length; index++) {
+                            option = options.eq(index);
+                            if (option.hasClass('nya-bs-option')) {
+                                option.removeClass('not-match');
+                            }
+                        }
+                        noSearchResult.removeClass('show');
+                        nyaBsOptionNode = findFocus(true);
+
+                        if (nyaBsOptionNode) {
+                            options.removeClass('active');
+                            jqLite(nyaBsOptionNode).addClass('active');
+                        }
+                    }
+
 
 
                     dropdownToggle.on('blur', function () {
@@ -714,6 +788,7 @@
                             calcMenuSize();
                         }
                         if ($attrs.liveSearch === 'true' && $element.hasClass('open')) {
+                            reset_search();
                             searchBox.children().eq(0)[0].focus();
                             nyaBsOptionNode = findFocus(true);
                             if (nyaBsOptionNode) {
@@ -730,13 +805,17 @@
 
                     // actions box
                     if ($attrs.actionsBox === 'true' && isMultiple) {
-                        actionsBox.find('.bs-select-all').on('click', function () {
+                        actionsBox.find('button').eq(0).on('click', function () {
                             setAllOptions(true);
                         });
-
-                        actionsBox.find('.bs-deselect-all').on('click', function () {
+                        actionsBox.find('button').eq(1).on('click', function () {
                             setAllOptions(false);
                         });
+                    } else {
+                        // if using inside ng-repeat or other transclude directive
+                        if (actionsBox) {
+                            actionsBox.addClass('hidden');
+                        }
                     }
 
 
@@ -788,6 +867,11 @@
                             }
 
                         });
+                    } else {
+                        // if using inside ng-repeat or other transclude directive
+                        if (searchBox) {
+                            searchBox.addClass('hidden');
+                        }
                     }
 
 
@@ -799,7 +883,7 @@
                             bsOptionElements = dropdownMenu.children(),
                             length = bsOptionElements.length,
                             value;
-                        if (typeof modelValue === 'undefined') {
+                        if (typeof modelValue === 'undefined' || modelValue === null) {
                             // if modelValue is undefined. uncheck all option
                             for (index = 0; index < length; index++) {
                                 if (bsOptionElements.eq(index).hasClass('nya-bs-option')) {
@@ -828,7 +912,7 @@
                                 }
                             }
                         }
-
+                        //console.log(nyaBsSelectCtrl.id + ' render end');
                         updateButtonContent();
                     };
 
@@ -876,6 +960,7 @@
 
                                 // if live search enabled. give focus to search box.
                                 if ($attrs.liveSearch === 'true') {
+                                    reset_search();
                                     searchBox.children().eq(0)[0].focus();
                                     // find the focusable node but we will use active
                                     nyaBsOptionNode = findFocus(true);
@@ -1006,7 +1091,7 @@
                             length = list.length;
                         for (i = 0; i < length; i++) {
                             liElement = list.eq(i);
-                            if (liElement.hasClass('active') && liElement.hasClass('nya-bs-option')) {
+                            if (liElement.hasClass('active') && liElement.hasClass('nya-bs-option') && !liElement.hasClass('not-match')) {
                                 return liElement;
                             }
                         }
@@ -1030,6 +1115,19 @@
                         }
                     }
 
+                    function supportsSelector(selector) {
+                        var el = document.createElement('div');
+                        el.innerHTML = ['&shy;', '<style>', selector, '{}', '</style>'].join('');
+                        el = document.body.appendChild(el);
+                        var style = el.getElementsByTagName('style')[0];
+                        if (style && style.sheet && style.sheet.rules && style.sheet.cssRules) {
+                            var ret = !!(style.sheet.rules || style.sheet.cssRules)[0];
+                            document.body.removeChild(el);
+                            return ret;
+                        }
+                        return false;
+                    }
+
                     function findFocus(fromFirst) {
                         var firstLiElement;
                         if (fromFirst) {
@@ -1039,9 +1137,18 @@
                         }
 
                         // focus on selected element
-                        for (var i = 0; i < dropdownMenu.children().length; i++) {
-                            if (dropdownMenu.children().eq(i).hasClass('selected')) {
-                                return dropdownMenu.children().eq(i)[0];
+                        if (supportsSelector(".selected:not(.not-match)")) {
+                            var match = dropdownMenu[0].querySelector('.selected:not(.not-match)');
+                            if (match)
+                                return match;
+                        }
+                        else {
+                            // Fallback for IE8 users
+                            for (var i = 0; i < dropdownMenu.children().length; i++) {
+                                var childElement = dropdownMenu.children().eq(i);
+                                if (!childElement.hasClass('not-match') && childElement.hasClass('selected')) {
+                                    return dropdownMenu.children().eq(i)[0];
+                                }
                             }
                         }
 
@@ -1083,20 +1190,20 @@
                             return;
 
                         var liElements,
-                            modelValue,
+                            wv,
                             viewValue;
 
-                        liElements = dropdownMenu.find('li');
+                        liElements = dropdownMenu[0].querySelectorAll('.nya-bs-option');
                         if (liElements.length > 0) {
-                            modelValue = ngCtrl.$modelValue;
+                            wv = ngCtrl.$viewValue;
 
                             // make a deep copy enforce ngModelController to call its $render method.
                             // See: https://github.com/angular/angular.js/issues/1751
-                            viewValue = Array.isArray(modelValue) ? deepCopy(modelValue) : [];
+                            viewValue = Array.isArray(wv) ? deepCopy(wv) : [];
 
                             for (var i = 0; i < liElements.length; i++) {
                                 var nyaBsOption = jqLite(liElements[i]);
-                                if (nyaBsOption.hasClass('disabled'))
+                                if (nyaBsOption.hasClass('disabled') || nyaBsOption.hasClass('not-match'))
                                     continue;
 
                                 var value, index;
@@ -1135,7 +1242,7 @@
                     function selectOption(nyaBsOption) {
                         var value,
                             viewValue,
-                            modelValue = ngCtrl.$modelValue,
+                            wv = ngCtrl.$viewValue,
                             index;
                         // if user specify the value attribute. we should use the value attribute
                         // otherwise, use the valueIdentifier specified field in target scope
@@ -1146,7 +1253,7 @@
                             if (isMultiple) {
                                 // make a deep copy enforce ngModelController to call its $render method.
                                 // See: https://github.com/angular/angular.js/issues/1751
-                                viewValue = Array.isArray(modelValue) ? deepCopy(modelValue) : [];
+                                viewValue = Array.isArray(wv) ? deepCopy(wv) : [];
                                 index = indexOf(viewValue, value);
                                 if (index === -1) {
                                     // check element
@@ -1162,10 +1269,9 @@
 
                             } else {
                                 dropdownMenu.children().removeClass('selected');
-                                if (modelValue !== value) {
-                                    viewValue = value;
-                                    nyaBsOption.addClass('selected');
-                                }
+                                viewValue = value;
+                                nyaBsOption.addClass('selected');
+
                             }
                         }
                         // update view value regardless
@@ -1178,6 +1284,7 @@
                                 $element.triggerHandler('blur');
                             }
                             $element.removeClass('open');
+                            dropdownToggle[0].focus();
                         }
                         updateButtonContent();
                     }
@@ -1192,14 +1299,15 @@
                     function getOptionValue(nyaBsOption) {
                         var scopeOfOption;
                         if (valueExpFn) {
-                            scopeOfOption = nyaBsOption.scope();
+                            // here we use the scope bound by ourselves in the nya-bs-option.
+                            scopeOfOption = nyaBsOption.data('isolateScope');
                             return valueExpFn(scopeOfOption);
                         } else {
                             if (nyaBsSelectCtrl.valueIdentifier || nyaBsSelectCtrl.keyIdentifier) {
-                                scopeOfOption = nyaBsOption.scope();
+                                scopeOfOption = nyaBsOption.data('isolateScope');
                                 return scopeOfOption[nyaBsSelectCtrl.valueIdentifier] || scopeOfOption[nyaBsSelectCtrl.keyIdentifier];
                             } else {
-                                return nyaBsOption.attr('value');
+                                return nyaBsOption.attr('data-value');
                             }
                         }
 
@@ -1217,26 +1325,24 @@
                     }
 
                     function updateButtonContent() {
-                        var modelValue = ngCtrl.$modelValue;
-                        var emptyClass = "nya-bs-empty";
+                        var viewValue = ngCtrl.$viewValue;
                         $element.triggerHandler('change');
-                        $element.removeClass(emptyClass);
 
-                        var filterOption = dropdownToggle.children().eq(0);
-                        if (typeof modelValue === 'undefined') {
+                        var filterOption = jqLite(dropdownToggle[0].querySelector('.filter-option'));
+                        var specialTitle = jqLite(dropdownToggle[0].querySelector('.special-title'));
+                        if (typeof viewValue === 'undefined' || viewValue === null) {
                             /**
                              * Select empty option when model is undefined.
                              */
+                            dropdownToggle.addClass('show-special-title');
                             filterOption.empty();
-                            filterOption.append(getDefaultNoneSelectionContent());
-                            $element.addClass(emptyClass);
                             return;
                         }
-                        if (isMultiple && modelValue.length === 0) {
+                        if (isMultiple && viewValue.length === 0) {
+                            dropdownToggle.addClass('show-special-title');
                             filterOption.empty();
-                            filterOption.append(getDefaultNoneSelectionContent());
-                            $element.addClass(emptyClass);
                         } else {
+                            dropdownToggle.removeClass('show-special-title');
                             $timeout(function () {
 
                                 var bsOptionElements = dropdownMenu.children(),
@@ -1246,8 +1352,10 @@
                                     length = bsOptionElements.length,
                                     optionTitle,
                                     selection = [],
+                                    optionScopes = [],
                                     match,
-                                    count;
+                                    count,
+                                    clone;
 
                                 if (isMultiple && $attrs.selectedTextFormat === 'count') {
                                     count = 1;
@@ -1256,14 +1364,14 @@
                                 }
 
                                 // data-selected-text-format="count" or data-selected-text-format="count>x"
-                                if ((typeof count !== 'undefined') && modelValue.length > count) {
+                                if ((typeof count !== 'undefined') && viewValue.length > count) {
                                     filterOption.empty();
                                     if (localizedText.numberItemSelectedTpl) {
-                                        filterOption.append(jqLite(localizedText.numberItemSelectedTpl.replace('%d', modelValue.length)));
+                                        filterOption.append(jqLite(localizedText.numberItemSelectedTpl.replace('%d', viewValue.length)));
                                     } else if (localizedText.numberItemSelected) {
-                                        filterOption.append(document.createTextNode(localizedText.numberItemSelected.replace('%d', modelValue.length)));
+                                        filterOption.append(document.createTextNode(localizedText.numberItemSelected.replace('%d', viewValue.length)));
                                     } else {
-                                        filterOption.append(document.createTextNode(modelValue.length + ' items selected'));
+                                        filterOption.append(document.createTextNode(viewValue.length + ' items selected'));
                                     }
                                     return;
                                 }
@@ -1276,7 +1384,7 @@
                                         value = getOptionValue(nyaBsOption);
 
                                         if (isMultiple) {
-                                            if (Array.isArray(modelValue) && contains(modelValue, value)) {
+                                            if (Array.isArray(viewValue) && contains(viewValue, value)) {
                                                 // if option has an title attribute. use the title value as content show in button.
                                                 // otherwise get very first child element.
                                                 optionTitle = nyaBsOption.attr('title');
@@ -1284,16 +1392,18 @@
                                                     selection.push(document.createTextNode(optionTitle));
                                                 } else {
                                                     selection.push(getOptionText(nyaBsOption));
+                                                    optionScopes.push(nyaBsOption.data('isolateScope'))
                                                 }
 
                                             }
                                         } else {
-                                            if (deepEquals(modelValue, value)) {
+                                            if (deepEquals(viewValue, value)) {
                                                 optionTitle = nyaBsOption.attr('title');
                                                 if (optionTitle) {
                                                     selection.push(document.createTextNode(optionTitle));
                                                 } else {
                                                     selection.push(getOptionText(nyaBsOption));
+                                                    optionScopes.push(nyaBsOption.data('isolateScope'))
                                                 }
                                             }
                                         }
@@ -1303,16 +1413,28 @@
 
                                 if (selection.length === 0) {
                                     filterOption.empty();
-                                    filterOption.append(getDefaultNoneSelectionContent());
-                                    $element.addClass(emptyClass);
+                                    dropdownToggle.addClass('show-special-title');
                                 } else if (selection.length === 1) {
+                                    dropdownToggle.removeClass('show-special-title');
                                     // either single or multiple selection will show the only selected content.
                                     filterOption.empty();
-                                    filterOption.append(selection[0]);
+                                    // the isolateScope attribute may not set when we use the static version nya-bs-option class with data-value attribute.
+                                    if (optionScopes[0]) {
+                                        clone = $compile(selection[0])(optionScopes[0]);
+                                    } else {
+                                        clone = selection[0];
+                                    }
+                                    filterOption.append(clone);
                                 } else {
+                                    dropdownToggle.removeClass('show-special-title');
                                     filterOption.empty();
                                     for (index = 0; index < selection.length; index++) {
-                                        filterOption.append(selection[index]);
+                                        if (optionScopes[index]) {
+                                            clone = $compile(selection[index])(optionScopes[index]);
+                                        } else {
+                                            clone = selection[index];
+                                        }
+                                        filterOption.append(clone);
                                         if (index < selection.length - 1) {
                                             filterOption.append(document.createTextNode(', '));
                                         }
@@ -1346,6 +1468,14 @@
                         }
 
                     }
+
+                    $scope.$on('$destroy', function () {
+                        dropdownMenu.off();
+                        dropdownToggle.off();
+                        if (searchBox.off) searchBox.off();
+                        $document.off('click', outClick);
+
+                    });
 
                 };
             }
@@ -1405,6 +1535,7 @@
                     var nyaBsSelectCtrl = ctrls[0],
                         ngCtrl = ctrls[1],
                         valueExpFn,
+                        deepWatched,
                         valueExpLocals = {};
 
                     if (trackByExpGetter) {
@@ -1462,8 +1593,10 @@
 
                     // deepWatch will impact performance. use with caution.
                     if ($attr.deepWatch === 'true') {
+                        deepWatched = true;
                         $scope.$watch(collectionExp, nyaBsOptionAction, true);
                     } else {
+                        deepWatched = false;
                         $scope.$watchCollection(collectionExp, nyaBsOptionAction);
                     }
 
@@ -1487,6 +1620,8 @@
                             nextNode,
                             group,
                             lastGroup,
+
+                            removedClone, // removed clone node, should also remove isolateScope data as well
 
                             values = [],
                             valueObj; // the collection value
@@ -1574,7 +1709,10 @@
                         // remove DOM nodes
                         for (var blockKey in lastBlockMap) {
                             block = lastBlockMap[blockKey];
-                            getBlockNodes(block.clone).remove();
+                            removedClone = getBlockNodes(block.clone);
+                            // remove the isolateScope data to detach scope from this clone
+                            removedClone.removeData('isolateScope');
+                            removedClone.remove();
                             block.scope.$destroy();
                         }
 
@@ -1593,6 +1731,9 @@
                                 updateScope(block.scope, index, valueIdentifier, block.value, keyIdentifier, block.key, collectionLength, block.group);
                             } else {
                                 $transclude(function nyaBsOptionTransclude(clone, scope) {
+                                    // in case of the debugInfoEnable is set to false, we have to bind the scope to the clone node.
+                                    setElementIsolateScope(clone, scope);
+
                                     block.scope = scope;
 
                                     var endNode = nyaBsOptionEndComment.cloneNode(false);
@@ -1601,7 +1742,6 @@
                                     jqLite(previousNode).after(clone);
 
                                     // add nya-bs-option class
-
                                     clone.addClass('nya-bs-option');
 
                                     // for newly created item we need to ensure its selected status from the model value.
@@ -1649,7 +1789,7 @@
 
                         lastBlockMap = nextBlockMap;
 
-                        nyaBsSelectCtrl.onCollectionChange(values);
+                        nyaBsSelectCtrl.onCollectionChange(values, deepWatched);
                     }
                 };
             }
