@@ -185,12 +185,15 @@ namespace WEB.Models
                 else
                 {
                     var column = new SearchResultColumn { Header = field.Label, IsOnAnotherEntity = false };
+                    // these should use local formats?
                     if (field.FieldType == FieldType.Enum)
                         column.Value = $"{{{{ {field.Lookup.PluralName.ToCamelCase()}[{field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() }].label }}}}";
                     else if (field.FieldType == FieldType.Bit)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } ? \"Yes\" : \"No\" }}}}";
                     else if (field.FieldType == FieldType.Date)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | momentPipe: 'DD MMM YYYY' }}}}";
+                    else if (field.FieldType == FieldType.DateTime)
+                        column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | momentPipe: 'DD MMM YYYY HH:mm' }}}}";
                     else
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } }}}}";
                     result.Add(column);

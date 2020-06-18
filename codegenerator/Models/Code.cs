@@ -2043,17 +2043,20 @@ namespace WEB.Models
 
                 s.Add($"");
 
-                var validationErrors = new Dictionary<string, string>();
-                if (!field.IsNullable && field.CustomType != CustomType.Boolean && field.EditPageType != EditPageType.ReadOnly) validationErrors.Add("required", $"{field.Label} is required");
-                if (field.MinLength > 0) validationErrors.Add("minlength", $"{field.Label} must be at least {field.MinLength} characters long");
-                if (field.Length > 0) validationErrors.Add("maxlength", $"{field.Label} must be at most {field.Length} characters long");
-
-                foreach (var validationError in validationErrors)
+                if (field.EditPageType != EditPageType.ReadOnly)
                 {
-                    s.Add(t + $"                    <div *ngIf=\"{fieldName}.errors?.{validationError.Key}\" class=\"invalid-feedback\">");
-                    s.Add(t + $"                        {validationError.Value}");
-                    s.Add(t + $"                    </div>");
-                    s.Add($"");
+                    var validationErrors = new Dictionary<string, string>();
+                    if (!field.IsNullable && field.CustomType != CustomType.Boolean && field.EditPageType != EditPageType.ReadOnly) validationErrors.Add("required", $"{field.Label} is required");
+                    if (field.MinLength > 0) validationErrors.Add("minlength", $"{field.Label} must be at least {field.MinLength} characters long");
+                    if (field.Length > 0) validationErrors.Add("maxlength", $"{field.Label} must be at most {field.Length} characters long");
+
+                    foreach (var validationError in validationErrors)
+                    {
+                        s.Add(t + $"                    <div *ngIf=\"{fieldName}.errors?.{validationError.Key}\" class=\"invalid-feedback\">");
+                        s.Add(t + $"                        {validationError.Value}");
+                        s.Add(t + $"                    </div>");
+                        s.Add($"");
+                    }
                 }
 
                 s.Add(t + $"                </div>");
