@@ -26,7 +26,7 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
     disabled = false;
     placeholder = this.multiple ? "Select PLURALFRIENDLYNAME_TOLOWER" : "Select aSTARTSWITHVOWEL FRIENDLYNAME_LOWER";
 
-    @ViewChild('modal', { static: false }) modal: NAMEModalComponent;
+    @ViewChild('modal') modal: NAMEModalComponent;
 
     constructor(
     ) {

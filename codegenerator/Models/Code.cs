@@ -1620,7 +1620,7 @@ namespace WEB.Models
                 s.Add(t + $"            <th>{field.Label}</th>");
             s.Add(t + $"        </tr>");
             s.Add(t + $"    </thead>");
-            s.Add(t + $"    <tbody{(useSortColumn ? " cdkDropList (cdkDropListDropped)=\"drop($event)\"" : "")}>");
+            s.Add(t + $"    <tbody{(useSortColumn ? " cdkDropList (cdkDropListDropped)=\"sort($event)\"" : "")}>");
             s.Add(t + $"        <tr *ngFor=\"let {CurrentEntity.CamelCaseName} of {CurrentEntity.PluralName.ToCamelCase()}\" (click)=\"goTo{CurrentEntity.Name}({CurrentEntity.CamelCaseName})\"{(useSortColumn ? " cdkDrag" : "")}>");
             if (useSortColumn)
                 s.Add(t + $"            <td class=\"text-center fa-col-width\" cdkDragHandle (click)=\"$event.stopPropagation();\"><span *cdkDragPreview></span><i class=\"fas fa-sort\"></i></td>");
@@ -1670,7 +1670,7 @@ namespace WEB.Models
 
             s.Add($"import {{ Component, OnInit{(hasChildRoutes ? ", OnDestroy" : "")} }} from '@angular/core';");
             s.Add($"import {{ Router{(hasChildRoutes ? ", ActivatedRoute, NavigationEnd" : "")} }} from '@angular/router';");
-            s.Add($"import {{ Observable{(hasChildRoutes ? ", Subscription" : "")} }} from 'rxjs';");
+            s.Add($"import {{ Subject{(hasChildRoutes ? ", Subscription" : "")} }} from 'rxjs';");
             s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             if (CurrentEntity.HasASortField)
                 s.Add($"import {{ CdkDragDrop, moveItemInArray }} from '@angular/cdk/drag-drop';");
@@ -1731,32 +1731,31 @@ namespace WEB.Models
                 s.Add($"    }}");
                 s.Add($"");
             }
-            s.Add($"    runSearch(pageIndex = 0): Observable<{CurrentEntity.Name}SearchResponse> {{");
+            s.Add($"    runSearch(pageIndex = 0): Subject<{CurrentEntity.Name}SearchResponse> {{");
             s.Add($"");
             s.Add($"        this.searchOptions.pageIndex = pageIndex;");
             s.Add($"");
-            s.Add($"        const observable = this.{CurrentEntity.Name.ToCamelCase()}Service");
-            s.Add($"            .search(this.searchOptions);");
+            s.Add($"        const subject = new Subject<{CurrentEntity.Name}SearchResponse>();");
             s.Add($"");
-            s.Add($"        observable.subscribe(");
-            s.Add($"            response => {{");
-            s.Add($"                this.{CurrentEntity.PluralName.ToCamelCase()} = response.{CurrentEntity.PluralName.ToCamelCase()};");
-            s.Add($"                this.headers = response.headers;");
-            s.Add($"            }},");
-            s.Add($"            err => {{");
+            s.Add($"        this.{CurrentEntity.Name.ToCamelCase()}Service.search(this.searchOptions)");
+            s.Add($"            .subscribe(");
+            s.Add($"                response => {{");
+            s.Add($"                    subject.next(response);");
+            s.Add($"                    this.{CurrentEntity.PluralName.ToCamelCase()} = response.{CurrentEntity.PluralName.ToCamelCase()};");
+            s.Add($"                    this.headers = response.headers;");
+            s.Add($"                }},");
+            s.Add($"                err => {{");
+            s.Add($"                    this.errorService.handleError(err, \"{CurrentEntity.PluralFriendlyName}\", \"Load\");");
+            s.Add($"                }}");
+            s.Add($"            );");
             s.Add($"");
-            s.Add($"                this.errorService.handleError(err, \"{CurrentEntity.PluralFriendlyName}\", \"Load\");");
-            s.Add($"");
-            s.Add($"            }}");
-            s.Add($"        );");
-            s.Add($"");
-            s.Add($"        return observable;");
+            s.Add($"        return subject;");
             s.Add($"");
             s.Add($"    }}");
             s.Add($"");
             if (CurrentEntity.HasASortField)
             {
-                s.Add($"    drop(event: CdkDragDrop<{CurrentEntity.Name}[]>) {{");
+                s.Add($"    sort(event: CdkDragDrop<{CurrentEntity.Name}[]>) {{");
                 s.Add($"        moveItemInArray(this.{CurrentEntity.PluralName.ToCamelCase()}, event.previousIndex, event.currentIndex);");
                 s.Add($"        this.{CurrentEntity.Name.ToCamelCase()}Service.sort(this.{CurrentEntity.PluralName.ToCamelCase()}.map(o => o.{CurrentEntity.KeyFields.First().Name.ToCamelCase()})).subscribe(");
                 s.Add($"            () => {{");
@@ -2276,7 +2275,7 @@ namespace WEB.Models
                     s.Add(t + $"                    </thead>");
                     if (relationship.Hierarchy && childEntity.HasASortField)
                     {
-                        s.Add(t + $"                    <tbody cdkDropList (cdkDropListDropped)=\"drop{relationship.CollectionName}($event)\">");
+                        s.Add(t + $"                    <tbody cdkDropList (cdkDropListDropped)=\"sort{relationship.CollectionName}($event)\">");
                         s.Add(t + $"                        <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\" (click)=\"goTo{childEntity.Name}({childEntity.Name.ToCamelCase()})\" cdkDrag>");
                         s.Add(t + $"                            <td *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\" cdkDragHandle (click)=\"$event.stopPropagation();\"><span *cdkDragPreview></span><i class=\"fas fa-sort sortable-handle mt-1\" (click)=\"$event.stopPropagation();\"></i></td>");
                     }
@@ -2369,7 +2368,7 @@ namespace WEB.Models
             s.Add($"import {{ ToastrService }} from 'ngx-toastr';");
             s.Add($"import {{ NgForm }} from '@angular/forms';");
             if (relationshipsAsParent.Any() || CurrentEntity.EntityType == EntityType.User)
-                s.Add($"import {{ Observable{(hasChildRoutes || CurrentEntity.EntityType == EntityType.User ? ", Subscription" : "")} }} from 'rxjs';");
+                s.Add($"import {{ Subject{(hasChildRoutes || CurrentEntity.EntityType == EntityType.User ? ", Subscription" : "")} }} from 'rxjs';");
             s.Add($"import {{ HttpErrorResponse }} from '@angular/common/http';");
             s.Add($"import {{ BreadcrumbService }} from 'angular-crumbs';");
             s.Add($"import {{ ErrorService }} from '../common/services/error.service';");
@@ -2434,7 +2433,7 @@ namespace WEB.Models
             foreach (var rel in multiSelectRelationships)
             {
                 var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
-                s.Add($"    @ViewChild('{reverseRel.ParentEntity.Name.ToCamelCase()}Modal', {{ static: false }}) {reverseRel.ParentEntity.Name.ToCamelCase()}Modal: {reverseRel.ParentEntity.Name}ModalComponent;");
+                s.Add($"    @ViewChild('{reverseRel.ParentEntity.Name.ToCamelCase()}Modal') {reverseRel.ParentEntity.Name.ToCamelCase()}Modal: {reverseRel.ParentEntity.Name}ModalComponent;");
             }
             if (multiSelectRelationships.Any())
                 s.Add($"");
@@ -2613,7 +2612,7 @@ namespace WEB.Models
             if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First()?.ChildFieldId == CurrentEntity.PrimaryField.FieldId))
             {
                 var rel = CurrentEntity.RelationshipsAsChild.Single(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First().ChildFieldId == CurrentEntity.PrimaryField.FieldId);
-                s.Add($"        this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.RelationshipFields.First().ChildField.Name.ToCamelCase()} ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentName.ToCamelCase()}.{rel.ParentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : ".toString()")}.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+                s.Add($"        this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.RelationshipFields.First().ChildField.Name.ToCamelCase()} ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentName.ToCamelCase()}?.{rel.ParentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : "?.toString()")}?.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
             }
             else if (CurrentEntity.PrimaryField.CustomType == CustomType.Date)
             {
@@ -2630,26 +2629,25 @@ namespace WEB.Models
             {
                 if (!rel.DisplayListOnParent && !rel.Hierarchy) continue;
 
-                s.Add($"    load{rel.CollectionName}(pageIndex = 0): Observable<{rel.ChildEntity.Name}SearchResponse> {{");
+                s.Add($"    load{rel.CollectionName}(pageIndex = 0): Subject<{rel.ChildEntity.Name}SearchResponse> {{");
                 s.Add($"");
                 s.Add($"        this.{rel.CollectionName.ToCamelCase()}SearchOptions.pageIndex = pageIndex;");
                 s.Add($"");
-                s.Add($"        const observable = this.{rel.ChildEntity.Name.ToCamelCase()}Service");
-                s.Add($"            .search(this.{rel.CollectionName.ToCamelCase()}SearchOptions);");
+                s.Add($"        const subject = new Subject<{rel.ChildEntity.Name}SearchResponse>()");
                 s.Add($"");
-                s.Add($"        observable.subscribe(");
-                s.Add($"            response => {{");
-                s.Add($"                this.{rel.CollectionName.ToCamelCase()} = response.{rel.ChildEntity.PluralName.ToCamelCase()};");
-                s.Add($"                this.{rel.CollectionName.ToCamelCase()}Headers = response.headers;");
-                s.Add($"            }},");
-                s.Add($"            err => {{");
+                s.Add($"        this.{rel.ChildEntity.Name.ToCamelCase()}Service.search(this.{rel.CollectionName.ToCamelCase()}SearchOptions)");
+                s.Add($"            .subscribe(");
+                s.Add($"                response => {{");
+                s.Add($"                    subject.next(response);");
+                s.Add($"                    this.{rel.CollectionName.ToCamelCase()} = response.{rel.ChildEntity.PluralName.ToCamelCase()};");
+                s.Add($"                    this.{rel.CollectionName.ToCamelCase()}Headers = response.headers;");
+                s.Add($"                }},");
+                s.Add($"                err => {{");
+                s.Add($"                    this.errorService.handleError(err, \"{rel.CollectionFriendlyName}\", \"Load\");");
+                s.Add($"                }}");
+                s.Add($"            );");
                 s.Add($"");
-                s.Add($"                this.errorService.handleError(err, \"{rel.CollectionFriendlyName}\", \"Load\");");
-                s.Add($"");
-                s.Add($"            }}");
-                s.Add($"        );");
-                s.Add($"");
-                s.Add($"        return observable;");
+                s.Add($"        return subject;");
                 s.Add($"");
                 s.Add($"    }}");
                 s.Add($"");
@@ -2719,7 +2717,7 @@ namespace WEB.Models
 
             foreach (var relationship in relationshipsAsParent.Where(o => o.Hierarchy && o.ChildEntity.HasASortField))
             {
-                s.Add($"    drop{relationship.CollectionName}(event: CdkDragDrop<{relationship.ChildEntity.Name}[]>) {{");
+                s.Add($"    sort{relationship.CollectionName}(event: CdkDragDrop<{relationship.ChildEntity.Name}[]>) {{");
                 s.Add($"        moveItemInArray(this.{relationship.CollectionName.ToCamelCase()}, event.previousIndex, event.currentIndex);");
                 s.Add($"        this.{relationship.ChildEntity.Name.ToCamelCase()}Service.sort(this.{relationship.CollectionName.ToCamelCase()}.map(o => o.{relationship.ChildEntity.KeyFields[0].Name.ToCamelCase()})).subscribe(");
                 s.Add($"            () => {{");
