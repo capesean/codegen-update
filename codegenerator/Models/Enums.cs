@@ -42,7 +42,9 @@ namespace WEB.Models
         EditWhenNew,
         SortField,
         CalculatedField,
-        EditOnly
+        EditOnly,
+        FileContents,
+        FileName
     }
 
     public enum EntityType
@@ -145,17 +147,17 @@ namespace WEB.Models
                 case CodeType.AppSelectTypeScript:
                     return "App-Select TypeScript";
                 case CodeType.SelectModalHtml:
-                    return "Select Modal Html";
+                    return "Select Model Html";
                 case CodeType.SelectModalTypeScript:
                     return "Select Modal TypeScript";
                 case CodeType.TypeScriptModel:
                     return "TypeScript Model";
                 case CodeType.TypeScriptEnums:
                     return "TypeScript Enums";
-                case CodeType.Roles:
-                    return "Roles";
                 case CodeType.TypeScriptRoles:
                     return "TypeScript Roles";
+                case CodeType.Roles:
+                    return "Roles";
                 case CodeType.SharedModule:
                     return "Shared Module";
                 default:
@@ -181,6 +183,10 @@ namespace WEB.Models
                     return "Calculated Field";
                 case EditPageType.EditOnly:
                     return "Edit Only";
+                case EditPageType.FileContents:
+                    return "File Contents";
+                case EditPageType.FileName:
+                    return "File Name";
                 default:
                     return null;
             }
