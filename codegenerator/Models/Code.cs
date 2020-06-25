@@ -477,8 +477,17 @@ namespace WEB.Models
             s.Add($"{{");
             s.Add($"    public class {CurrentEntity.DTOName}");
             s.Add($"    {{");
-            foreach (var field in CurrentEntity.Fields.Where(f => f.EditPageType != EditPageType.Exclude).OrderBy(f => f.FieldOrder))
+            foreach (var field in CurrentEntity.Fields.OrderBy(f => f.FieldOrder))
             {
+                if (field.EditPageType == EditPageType.Exclude) continue;
+
+                if (field.EditPageType == EditPageType.FileContents)
+                {
+                    s.Add($"        public string {field.Name} {{ get; set; }}");
+                    s.Add($"");
+                    continue;
+                }
+
                 var attributes = new List<string>();
 
                 if (field.EditPageType != EditPageType.CalculatedField)
@@ -537,7 +546,7 @@ namespace WEB.Models
             }
             s.Add($"            var {CurrentEntity.DTOName.ToCamelCase()} = new {CurrentEntity.DTOName}();");
             s.Add($"");
-            foreach (var field in CurrentEntity.Fields.Where(f => f.EditPageType != EditPageType.Exclude && f.EditPageType != EditPageType.EditOnly).OrderBy(f => f.FieldOrder))
+            foreach (var field in CurrentEntity.Fields.Where(f => f.EditPageType != EditPageType.Exclude && f.EditPageType != EditPageType.EditOnly && f.EditPageType != EditPageType.FileContents).OrderBy(f => f.FieldOrder))
             {
                 s.Add($"            {CurrentEntity.DTOName.ToCamelCase()}.{field.Name} = {CurrentEntity.CamelCaseName}.{field.Name};");
             }
@@ -568,7 +577,10 @@ namespace WEB.Models
             {
                 if (field.KeyField || field.EditPageType == EditPageType.ReadOnly) continue;
                 if (field.EditPageType == EditPageType.Exclude || field.EditPageType == EditPageType.CalculatedField) continue;
-                s.Add($"            {CurrentEntity.CamelCaseName}.{field.Name} = {CurrentEntity.DTOName.ToCamelCase()}.{field.Name};");
+                if (field.EditPageType == EditPageType.FileContents)
+                    s.Add($"            {CurrentEntity.CamelCaseName}.{field.Name} = {CurrentEntity.DTOName.ToCamelCase()}.{field.Name} == null ? null : Convert.FromBase64String({CurrentEntity.DTOName.ToCamelCase()}.{field.Name});");
+                else
+                    s.Add($"            {CurrentEntity.CamelCaseName}.{field.Name} = {CurrentEntity.DTOName.ToCamelCase()}.{field.Name};");
             }
             s.Add($"        }}");
             s.Add($"    }}");
@@ -1262,6 +1274,8 @@ namespace WEB.Models
             s.Add($"import {{ NgbModule }} from '@ng-bootstrap/ng-bootstrap';");
             s.Add($"import {{ DragDropModule }} from '@angular/cdk/drag-drop';");
             s.Add($"import {{ BreadcrumbModule }} from 'primeng/breadcrumb';");
+            s.Add($"import {{ AppFileInputDirective }} from './common/directives/appfileinput';");
+            s.Add($"import {{ AppHasRoleDirective }} from './common/directives/apphasrole';");
 
             var entitiesToBundle = AllEntities.Where(e => !e.Exclude);
             var componentList = "";
@@ -1270,13 +1284,13 @@ namespace WEB.Models
                 if (string.IsNullOrWhiteSpace(e.PreventAppSelectTypeScriptDeployment))
                 {
                     s.Add($"import {{ {e.Name}SelectComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.select.component';");
-                    componentList += (componentList == "" ? "" : ", ") + $"{e.Name}SelectComponent";
+                    componentList += "," + Environment.NewLine + $"        {e.Name}SelectComponent";
                 }
 
                 if (string.IsNullOrWhiteSpace(e.PreventSelectModalTypeScriptDeployment))
                 {
                     s.Add($"import {{ {e.Name}ModalComponent }} from './{e.PluralName.ToLower()}/{e.Name.ToLower()}.modal.component';");
-                    componentList += (componentList == "" ? "" : ", ") + $"{e.Name}ModalComponent";
+                    componentList += "," + Environment.NewLine + $"        {e.Name}ModalComponent";
                 }
             }
             s.Add($"");
@@ -1284,29 +1298,31 @@ namespace WEB.Models
 
             s.Add($"@NgModule({{");
             //s.Add($"   declarations: [{componentList}],");
-            s.Add($"   imports: [");
-            s.Add($"      CommonModule,");
-            s.Add($"      FormsModule,");
-            s.Add($"      RouterModule,");
-            s.Add($"      NgbModule,");
-            s.Add($"      DragDropModule,");
-            s.Add($"      BreadcrumbModule");
-            s.Add($"   ],");
-            s.Add($"   declarations: [");
-            s.Add($"      PagerComponent,");
-            s.Add($"      MainComponent,");
-            s.Add($"      NavMenuComponent,");
-            s.Add($"      MomentPipe,");
-            s.Add($"      " + componentList);
-            s.Add($"   ],");
-            s.Add($"   exports: [");
-            s.Add($"      PagerComponent,");
-            s.Add($"      MainComponent,");
-            s.Add($"      NavMenuComponent,");
-            s.Add($"      NgbModule,");
-            s.Add($"      MomentPipe,");
-            s.Add($"      " + componentList);
-            s.Add($"   ]");
+            s.Add($"    imports: [");
+            s.Add($"        CommonModule,");
+            s.Add($"        FormsModule,");
+            s.Add($"        RouterModule,");
+            s.Add($"        NgbModule,");
+            s.Add($"        DragDropModule,");
+            s.Add($"        BreadcrumbModule");
+            s.Add($"    ],");
+            s.Add($"    declarations: [");
+            s.Add($"        PagerComponent,");
+            s.Add($"        MainComponent,");
+            s.Add($"        NavMenuComponent,");
+            s.Add($"        MomentPipe,");
+            s.Add($"        AppFileInputDirective,");
+            s.Add($"        AppHasRoleDirective" + componentList);
+            s.Add($"    ],");
+            s.Add($"    exports: [");
+            s.Add($"        PagerComponent,");
+            s.Add($"        MainComponent,");
+            s.Add($"        NavMenuComponent,");
+            s.Add($"        NgbModule,");
+            s.Add($"        MomentPipe,");
+            s.Add($"        AppFileInputDirective,");
+            s.Add($"        AppHasRoleDirective" + componentList);
+            s.Add($"    ]");
             s.Add($"}})");
             s.Add($"export class SharedModule {{ }}");
 
@@ -1882,6 +1898,7 @@ namespace WEB.Models
                 var controlSize = "col-sm-6 col-md-4";
                 var tagType = "input";
                 var attributes = new Dictionary<string, string>();
+                var ngIf = string.Empty;
 
                 attributes.Add("id", fieldName);
                 attributes.Add("name", fieldName);
@@ -1890,10 +1907,12 @@ namespace WEB.Models
                 // default = text
                 attributes.Add("type", "text");
 
-                if (field.EditPageType != EditPageType.ReadOnly || isAppSelect)
+                var readOnly = field.EditPageType == EditPageType.ReadOnly || field.EditPageType == EditPageType.FileName;
+
+                if (!readOnly || isAppSelect)
                     attributes.Add("[(ngModel)]", CurrentEntity.Name.ToCamelCase() + "." + fieldName);
 
-                if (field.EditPageType != EditPageType.ReadOnly)
+                if (!readOnly)
                 {
                     attributes.Add("#" + fieldName, "ngModel");
                     if (!field.IsNullable)
@@ -1964,6 +1983,24 @@ namespace WEB.Models
                     attributes.Remove("type");
                     attributes.Add("rows", "5");
                 }
+                else if (field.EditPageType == EditPageType.FileContents)
+                {
+                    ngIf = " *ngIf=\"isNew\"";
+                    field.Label = "File"; //set label to 'File' (don't save!)
+                    attributes["type"] = "file";
+                    attributes.Add("app-file-input", null);
+                    // make ngModel output only so it doesn't error trying to write to the input value (not allowed in html)
+                    attributes.Remove("[(ngModel)]");
+                    attributes.Add("(ngModel)", CurrentEntity.Name.ToCamelCase() + "." + fieldName);
+                    attributes.Add("[(appFileContent)]", CurrentEntity.Name.ToCamelCase() + "." + fieldName);
+                    var fileNameField = CurrentEntity.Fields.SingleOrDefault(o => o.EditPageType == EditPageType.FileName);
+                    if (fileNameField != null) attributes.Add("[(appFileName)]", CurrentEntity.Name.ToCamelCase() + "." + fileNameField.Name.ToCamelCase());
+
+                }
+                else if (field.EditPageType == EditPageType.FileName)
+                {
+                    ngIf = " *ngIf=\"!isNew\"";
+                }
 
 
 
@@ -1991,9 +2028,8 @@ namespace WEB.Models
                     }
                 }
 
-
-                s.Add(t + $"            <div class=\"{controlSize}\">");
-                s.Add(t + $"                <div class=\"form-group\"{(field.EditPageType == EditPageType.ReadOnly ? "" : $" [ngClass]=\"{{ 'is-invalid': {fieldName}.invalid }}\"")}>");
+                s.Add(t + $"            <div class=\"{controlSize}\"{ngIf}>");
+                s.Add(t + $"                <div class=\"form-group\"{(readOnly ? "" : $" [ngClass]=\"{{ 'is-invalid': {fieldName}.invalid }}\"")}>");
                 s.Add($"");
                 s.Add(t + $"                    <label for=\"{fieldName.ToCamelCase()}\">");
                 s.Add(t + $"                        {field.Label}:");
@@ -2027,7 +2063,7 @@ namespace WEB.Models
                     s.Add(t + $"                        </label>");
                     s.Add(t + $"                    </div>");
                 }
-                else if (field.CustomType == CustomType.Date && field.EditPageType != EditPageType.ReadOnly)
+                else if (field.CustomType == CustomType.Date && !readOnly)
                 {
                     s.Add(t + $"                    <div class=\"input-group\">");
                     s.Add(t + $"                        {controlHtml}");
@@ -2042,7 +2078,7 @@ namespace WEB.Models
 
                 s.Add($"");
 
-                if (field.EditPageType != EditPageType.ReadOnly)
+                if (!readOnly)
                 {
                     var validationErrors = new Dictionary<string, string>();
                     if (!field.IsNullable && field.CustomType != CustomType.Boolean && field.EditPageType != EditPageType.ReadOnly) validationErrors.Add("required", $"{field.Label} is required");
