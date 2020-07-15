@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Configuration;
 
 namespace WEB.Models
 {
@@ -16,9 +17,11 @@ namespace WEB.Models
         [Index("IX_Project_Name", IsUnique = true, Order = 0)]
         public string Name { get; set; }
 
-        [Required(AllowEmptyStrings = true)]
-        [MaxLength(250)]
-        public string RootPath { get; set; }
+        [NotMapped]
+        public string RootPath { get { return ConfigurationManager.AppSettings["RootPath"] + Name; } }
+        //[Required(AllowEmptyStrings = true)]
+        //[MaxLength(250)]
+        //public string RootPath { get; set; }
 
         [Required(AllowEmptyStrings = true)]
         [MaxLength(20)]
@@ -47,7 +50,7 @@ namespace WEB.Models
 
         [MaxLength(50)]
         public string UserFilterFieldName { get; set; }
-        
+
         public string Notes { get; set; }
 
         [Required]

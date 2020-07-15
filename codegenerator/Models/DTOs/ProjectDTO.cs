@@ -12,9 +12,9 @@ namespace WEB.Models
         [MaxLength(50)]
         public string Name { get; set; }
 
-        [DisplayFormat(ConvertEmptyStringToNull = false)]
-        [MaxLength(250)]
-        public string RootPath { get; set; }
+        //[DisplayFormat(ConvertEmptyStringToNull = false)]
+        //[MaxLength(250)]
+        //public string RootPath { get; set; }
 
         [DisplayFormat(ConvertEmptyStringToNull = false)]
         [MaxLength(20)]
@@ -61,7 +61,7 @@ namespace WEB.Models
 
             projectDTO.ProjectId = project.ProjectId;
             projectDTO.Name = project.Name;
-            projectDTO.RootPath = project.RootPath;
+            //projectDTO.RootPath = project.RootPath;
             projectDTO.Namespace = project.Namespace;
             projectDTO.AngularModuleName = project.AngularModuleName;
             projectDTO.AngularDirectivePrefix = project.AngularDirectivePrefix;
@@ -79,7 +79,7 @@ namespace WEB.Models
         public void Hydrate(Project project, ProjectDTO projectDTO)
         {
             project.Name = projectDTO.Name;
-            project.RootPath = projectDTO.RootPath;
+            //project.RootPath = projectDTO.RootPath;
             project.Namespace = projectDTO.Namespace;
             project.AngularModuleName = projectDTO.AngularModuleName;
             project.AngularDirectivePrefix = projectDTO.AngularDirectivePrefix;
