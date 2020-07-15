@@ -744,7 +744,7 @@ namespace WEB.Models
             foreach (var field in CurrentEntity.RangeSearchFields)
                 fieldsToSearch.Add(field);
 
-            s.Add($"        public async Task<IActionResult> Search([FromQuery]PagingOptions pagingOptions{(CurrentEntity.TextSearchFields.Count > 0 ? ", [FromQuery]string q = null" : "")}{(fieldsToSearch.Count > 0 ? $", {fieldsToSearch.Select(f => f.ControllerSearchParams).Aggregate((current, next) => current + ", " + next)}" : "") + (CurrentEntity.EntityType == EntityType.User ? ", Guid? roleId = null" : "")})");
+            s.Add($"        public async Task<IActionResult> Search([FromQuery] PagingOptions pagingOptions{(CurrentEntity.TextSearchFields.Count > 0 ? ", [FromQuery] string q = null" : "")}{(fieldsToSearch.Count > 0 ? $", {fieldsToSearch.Select(f => f.ControllerSearchParams).Aggregate((current, next) => current + ", " + next)}" : "") + (CurrentEntity.EntityType == EntityType.User ? ", Guid? roleId = null" : "")})");
             s.Add($"        {{");
             s.Add($"            if (pagingOptions == null) pagingOptions = new PagingOptions();");
             s.Add($"");
@@ -877,7 +877,7 @@ namespace WEB.Models
 
             #region save
             s.Add($"        [HttpPost(\"{CurrentEntity.RoutePath}\"){ (CurrentEntity.AuthorizationType == AuthorizationType.None ? "" : ", AuthorizeRoles(Roles.Administrator)")}]");
-            s.Add($"        public async Task<IActionResult> Save({CurrentEntity.ControllerParameters}, [FromBody]{CurrentEntity.DTOName} {CurrentEntity.DTOName.ToCamelCase()})");
+            s.Add($"        public async Task<IActionResult> Save({CurrentEntity.ControllerParameters}, [FromBody] {CurrentEntity.DTOName} {CurrentEntity.DTOName.ToCamelCase()})");
             s.Add($"        {{");
             s.Add($"            if (!ModelState.IsValid) return BadRequest(ModelState);");
             s.Add($"");
@@ -1109,7 +1109,7 @@ namespace WEB.Models
             if (CurrentEntity.HasASortField)
             {
                 s.Add($"        [HttpPost(\"sort\"){ (CurrentEntity.AuthorizationType == AuthorizationType.None ? "" : ", AuthorizeRoles(Roles.Administrator)")}]");
-                s.Add($"        public async Task<IActionResult> Sort([FromBody]Guid[] sortedIds)");
+                s.Add($"        public async Task<IActionResult> Sort([FromBody] Guid[] sortedIds)");
                 s.Add($"        {{");
                 // if it's a child entity, just sort the id's that were sent
                 if (CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy))
@@ -1148,7 +1148,7 @@ namespace WEB.Models
                 var reverseRelationshipField = reverseRel.RelationshipFields.Single();
 
                 s.Add($"        [HttpPost(\"{CurrentEntity.RoutePath}/{rel.ChildEntity.PluralName.ToLower()}\"){ (CurrentEntity.AuthorizationType == AuthorizationType.None ? "" : ", AuthorizeRoles(Roles.Administrator)")}]");
-                s.Add($"        public async Task<IActionResult> Save{rel.ChildEntity.PluralName}({CurrentEntity.ControllerParameters}, [FromBody]{rel.RelationshipFields.First().ParentField.NetType}[] {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()}s)");
+                s.Add($"        public async Task<IActionResult> Save{rel.ChildEntity.PluralName}({CurrentEntity.ControllerParameters}, [FromBody] {rel.RelationshipFields.First().ParentField.NetType}[] {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()}s)");
                 s.Add($"        {{");
                 s.Add($"            if (!ModelState.IsValid) return BadRequest(ModelState);");
                 s.Add($"");
@@ -1985,7 +1985,7 @@ namespace WEB.Models
                 }
                 else if (field.EditPageType == EditPageType.FileContents)
                 {
-                    ngIf = " *ngIf=\"isNew\"";
+                    //ngIf = " *ngIf=\"isNew\"";
                     field.Label = "File"; //set label to 'File' (don't save!)
                     attributes["type"] = "file";
                     attributes.Add("app-file-input", null);
@@ -2394,6 +2394,15 @@ namespace WEB.Models
                 foreach (var field in rel.ChildEntity.Fields.Where(o => o.ShowInSearchResults))
                     if (field.FieldType == FieldType.Enum && !enumLookups.Contains(field.Lookup))
                         enumLookups.Add(field.Lookup);
+            // this is for the breadcrumb being on the parent entity which has a primary field of type enum
+            var addEnum = CurrentEntity.RelationshipsAsChild.SingleOrDefault(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First().ChildFieldId == CurrentEntity.PrimaryField.FieldId)?.ParentEntity?.PrimaryField?.FieldType == FieldType.Enum;
+            if (!addEnum)
+            {
+                // can't get this to work: 
+                // intention: on CurrentEntity, a child entity list has a field that is a relationship-link to another 
+                if (CurrentEntity.RelationshipsAsParent.Any(o => (o.DisplayListOnParent || o.Hierarchy) && o.ChildEntity.Fields.Any(f => f.ShowInSearchResults && f.RelationshipFieldsAsChild.Any(rf => rf.ParentField.Entity.PrimaryField.FieldType == FieldType.Enum))))
+                    addEnum = true;
+            }
 
             var hasChildRoutes = relationshipsAsParent.Any(o => o.Hierarchy) || CurrentEntity.UseChildRoutes;
 
@@ -2412,8 +2421,8 @@ namespace WEB.Models
                 s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             s.Add($"import {{ {CurrentEntity.Name} }} from '../common/models/{CurrentEntity.Name.ToLower()}.model';");
             s.Add($"import {{ {CurrentEntity.Name}Service }} from '../common/services/{CurrentEntity.Name.ToLower()}.service';");
-            if (enumLookups.Count > 0)
-                s.Add($"import {{ Enum, Enums }} from '../common/models/enums.model';");
+            if (enumLookups.Count > 0 || addEnum)
+                s.Add($"import {{ Enum, Enums{(CurrentEntity.PrimaryField.FieldType == FieldType.Enum ? ", " + CurrentEntity.PrimaryField.Lookup.PluralName : "")} }} from '../common/models/enums.model';");
             foreach (var relChildEntity in relationshipsAsParent.Select(o => o.ChildEntity).Distinct().OrderBy(o => o.Name))
             {
                 s.Add($"import {{ {(relChildEntity.EntityId == CurrentEntity.EntityId ? "" : relChildEntity.Name + ", ")}{relChildEntity.Name}SearchOptions, {relChildEntity.Name}SearchResponse }} from '../common/models/{relChildEntity.Name.ToLower()}.model';");
@@ -2458,6 +2467,7 @@ namespace WEB.Models
                 s.Add($"    public roles: Role[] = Roles.List;");
                 s.Add($"    private profile: ProfileModel;");
             }
+            //foreach(var x in CurrentEntity.RelationshipsAsParent.Where(o => (o.DisplayListOnParent || o.Hierarchy) && o.ChildEntity.Fields.Any(f => f.ShowInSearchResults && f.RelationshipFieldsAsChild.Any(rf => rf.ParentField.Entity.PrimaryField.FieldType == FieldType.Enum)
             s.Add($"");
             foreach (var rel in relationshipsAsParent)
             {
@@ -2648,11 +2658,23 @@ namespace WEB.Models
             if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First()?.ChildFieldId == CurrentEntity.PrimaryField.FieldId))
             {
                 var rel = CurrentEntity.RelationshipsAsChild.Single(r => r.RelationshipFields.Count == 1 && r.RelationshipFields.First().ChildFieldId == CurrentEntity.PrimaryField.FieldId);
-                s.Add($"        this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.RelationshipFields.First().ChildField.Name.ToCamelCase()} ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentName.ToCamelCase()}?.{rel.ParentEntity.PrimaryField.Name.ToCamelCase() + (CurrentEntity.PrimaryField.JavascriptType == "string" ? "" : "?.toString()")}?.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+                var primaryField = rel.ParentEntity.PrimaryField;
+                if (primaryField.CustomType == CustomType.Enum)
+                {
+                    s.Add($"        this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{primaryField.Name.ToCamelCase()} !== undefined ? Enums.{primaryField.Lookup.PluralName}[this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentEntity.Name.ToCamelCase()}.{primaryField.Name.ToCamelCase()}].label?.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+                }
+                else
+                {
+                    s.Add($"        this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{rel.RelationshipFields.First().ChildField.Name.ToCamelCase()} ? this.{CurrentEntity.Name.ToCamelCase()}.{rel.ParentName.ToCamelCase()}?.{primaryField.Name.ToCamelCase() + (primaryField.JavascriptType == "string" ? "" : "?.toString()")}?.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+                }
             }
             else if (CurrentEntity.PrimaryField.CustomType == CustomType.Date)
             {
                 s.Add($"        this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()} ? moment(this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField?.Name.ToCamelCase()}).format(\"LL\") : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
+            }
+            else if (CurrentEntity.PrimaryField.CustomType == CustomType.Enum)
+            {
+                s.Add($"        this.breadcrumbService.changeBreadcrumb(this.route.snapshot, this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()} !== undefined ? Enums.{CurrentEntity.PrimaryField.Lookup.PluralName}[this.{CurrentEntity.Name.ToCamelCase()}.{CurrentEntity.PrimaryField.Name.ToCamelCase()}].label?.substring(0, 25) : \"(new {CurrentEntity.FriendlyName.ToLower()})\");");
             }
             else
             {
@@ -2772,7 +2794,7 @@ namespace WEB.Models
 
         }
 
-        public string GenerateAppSelectHtml()
+        public string GenerateSelectHtml()
         {
             var s = new StringBuilder();
 
@@ -2800,7 +2822,7 @@ namespace WEB.Models
             return RunCodeReplacements(s.ToString(), CodeType.AppSelectHtml);
         }
 
-        public string GenerateAppSelectTypeScript()
+        public string GenerateSelectTypeScript()
         {
             var s = new StringBuilder();
 
@@ -2848,14 +2870,22 @@ namespace WEB.Models
 
             if (CurrentEntity.PrimaryField.CustomType == CustomType.Date)
             {
-                LABEL_OUTPUT_MULTI = "moment(" + LABEL_OUTPUT_MULTI + ").format(\"LL\")";
-                LABEL_OUTPUT_SINGLE = "moment(" + LABEL_OUTPUT_SINGLE + ").format(\"LL\")";
+                LABEL_OUTPUT_MULTI = $"moment({LABEL_OUTPUT_MULTI}).format(\"LL\")";
+                LABEL_OUTPUT_SINGLE = $"moment({LABEL_OUTPUT_SINGLE}).format(\"LL\")";
             }
+            else if (CurrentEntity.PrimaryField.FieldType == FieldType.Enum)
+            {
+                LABEL_OUTPUT_MULTI = $"Enums.{CurrentEntity.PrimaryField.Lookup.PluralName}[{LABEL_OUTPUT_MULTI}].label";
+                LABEL_OUTPUT_SINGLE = $"Enums.{CurrentEntity.PrimaryField.Lookup.PluralName}[{LABEL_OUTPUT_SINGLE}].label";
+            }
+
+            var enums = CurrentEntity.PrimaryField.FieldType == FieldType.Enum ? ", Enums" : string.Empty;
 
             file = RunTemplateReplacements(file)
                 .Replace("/*FILTER_ATTRIBUTES*/", filterAttributes)
                 .Replace("/*FILTER_OPTIONS*/", filterOptions)
                 .Replace("/*INPUTS*/", inputs)
+                .Replace("/*ENUMS*/", enums)
                 .Replace("/*IMPORTS*/", imports)
                 .Replace("LABEL_OUTPUT_MULTI", LABEL_OUTPUT_MULTI)
                 .Replace("LABEL_OUTPUT_SINGLE", LABEL_OUTPUT_SINGLE)
@@ -2866,7 +2896,7 @@ namespace WEB.Models
             return RunCodeReplacements(s.ToString(), CodeType.AppSelectTypeScript);
         }
 
-        public string GenerateSelectModalHtml()
+        public string GenerateModalHtml()
         {
             var s = new StringBuilder();
 
@@ -2946,7 +2976,7 @@ namespace WEB.Models
             return RunCodeReplacements(s.ToString(), CodeType.SelectModalHtml);
         }
 
-        public string GenerateSelectModalTypeScript()
+        public string GenerateModalTypeScript()
         {
             var s = new StringBuilder();
 
@@ -2962,9 +2992,16 @@ namespace WEB.Models
             if (lookups.Any())
                 imports += $"import {{ Enum, Enums }} from '../common/models/enums.model';" + Environment.NewLine;
 
+            if (!lookups.Any() && CurrentEntity.Fields.Where(o => o.ShowInSearchResults && o.FieldType == FieldType.Enum).Any())
+            {
+                imports += $"import {{ Enums }} from '../common/models/enums.model';" + Environment.NewLine;
+                foreach (var lookup in CurrentEntity.Fields.Where(o => o.ShowInSearchResults && o.FieldType == FieldType.Enum).Select(o => o.Lookup).Distinct())
+                    properties += $"    {lookup.PluralName.ToCamelCase()} = Enums.{lookup.PluralName};" + Environment.NewLine;
+            }
+
             foreach (var lookup in lookups)
             {
-                properties += $"    {lookup.PluralName.ToCamelCase()}: Enum[] = Enums.{lookup.PluralName};" + Environment.NewLine;
+                properties += $"    {lookup.PluralName.ToCamelCase()} = Enums.{lookup.PluralName};" + Environment.NewLine;
                 //properties += $"   {lookup.Name.ToCamelCase()}: Enum;" + Environment.NewLine;
             }
 
@@ -3041,8 +3078,8 @@ namespace WEB.Models
         {
             if (String.IsNullOrWhiteSpace(entity.IconClass)) return string.Empty;
 
-            string html = $@"<span class=""input-group-prepend"" *ngIf=""!multiple && !!{entity.Name.ToLower()}"">
-        <a routerLink=""{GetHierarchyString(entity)}"" class=""btn btn-secondary"" ng-disabled=""disabled"">
+            string html = $@"<span class=""input-group-prepend"" *ngIf=""!multiple && !!{entity.Name.ToCamelCase()}"">
+        <a routerLink=""{GetHierarchyString(entity)}"" class=""btn btn-secondary"" [disabled]=""disabled"">
             <i class=""fas {entity.IconClass}""></i>
         </a>
     </span>
@@ -3096,7 +3133,7 @@ namespace WEB.Models
             replacements.InsertRange(0, DbContext.CodeReplacements.Where(o => o.Entity.ProjectId == CurrentEntity.ProjectId && !o.Disabled && o.CodeType == CodeType.Global).ToList());
 
             // common scripts need a common replacement
-            if (type == CodeType.Enums || type == CodeType.AppRouter || type == CodeType.BundleConfig || type == CodeType.DbContext)
+            if (type == CodeType.Enums || type == CodeType.AppRouter || type == CodeType.BundleConfig || type == CodeType.DbContext || type == CodeType.SharedModule)
                 replacements = CodeReplacements.Where(cr => !cr.Disabled && cr.CodeType == type && cr.Entity.ProjectId == CurrentEntity.ProjectId).ToList();
 
             foreach (var replacement in replacements.OrderBy(o => o.SortOrder))
@@ -3419,7 +3456,7 @@ namespace WEB.Models
             #region app-select html
             if (deploymentOptions.AppSelectHtml)
             {
-                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateAppSelectHtml(), entity.Name.ToLower() + ".select.component.html"))
+                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateSelectHtml(), entity.Name.ToLower() + ".select.component.html"))
                     return ("App path does not exist");
             }
             #endregion
@@ -3427,7 +3464,7 @@ namespace WEB.Models
             #region app-select typescript
             if (deploymentOptions.AppSelectTypeScript)
             {
-                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateAppSelectTypeScript(), entity.Name.ToLower() + ".select.component.ts"))
+                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateSelectTypeScript(), entity.Name.ToLower() + ".select.component.ts"))
                     return ("App path does not exist");
             }
             #endregion
@@ -3435,7 +3472,7 @@ namespace WEB.Models
             #region select modal html
             if (deploymentOptions.SelectModalHtml)
             {
-                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateSelectModalHtml(), entity.Name.ToLower() + ".modal.component.html"))
+                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateModalHtml(), entity.Name.ToLower() + ".modal.component.html"))
                     return ("App path does not exist");
             }
             #endregion
@@ -3443,7 +3480,7 @@ namespace WEB.Models
             #region select modal typescript
             if (deploymentOptions.SelectModalTypeScript)
             {
-                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateSelectModalTypeScript(), entity.Name.ToLower() + ".modal.component.ts"))
+                if (!CreateAppDirectory(entity.Project, entity.PluralName, codeGenerator.GenerateModalTypeScript(), entity.Name.ToLower() + ".modal.component.ts"))
                     return ("App path does not exist");
             }
             #endregion

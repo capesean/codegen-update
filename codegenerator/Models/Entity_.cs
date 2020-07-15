@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace WEB.Models
 {
@@ -175,10 +176,21 @@ namespace WEB.Models
                     var rel = RelationshipsAsChild.Single(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId));
                     if (rel.ParentEntity == currentEntity) continue;
 
+                    var value = string.Empty;
+                    if (rel.ParentEntity.PrimaryField.FieldType == FieldType.Enum)
+                    {
+                        if (field.IsNullable) throw new Exception("unhandled: what now!?");
+                        value = $"{{{{ {rel.ParentEntity.PrimaryField.Lookup.PluralName.ToCamelCase()}[{ field.Entity.Name.ToCamelCase()}.{ rel.ParentName.ToCamelCase() }.{ rel.ParentField.Name.ToCamelCase() }].label }}}}";
+                    }
+                    else
+                    {
+                        value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ rel.ParentName.ToCamelCase() + (field.IsNullable ? "?" : "") }.{ rel.ParentField.Name.ToCamelCase() } }}}}";
+                    }
+
                     result.Add(new SearchResultColumn
                     {
                         Header = rel.ParentEntity.FriendlyName,
-                        Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ rel.ParentName.ToCamelCase() + (field.IsNullable ? "?" : "") }.{ rel.ParentField.Name.ToCamelCase() } }}}}",
+                        Value = value,
                         IsOnAnotherEntity = true
                     });
                 }

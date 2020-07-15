@@ -88,10 +88,10 @@ namespace WEB.Controllers
             result.ListTypeScript = code.GenerateListTypeScript();
             result.EditHtml = code.GenerateEditHtml();
             result.EditTypeScript = code.GenerateEditTypeScript();
-            if (string.IsNullOrWhiteSpace(entity.PreventAppSelectHtmlDeployment)) result.AppSelectHtml = code.GenerateAppSelectHtml();
-            if (string.IsNullOrWhiteSpace(entity.PreventAppSelectTypeScriptDeployment)) result.AppSelectTypeScript = code.GenerateAppSelectTypeScript();
-            if (string.IsNullOrWhiteSpace(entity.PreventSelectModalHtmlDeployment)) result.SelectModalHtml = code.GenerateSelectModalHtml();
-            if (string.IsNullOrWhiteSpace(entity.PreventSelectModalTypeScriptDeployment)) result.SelectModalTypeScript = code.GenerateSelectModalTypeScript();
+            if (string.IsNullOrWhiteSpace(entity.PreventAppSelectHtmlDeployment)) result.AppSelectHtml = code.GenerateSelectHtml();
+            if (string.IsNullOrWhiteSpace(entity.PreventAppSelectTypeScriptDeployment)) result.AppSelectTypeScript = code.GenerateSelectTypeScript();
+            if (string.IsNullOrWhiteSpace(entity.PreventSelectModalHtmlDeployment)) result.SelectModalHtml = code.GenerateModalHtml();
+            if (string.IsNullOrWhiteSpace(entity.PreventSelectModalTypeScriptDeployment)) result.SelectModalTypeScript = code.GenerateModalTypeScript();
 
             return Ok(result);
         }
