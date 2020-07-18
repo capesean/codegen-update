@@ -18,7 +18,7 @@ namespace WEB.Models
         public string Name { get; set; }
 
         [NotMapped]
-        public string RootPath { get { return ConfigurationManager.AppSettings["RootPath"] + Name; } }
+        public string RootPath { get { return ConfigurationManager.AppSettings["RootPath"] + Name + @"\"; } }
         //[Required(AllowEmptyStrings = true)]
         //[MaxLength(250)]
         //public string RootPath { get; set; }
