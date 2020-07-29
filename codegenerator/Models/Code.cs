@@ -1784,7 +1784,7 @@ namespace WEB.Models
                 s.Add($"");
             }
             s.Add($"    goTo{CurrentEntity.Name}({CurrentEntity.Name.ToCamelCase()}: {CurrentEntity.Name}): void {{");
-            s.Add($"        this.router.navigate([{GetRouterLink(CurrentEntity)}]);");
+            s.Add($"        this.router.navigate({GetRouterLink(CurrentEntity)});");
             s.Add($"    }}");
             s.Add($"}}");
             s.Add($"");
@@ -1794,28 +1794,40 @@ namespace WEB.Models
 
         private string GetRouterLink(Entity entity)
         {
+            // reason for change!!
+            // change to use relative routes, so I can inject a url prefix (start app at www.site.com/app/<here>)
+            // note: this requirement can't work with base href=/app, as that gets set for the entire site, where 
+            // the ktu-covid project was effectively 2 websites in 1: /offline and /admin - both needing base href=/
+
             string routerLink = string.Empty;
 
             if (entity.RelationshipsAsChild.Any(r => r.Hierarchy))
             {
                 var prefix = string.Empty;
                 Relationship previousRelationship = null;
-                while (entity != null)
-                {
-                    var nextEntity = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy)?.ParentEntity;
-                    var keyFields = entity.GetNonHierarchicalKeyFields();
 
-                    routerLink = $"'{(nextEntity == null ? "/" : "")}{entity.PluralName.ToLower()}', {keyFields.Select(o => $"{prefix + (previousRelationship == null ? entity.Name.ToCamelCase() : previousRelationship.ParentName.ToCamelCase())}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}" + (routerLink == "" ? "" : ", ") + routerLink;
+                //while (entity != null)
+                //{
+                //    var nextEntity = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy)?.ParentEntity;
+                //    var keyFields = entity.GetNonHierarchicalKeyFields();
 
-                    prefix += (previousRelationship == null ? entity.Name.ToCamelCase() : previousRelationship.ParentName.ToCamelCase()) + ".";
+                //    routerLink = $"'{(nextEntity == null ? "/" : "")}{entity.PluralName.ToLower()}', {keyFields.Select(o => $"{prefix + (previousRelationship == null ? entity.Name.ToCamelCase() : previousRelationship.ParentName.ToCamelCase())}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}" + (routerLink == "" ? "" : ", ") + routerLink;
 
-                    previousRelationship = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy);
-                    entity = nextEntity;
-                }
+                //    prefix += (previousRelationship == null ? entity.Name.ToCamelCase() : previousRelationship.ParentName.ToCamelCase()) + ".";
+
+                //    previousRelationship = entity.RelationshipsAsChild.SingleOrDefault(r => r.Hierarchy);
+                //    entity = nextEntity;
+                //}
+
+                var keyFields = entity.GetNonHierarchicalKeyFields();
+
+                routerLink = $"[\"{entity.PluralName.ToLower()}\", {keyFields.Select(o => $"{entity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}], {{ relativeTo: this.route }}";
             }
             else
             {
-                routerLink = $"'/{entity.PluralName.ToLower()}', { entity.KeyFields.Select(o => entity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }";
+                //routerLink = $"'/{entity.PluralName.ToLower()}', { entity.KeyFields.Select(o => entity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }";
+
+                routerLink = $"[{ entity.KeyFields.Select(o => entity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }], {{ relativeTo: this.route }}";
             }
 
             return routerLink;
@@ -2711,7 +2723,7 @@ namespace WEB.Models
                 s.Add($"");
                 // todo: use relative links? can then disable 'includeEntities' on these entities
                 s.Add($"    goTo{rel.ChildEntity.Name}({rel.ChildEntity.Name.ToCamelCase()}: {rel.ChildEntity.Name}): void {{");
-                s.Add($"        this.router.navigate([{GetRouterLink(rel.ChildEntity)}]);");
+                s.Add($"        this.router.navigate({GetRouterLink(rel.ChildEntity)});");
                 s.Add($"    }}");
                 s.Add($"");
                 if (rel.UseMultiSelect)
