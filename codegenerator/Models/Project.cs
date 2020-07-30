@@ -35,15 +35,6 @@ namespace WEB.Models
         [MaxLength(20)]
         public string AngularDirectivePrefix { get; set; }
 
-        [Required]
-        public bool Bootstrap3 { get; set; }
-
-        [MaxLength(50)]
-        public string UrlPrefix { get; set; }
-
-        [Required]
-        public bool UseStringAuthorizeAttributes { get; set; }
-
         [Required(AllowEmptyStrings = true)]
         [MaxLength(20)]
         public string DbContextVariable { get; set; }
@@ -56,9 +47,6 @@ namespace WEB.Models
         [Required]
         [Column(TypeName = "Date")]
         public DateTime DateCreated { get; set; }
-
-        [MaxLength(20)]
-        public string RouteViewName { get; set; }
 
         public virtual ICollection<Entity> Entities { get; set; } = new List<Entity>();
 

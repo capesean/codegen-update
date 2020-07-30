@@ -19,14 +19,14 @@
                         </div>
                     </div>
 
-                    <div class="col-sm-6 col-md-4">
+                    <!--<div class="col-sm-6 col-md-4">
                         <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.rootPath.$invalid }">
                             <label for="rootPath" class="control-label">
                                 Root Path:
                             </label>
                             <input type="text" id="rootPath" name="rootPath" ng-model="vm.project.rootPath" maxlength="250" class="form-control" ng-required="true" />
                         </div>
-                    </div>
+                    </div>-->
 
                     <div class="col-sm-6 col-md-4">
                         <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.namespace.$invalid }">
@@ -56,71 +56,11 @@
                     </div>
 
                     <div class="col-sm-6 col-md-4 col-lg-3">
-                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.urlPrefix.$invalid }">
-                            <label for="urlPrefix" class="control-label">
-                                URL Prefix:
-                            </label>
-                            <input type="text" id="urlPrefix" name="urlPrefix" ng-model="vm.project.urlPrefix" maxlength="50" class="form-control" />
-                        </div>
-                    </div>
-
-                    <div class="col-sm-6 col-md-4 col-lg-3">
                         <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.dbContextVariable.$invalid }">
                             <label for="dbContextVariable" class="control-label">
                                 DbContext Variable:
                             </label>
                             <input type="text" id="dbContextVariable" name="dbContextVariable" ng-model="vm.project.dbContextVariable" maxlength="20" class="form-control" />
-                        </div>
-                    </div>
-
-                    <div class="col-sm-4 col-md-3 col-lg-2">
-                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.bootstrap3.$invalid }">
-                            <label for="bootstrap3" class="control-label">
-                                Bootstrap 3:
-                            </label>
-                            <div class="checkbox">
-                                <label>
-                                    <input type="checkbox" id="bootstrap3" name="bootstrap3" ng-model="vm.project.bootstrap3" />
-                                    Bootstrap 3
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-sm-4 col-md-3 col-lg-2">
-                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.excludeTypes.$invalid }">
-                            <label for="excludeTypes" class="control-label">
-                                Exclude Types:
-                            </label>
-                            <div class="checkbox">
-                                <label>
-                                    <input type="checkbox" id="excludeTypes" name="excludeTypes" ng-model="vm.project.excludeTypes" />
-                                    Exclude Types
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-sm-4 col-md-3 col-lg-2">
-                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.useStringAuthorizeAttributes.$invalid }">
-                            <label for="useStringAuthorizeAttributes" class="control-label">
-                                Use String Authorize Attributes:
-                            </label>
-                            <div class="checkbox">
-                                <label>
-                                    <input type="checkbox" id="useStringAuthorizeAttributes" name="useStringAuthorizeAttributes" ng-model="vm.project.useStringAuthorizeAttributes" />
-                                    Use String Attributes
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-sm-6 col-md-4 col-lg-3">
-                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.routeViewName.$invalid }">
-                            <label for="routeViewName" class="control-label">
-                                Route View Name:
-                            </label>
-                            <input type="text" id="routeViewName" name="routeViewName" ng-model="vm.project.routeViewName" maxlength="20" class="form-control" />
                         </div>
                     </div>
 

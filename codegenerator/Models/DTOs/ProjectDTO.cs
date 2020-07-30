@@ -65,13 +65,9 @@ namespace WEB.Models
             projectDTO.Namespace = project.Namespace;
             projectDTO.AngularModuleName = project.AngularModuleName;
             projectDTO.AngularDirectivePrefix = project.AngularDirectivePrefix;
-            projectDTO.Bootstrap3 = project.Bootstrap3;
-            projectDTO.UrlPrefix = project.UrlPrefix;
             projectDTO.UserFilterFieldName = project.UserFilterFieldName;
-            projectDTO.UseStringAuthorizeAttributes = project.UseStringAuthorizeAttributes;
             projectDTO.DbContextVariable = project.DbContextVariable;
             projectDTO.Notes = project.Notes;
-            projectDTO.RouteViewName = project.RouteViewName;
 
             return projectDTO;
         }
@@ -83,13 +79,9 @@ namespace WEB.Models
             project.Namespace = projectDTO.Namespace;
             project.AngularModuleName = projectDTO.AngularModuleName;
             project.AngularDirectivePrefix = projectDTO.AngularDirectivePrefix;
-            project.Bootstrap3 = projectDTO.Bootstrap3;
-            project.UrlPrefix = projectDTO.UrlPrefix;
             project.UserFilterFieldName = projectDTO.UserFilterFieldName;
-            project.UseStringAuthorizeAttributes = projectDTO.UseStringAuthorizeAttributes;
             project.DbContextVariable = projectDTO.DbContextVariable;
             project.Notes = projectDTO.Notes;
-            project.RouteViewName = projectDTO.RouteViewName;
         }
     }
 }

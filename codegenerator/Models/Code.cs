@@ -1610,7 +1610,7 @@ namespace WEB.Models
                 s.Add($"");
                 s.Add(t + $"    <fieldset>");
                 s.Add($"");
-                s.Add(t + $"        <button type=\"submit\" class=\"btn btn-success\">Search<i class=\"fas fa-search{(CurrentEntity.Project.Bootstrap3 ? string.Empty : " ml-1")}\"></i></button>");
+                s.Add(t + $"        <button type=\"submit\" class=\"btn btn-success\">Search<i class=\"fas fa-search ml-1\"></i></button>");
                 if (CurrentEntity.RelationshipsAsChild.Count(r => r.Hierarchy) == 0)
                 {
                     // todo: needs field list + field.newParameter
@@ -1685,7 +1685,7 @@ namespace WEB.Models
             var s = new StringBuilder();
 
             s.Add($"import {{ Component, OnInit{(hasChildRoutes ? ", OnDestroy" : "")} }} from '@angular/core';");
-            s.Add($"import {{ Router{(hasChildRoutes ? ", ActivatedRoute, NavigationEnd" : "")} }} from '@angular/router';");
+            s.Add($"import {{ Router, ActivatedRoute{(hasChildRoutes ? ", NavigationEnd" : "")} }} from '@angular/router';");
             s.Add($"import {{ Subject{(hasChildRoutes ? ", Subscription" : "")} }} from 'rxjs';");
             s.Add($"import {{ PagingOptions }} from '../common/models/http.model';");
             if (CurrentEntity.HasASortField)
@@ -1714,8 +1714,7 @@ namespace WEB.Models
 
             s.Add($"");
             s.Add($"    constructor(");
-            if (hasChildRoutes)
-                s.Add($"        public route: ActivatedRoute,");
+            s.Add($"        public route: ActivatedRoute,");
             s.Add($"        private router: Router,");
             s.Add($"        private errorService: ErrorService,");
             if (CurrentEntity.HasASortField)
@@ -2247,8 +2246,8 @@ namespace WEB.Models
             //s.Add($"");
 
             s.Add(t + $"    <fieldset>");
-            s.Add(t + $"        <button type=\"submit\" class=\"btn btn-success\">Save<i class=\"fas fa-check{(CurrentEntity.Project.Bootstrap3 ? string.Empty : " ml-1")}\"></i></button>");
-            s.Add(t + $"        <button type=\"button\" *ngIf=\"!isNew\" class=\"btn btn-outline-danger ml-1\" (click)=\"delete()\">Delete<i class=\"fas fa-times{(CurrentEntity.Project.Bootstrap3 ? string.Empty : " ml-1")}\"></i></button>");
+            s.Add(t + $"        <button type=\"submit\" class=\"btn btn-success\">Save<i class=\"fas fa-check ml-1\"></i></button>");
+            s.Add(t + $"        <button type=\"button\" *ngIf=\"!isNew\" class=\"btn btn-outline-danger ml-1\" (click)=\"delete()\">Delete<i class=\"fas fa-times ml-1\"></i></button>");
             s.Add(t + $"    </fieldset>");
             s.Add($"");
             s.Add(t + $"</form>");
@@ -3236,6 +3235,8 @@ namespace WEB.Models
 
         public static string RunDeployment(ApplicationDbContext DbContext, Entity entity, DeploymentOptions deploymentOptions)
         {
+            if (entity.PrimaryFieldId == null) throw new Exception($"Entity {entity.Name} does not have a Primary Field defined");
+
             var codeGenerator = new Code(entity, DbContext);
 
             var error = codeGenerator.Validate();
