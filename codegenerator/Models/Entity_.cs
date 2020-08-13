@@ -162,7 +162,7 @@ namespace WEB.Models
         {
             // field must be in a relationship of this entity, where the field is (part of) the key of the related entity
             var relationship = RelationshipsAsChild.Single(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId && f.ParentField.KeyField));
-            if (relationship.RelationshipFields.Count() != 1) throw new Exception("Can't have a search field that is part of a multi-field key");
+            //if (relationship.RelationshipFields.Count() != 1) throw new Exception("Can't have a search field that is part of a multi-field key");
             return relationship;
         }
 
