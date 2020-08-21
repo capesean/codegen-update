@@ -204,7 +204,7 @@ namespace WEB.Models
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } ? \"Yes\" : \"No\" }}}}";
                     else if (field.FieldType == FieldType.Date)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | momentPipe: 'DD MMM YYYY' }}}}";
-                    else if (field.FieldType == FieldType.DateTime)
+                    else if (field.FieldType == FieldType.DateTime || field.FieldType == FieldType.SmallDateTime)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | momentPipe: 'DD MMM YYYY HH:mm' }}}}";
                     else
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } }}}}";
