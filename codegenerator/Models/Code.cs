@@ -578,7 +578,7 @@ namespace WEB.Models
                 if (field.KeyField || field.EditPageType == EditPageType.ReadOnly) continue;
                 if (field.EditPageType == EditPageType.Exclude || field.EditPageType == EditPageType.CalculatedField) continue;
                 if (field.EditPageType == EditPageType.FileContents)
-                    s.Add($"            {CurrentEntity.CamelCaseName}.{field.Name} = {CurrentEntity.DTOName.ToCamelCase()}.{field.Name} == null ? null : Convert.FromBase64String({CurrentEntity.DTOName.ToCamelCase()}.{field.Name});");
+                    s.Add($"            if ({CurrentEntity.DTOName.ToCamelCase()}.{field.Name} != null) {CurrentEntity.CamelCaseName}.{field.Name} = Convert.FromBase64String({CurrentEntity.DTOName.ToCamelCase()}.{field.Name});");
                 else
                     s.Add($"            {CurrentEntity.CamelCaseName}.{field.Name} = {CurrentEntity.DTOName.ToCamelCase()}.{field.Name};");
             }
@@ -856,6 +856,7 @@ namespace WEB.Models
             }
             if (CurrentEntity.HasUserFilterField)
                 s.Add($"                .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
+            s.Add($"                .AsNoTracking()");
             s.Add($"                .FirstOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
             s.Add($"");
             s.Add($"            if ({CurrentEntity.CamelCaseName} == null)");
@@ -1270,6 +1271,7 @@ namespace WEB.Models
             s.Add($"import {{ MainComponent }} from './main.component';");
             s.Add($"import {{ NavMenuComponent }} from './common/nav-menu/nav-menu.component';");
             s.Add($"import {{ MomentPipe }} from './common/pipes/momentPipe';");
+            s.Add($"import {{ BooleanPipe }} from './common/pipes/booleanPipe';");
             s.Add($"import {{ FormsModule }} from '@angular/forms';");
             s.Add($"import {{ NgbModule }} from '@ng-bootstrap/ng-bootstrap';");
             s.Add($"import {{ DragDropModule }} from '@angular/cdk/drag-drop';");
@@ -1311,6 +1313,7 @@ namespace WEB.Models
             s.Add($"        MainComponent,");
             s.Add($"        NavMenuComponent,");
             s.Add($"        MomentPipe,");
+            s.Add($"        BooleanPipe,");
             s.Add($"        AppFileInputDirective,");
             s.Add($"        AppHasRoleDirective" + componentList);
             s.Add($"    ],");
@@ -1320,6 +1323,7 @@ namespace WEB.Models
             s.Add($"        NavMenuComponent,");
             s.Add($"        NgbModule,");
             s.Add($"        MomentPipe,");
+            s.Add($"        BooleanPipe,");
             s.Add($"        AppFileInputDirective,");
             s.Add($"        AppHasRoleDirective" + componentList);
             s.Add($"    ]");
@@ -2101,6 +2105,21 @@ namespace WEB.Models
                     s.Add(t + $"                        </div>");
                     s.Add(t + $"                    </div>");
                 }
+                else if (field.FieldType == FieldType.VarBinary && field.EditPageType == EditPageType.FileContents)
+                {
+                    var fileNameField = CurrentEntity.Fields.FirstOrDefault(o => o.EditPageType == EditPageType.FileName);
+                    if (fileNameField == null) throw new Exception(CurrentEntity.Name + ": FileContents field doesn't have a matching FileName field");
+
+                    s.Add(t + $"                    <div class=\"input-group\">");
+                    s.Add(t + $"                        <div class=\"input-group-prepend\" *ngIf=\"!isNew\">");
+                    s.Add(t + $"                            <button type=\"button\" class=\"btn btn-primary\" (click)=\"download()\"><i class=\"fa fa-fw fa-cloud-download-alt\"></i></button>");
+                    s.Add(t + $"                        </div>");
+                    s.Add(t + $"                        <div class=\"custom-file\">");
+                    s.Add(t + $"                            {controlHtml}");
+                    s.Add(t + $"                            <label class=\"custom-file-label\" for=\"{field.Name.ToCamelCase()}\">{{{{{CurrentEntity.Name.ToCamelCase()}.{fileNameField.Name.ToCamelCase()} || \"Choose file\"}}}}</label>");
+                    s.Add(t + $"                        </div>");
+                    s.Add(t + $"                    </div>");
+                }
                 else
                     s.Add(t + $"                    {controlHtml}");
 
@@ -2437,6 +2456,7 @@ namespace WEB.Models
             }
 
             var hasChildRoutes = relationshipsAsParent.Any(o => o.Hierarchy) || CurrentEntity.UseChildRoutes;
+            var hasFileContents = CurrentEntity.Fields.Any(o => o.EditPageType == EditPageType.FileContents && o.CustomType == CustomType.Binary);
 
             var s = new StringBuilder();
 
@@ -2478,6 +2498,8 @@ namespace WEB.Models
                 s.Add($"import {{ moveItemInArray, CdkDragDrop }} from '@angular/cdk/drag-drop';");
             if (CurrentEntity.PrimaryField.CustomType == CustomType.Date)
                 s.Add($"import * as moment from 'moment';");
+            if (hasFileContents)
+                s.Add($"import {{ DownloadService }} from '../common/services/download.service';");
 
             s.Add($"");
 
@@ -2524,13 +2546,12 @@ namespace WEB.Models
             s.Add($"        private {CurrentEntity.Name.ToCamelCase()}Service: {CurrentEntity.Name}Service,");
             var relChildEntities = relationshipsAsParent.Where(o => o.ChildEntityId != CurrentEntity.EntityId).Select(o => o.ChildEntity).Distinct().OrderBy(o => o.Name);
             foreach (var relChildEntity in relChildEntities)
-            {
                 s.Add($"        private {relChildEntity.Name.ToCamelCase()}Service: {relChildEntity.Name}Service,");
-            }
             if (CurrentEntity.EntityType == EntityType.User)
-            {
                 s.Add($"        private authService: AuthService,");
-            }
+            if (hasFileContents)
+                s.Add($"        private downloadService: DownloadService,");
+
             s.Add($"        private errorService: ErrorService");
             s.Add($"    ) {{");
             s.Add($"    }}");
@@ -2579,7 +2600,7 @@ namespace WEB.Models
             {
                 foreach (var relField in rel.RelationshipFields)
                     s.Add($"                this.{rel.CollectionName.ToCamelCase()}SearchOptions.{relField.ChildField.Name.ToCamelCase()} = {relField.ParentField.Name.ToCamelCase()};");
-                s.Add($"                this.{rel.CollectionName.ToCamelCase()}SearchOptions.includeEntities = true; // can remove if using relative routerLink");
+                s.Add($"                this.{rel.CollectionName.ToCamelCase()}SearchOptions.includeEntities = true;");
                 s.Add($"                this.load{rel.CollectionName}();");
                 s.Add($"");
             }
@@ -2714,6 +2735,15 @@ namespace WEB.Models
             }
             s.Add($"    }}");
             s.Add($"");
+
+            if (hasFileContents)
+            {
+                s.Add($"    download(): void {{");
+                s.Add($"        this.downloadService.download{CurrentEntity.Name}({CurrentEntity.KeyFields.Select(o => $"this.{CurrentEntity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}).subscribe();");
+                s.Add($"    }}");
+                s.Add($"");
+
+            }
 
             foreach (var rel in relationshipsAsParent)
             {

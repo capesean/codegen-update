@@ -342,7 +342,7 @@
             var filtered = [];
             for (var i = 0; i < items.length; i++) {
                 var item = items[i];
-                if ((codeType === undefined || codeType === item.codeType) && (query === undefined || item.findCode.toLowerCase().indexOf(query.toLowerCase()) >= 0 || item.replacementCode.toLowerCase().indexOf(query.toLowerCase()) >= 0)) {
+                if ((codeType === undefined || codeType === item.codeType) && (query === undefined || item.findCode.toLowerCase().indexOf(query.toLowerCase()) >= 0 || (item.replacementCode || "").toLowerCase().indexOf(query.toLowerCase()) >= 0)) {
                     filtered.push(item);
                 }
             }

@@ -20,7 +20,7 @@ export class NAMEModalComponent implements OnInit {
     PLURALNAME_TOCAMELCASE: NAME[];
     allSelected = false;
 /*PROPERTIES*/
-    @ViewChild('content') content: TemplateRef<any>;
+    @ViewChild('content') content: TemplateRef<unknown>;
     @Output() change: EventEmitter<NAME> = new EventEmitter<NAME>();
     @Input() canRemoveFilters = false;
     @Input() multiple = false;

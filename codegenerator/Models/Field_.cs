@@ -225,7 +225,7 @@ namespace WEB.Models
                     else if (FieldType == FieldType.Date)
                         return $"{{{{ { Entity.Name.ToCamelCase()}.{ Name.ToCamelCase() } | momentPipe: 'DD MMM YYYY' }}}}";
                     else if (FieldType == FieldType.Bit)
-                        return $"{{{{ { Entity.Name.ToCamelCase()}.{ Name.ToCamelCase() } ? \"Yes\" : \"No\" }}}}";
+                        return $"{{{{ { Entity.Name.ToCamelCase()}.{ Name.ToCamelCase() } | booleanPipe }}}}";
                     else
                         return $"{{{{ { Entity.CamelCaseName}.{ Name.ToCamelCase()} }}}}";
                 }

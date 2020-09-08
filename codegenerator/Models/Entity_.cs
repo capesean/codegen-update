@@ -201,7 +201,7 @@ namespace WEB.Models
                     if (field.FieldType == FieldType.Enum)
                         column.Value = $"{{{{ {field.Lookup.PluralName.ToCamelCase()}[{field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() }].label }}}}";
                     else if (field.FieldType == FieldType.Bit)
-                        column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } ? \"Yes\" : \"No\" }}}}";
+                        column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | booleanPipe }}}}";
                     else if (field.FieldType == FieldType.Date)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | momentPipe: 'DD MMM YYYY' }}}}";
                     else if (field.FieldType == FieldType.DateTime || field.FieldType == FieldType.SmallDateTime)
