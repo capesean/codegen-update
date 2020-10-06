@@ -55,6 +55,9 @@ namespace WEB.Models
         public bool UseMultiSelect { get; set; }
 
         [Required]
+        public bool IsOneToOne { get; set; }
+
+        [Required]
         public int SortOrderOnChild { get; set; }
 
         public EntityDTO ChildEntity { get; set; }
@@ -88,6 +91,7 @@ namespace WEB.Models
             relationshipDTO.CascadeDelete = relationship.CascadeDelete;
             relationshipDTO.UseSelectorDirective = relationship.UseSelectorDirective;
             relationshipDTO.UseMultiSelect = relationship.UseMultiSelect;
+            relationshipDTO.IsOneToOne = relationship.IsOneToOne;
             relationshipDTO.SortOrderOnChild = relationship.SortOrderOnChild;
             relationshipDTO.ChildEntity = Create(relationship.ChildEntity);
             relationshipDTO.ParentEntity = Create(relationship.ParentEntity);
@@ -112,6 +116,7 @@ namespace WEB.Models
             relationship.CascadeDelete = relationshipDTO.CascadeDelete;
             relationship.UseSelectorDirective = relationshipDTO.UseSelectorDirective;
             relationship.UseMultiSelect = relationshipDTO.UseMultiSelect;
+            relationship.IsOneToOne = relationshipDTO.IsOneToOne;
             relationship.SortOrderOnChild = relationshipDTO.SortOrderOnChild;
         }
     }

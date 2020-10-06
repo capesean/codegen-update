@@ -58,6 +58,9 @@ namespace WEB.Models
         public bool UseMultiSelect { get; set; }
 
         [Required]
+        public bool IsOneToOne { get; set; }
+
+        [Required]
         public int SortOrderOnChild { get; set; }
 
         public virtual ICollection<RelationshipField> RelationshipFields { get; set; } = new List<RelationshipField>();

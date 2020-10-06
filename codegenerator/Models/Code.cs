@@ -174,7 +174,10 @@ namespace WEB.Models
             // child entities
             foreach (var relationship in CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude).OrderBy(o => o.SortOrder))
             {
-                s.Add($"        public virtual ICollection<{GetEntity(relationship.ChildEntityId).Name}> {relationship.CollectionName} {{ get; set; }} = new List<{GetEntity(relationship.ChildEntityId).Name}>();");
+                if (!relationship.IsOneToOne)
+                    s.Add($"        public virtual ICollection<{GetEntity(relationship.ChildEntityId).Name}> {relationship.CollectionName} {{ get; set; }} = new List<{GetEntity(relationship.ChildEntityId).Name}>();");
+                else
+                    s.Add($"        public virtual {GetEntity(relationship.ChildEntityId).Name} {relationship.CollectionName} {{ get; set; }}");
                 s.Add($"");
             }
 
@@ -265,7 +268,7 @@ namespace WEB.Models
             // then the angular/typescript validation always passes as the value is not-undefined
             if (CurrentEntity.KeyFields.Count() == 1 && CurrentEntity.KeyFields.First().CustomType == CustomType.Guid)
                 s.Add($"        this.{CurrentEntity.KeyFields.First().Name.ToCamelCase()} = \"00000000-0000-0000-0000-000000000000\";");
-            foreach (var field in CurrentEntity.Fields)
+            foreach (var field in CurrentEntity.Fields.OrderBy(o => o.FieldOrder))
                 if (!string.IsNullOrWhiteSpace(field.EditPageDefault))
                     s.Add($"        this.{field.Name.ToCamelCase()} = {field.EditPageDefault};");
             s.Add($"    }}");
@@ -611,6 +614,20 @@ namespace WEB.Models
             //    s.Add($"            modelBuilder.Entity<{field.Entity.Name}>().Ignore(t => t.{field.Name});");
             //}
             //if (calculatedFields.Count() > 0) s.Add($"");
+
+            foreach (var relationship in DbContext.Relationships
+                .Include(o => o.ParentEntity)
+                .Include(o => o.ChildEntity)
+                .Include(o => o.RelationshipFields.Select(p => p.ChildField))
+               .Where(o => o.IsOneToOne))
+            {
+                s.Add($"            modelBuilder.Entity<{relationship.ParentEntity.Name}>()");
+                s.Add($"                .HasOne(o => o.{relationship.ChildEntity.Name})");
+                s.Add($"                .WithOne(o => o.{relationship.ParentEntity.Name})");
+                s.Add($"                .HasForeignKey<{relationship.ChildEntity.Name}>(o => o.{relationship.RelationshipFields.First().ChildField.Name});");
+                s.Add($"");
+            }
+
 
             foreach (var entity in AllEntities.OrderBy(o => o.Name))
             {
@@ -1847,8 +1864,10 @@ namespace WEB.Models
             else
             {
                 //routerLink = $"'/{entity.PluralName.ToLower()}', { entity.KeyFields.Select(o => entity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }";
-
-                routerLink = $"[{ entity.KeyFields.Select(o => entity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }], {{ relativeTo: this.route }}";
+                if (CurrentEntity == entity)
+                    routerLink = $"[{ entity.KeyFields.Select(o => entity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }], {{ relativeTo: this.route }}";
+                else
+                    routerLink = $"[\"/{entity.PluralName.ToLower()}\", { entity.KeyFields.Select(o => entity.Name.ToCamelCase() + "." + o.Name.ToCamelCase()).Aggregate((current, next) => current + ", " + next) }]";
             }
 
             return routerLink;
@@ -2797,7 +2816,10 @@ namespace WEB.Models
                     s.Add($"            .subscribe(");
                     s.Add($"                () => {{");
                     s.Add($"                    this.toastr.success(\"The {rel.ChildEntity.PluralFriendlyName.ToLower()} have been saved\", \"Save {rel.ChildEntity.PluralFriendlyName}\");");
-                    s.Add($"                    this.load{rel.CollectionName}(this.{rel.CollectionName.ToCamelCase()}Headers.pageIndex);");
+                    if (rel.ChildEntity.HasASortField)
+                        s.Add($"                    this.load{rel.CollectionName}();");
+                    else
+                        s.Add($"                    this.load{rel.CollectionName}(this.{rel.CollectionName.ToCamelCase()}Headers.pageIndex);");
                     s.Add($"                }},");
                     s.Add($"                err => {{");
                     s.Add($"                    this.errorService.handleError(err, \"{rel.ChildEntity.PluralFriendlyName}\", \"Save\");");

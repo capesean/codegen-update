@@ -79,7 +79,7 @@ export class NAMEModalComponent implements OnInit {
     }
 
     clear() {
-        if (this.multiple) this.modal.close([]);
+        if (this.multiple) { this.selectedItems = []; this.modal.close([]); }
         else this.modal.close(undefined);
     }
 

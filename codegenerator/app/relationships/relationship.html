@@ -164,6 +164,20 @@
                         </div>
                     </div>
 
+                    <div class="col-sm-4 col-md-3 col-lg-2">
+                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.isOneToOne.$invalid }">
+                            <label for="isOneToOne" class="control-label">
+                                Is One-To-One:
+                            </label>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="isOneToOne" name="isOneToOne" ng-model="vm.relationship.isOneToOne" class="custom-control-input" />
+                                    Is One-To-One
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
