@@ -16,7 +16,7 @@ import { Enum/*ENUMS*/ } from '../common/models/enums.model';
 })
 export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
-    @Input() KEYFIELD: string | string[];
+    @Input() KEYFIELD: KEYFIELDTYPE | KEYFIELDTYPE[];
     @Input() CAMELCASENAME: NAME | NAME[];
     @Output() CAMELCASENAMEChange = new EventEmitter<NAME | NAME[]>();
     @Input() canRemoveFilters = false;
@@ -37,7 +37,7 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
     propagateChange = (_) => { };
 
-    writeValue(KEYFIELD: string | string[]): void {
+    writeValue(KEYFIELD: KEYFIELDTYPE | KEYFIELDTYPE[]): void {
         if (KEYFIELD !== undefined) {
             this.KEYFIELD = KEYFIELD;
             this.propagateChange(this.KEYFIELD);

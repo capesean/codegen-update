@@ -1974,6 +1974,8 @@ namespace WEB.Models
                     if (field.CustomType == CustomType.Number && field.Scale > 0)
                         attributes.Add("step", "any");
 
+                    if (field.EditPageType == EditPageType.EditWhenNew) attributes.Add("[disabled]", "!isNew");
+
                     if (field.CustomType == CustomType.Number)
                     {
                         attributes["type"] = "number";
@@ -3155,6 +3157,7 @@ namespace WEB.Models
                 .Replace("PLURALNAME", CurrentEntity.PluralName)
                 .Replace("NAME_TOLOWER", CurrentEntity.Name.ToLower())
                 .Replace("HYPHENATEDNAME", CurrentEntity.Name.Hyphenated())
+                .Replace("KEYFIELDTYPE", CurrentEntity.KeyFields.First().JavascriptType)
                 .Replace("KEYFIELD", CurrentEntity.KeyFields.First().Name.ToCamelCase())
                 .Replace("NAME", CurrentEntity.Name)
                 .Replace("STARTSWITHVOWEL", new Regex("^[aeiou]").IsMatch(CurrentEntity.Name.ToLower()) ? "n" : "")
