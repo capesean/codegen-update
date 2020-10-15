@@ -285,6 +285,11 @@ namespace WEB.Models
             {
                 s.Add($"    {field.Name.ToCamelCase()}: {field.JavascriptType};");
             }
+            foreach (var field in CurrentEntity.Fields.Where(f => f.SearchType == SearchType.Range).OrderBy(f => f.FieldOrder))
+            {
+                s.Add($"    from{field.Name}: {field.JavascriptType};");
+                s.Add($"    to{field.Name}: {field.JavascriptType};");
+            }
 
             s.Add($"}}");
             s.Add($"");
@@ -619,7 +624,7 @@ namespace WEB.Models
                 .Include(o => o.ParentEntity)
                 .Include(o => o.ChildEntity)
                 .Include(o => o.RelationshipFields.Select(p => p.ChildField))
-               .Where(o => o.IsOneToOne))
+               .Where(o => o.IsOneToOne && o.ParentEntity.ProjectId == CurrentEntity.ProjectId))
             {
                 s.Add($"            modelBuilder.Entity<{relationship.ParentEntity.Name}>()");
                 s.Add($"                .HasOne(o => o.{relationship.ChildEntity.Name})");
@@ -1091,8 +1096,9 @@ namespace WEB.Models
             {
                 if (relationship.CascadeDelete)
                 {
-                    s.Add($"            foreach (var {relationship.ChildEntity.CamelCaseName} in {CurrentEntity.Project.DbContextVariable}.{relationship.ChildEntity.PluralName}.Where(o => {relationship.RelationshipFields.Select(rf => "o." + rf.ChildField.Name + " == " + CurrentEntity.CamelCaseName + "." + rf.ParentField.Name).Aggregate((current, next) => current + " && " + next)}))");
-                    s.Add($"                {CurrentEntity.Project.DbContextVariable}.Entry({relationship.ChildEntity.CamelCaseName}).State = EntityState.Deleted;");
+                    var childEntityName = relationship.ChildEntity.CamelCaseName + (relationship.ChildEntity.EntityId == CurrentEntity.EntityId ? "Child" : "");
+                    s.Add($"            foreach (var {childEntityName} in {CurrentEntity.Project.DbContextVariable}.{relationship.ChildEntity.PluralName}.Where(o => {relationship.RelationshipFields.Select(rf => "o." + rf.ChildField.Name + " == " + CurrentEntity.CamelCaseName + "." + rf.ParentField.Name).Aggregate((current, next) => current + " && " + next)}))");
+                    s.Add($"                {CurrentEntity.Project.DbContextVariable}.Entry({childEntityName}).State = EntityState.Deleted;");
                     s.Add($"");
                 }
                 else
@@ -2016,6 +2022,8 @@ namespace WEB.Models
                             attributes.Add("value", $"{{{{{field.Lookup.PluralName.ToCamelCase()}[{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()}]?.label}}}}");
                         else if (field.CustomType == CustomType.Date)
                             attributes.Add("value", $"{{{{{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()} | momentPipe: '{field.DateFormatString}'}}}}");
+                        else if (field.FieldType ==  FieldType.Money)
+                            attributes.Add("value", $"{{{{{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()} | currency }}}}");
                         else
                             attributes.Add("value", $"{{{{{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()}}}}}");
                     }

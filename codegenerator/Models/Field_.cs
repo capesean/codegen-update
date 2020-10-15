@@ -60,6 +60,7 @@ namespace WEB.Models
                     case FieldType.TinyInt:
                     case FieldType.SmallInt:
                     case FieldType.Decimal:
+                    case FieldType.Money:
                         return CustomType.Number;
                     case FieldType.nVarchar:
                     case FieldType.nText:
@@ -94,6 +95,7 @@ namespace WEB.Models
                     case FieldType.TinyInt:
                     case FieldType.SmallInt:
                     case FieldType.Decimal:
+                    case FieldType.Money:
                         return "number";
                     case FieldType.nVarchar:
                     case FieldType.nText:
@@ -164,6 +166,7 @@ namespace WEB.Models
                 case FieldType.SmallInt:
                     return "short" + (isNullable ? "?" : string.Empty);
                 case FieldType.Decimal:
+                case FieldType.Money:
                     return "decimal" + (isNullable ? "?" : string.Empty);
                 case FieldType.nVarchar:
                 case FieldType.nText:

@@ -202,6 +202,8 @@ namespace WEB.Models
                         column.Value = $"{{{{ {field.Lookup.PluralName.ToCamelCase()}[{field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() }].label }}}}";
                     else if (field.FieldType == FieldType.Bit)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | booleanPipe }}}}";
+                    else if (field.FieldType == FieldType.Money)
+                        column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | currency }}}}";
                     else if (field.FieldType == FieldType.Date)
                         column.Value = $"{{{{ { field.Entity.Name.ToCamelCase()}.{ field.Name.ToCamelCase() } | momentPipe: 'DD MMM YYYY' }}}}";
                     else if (field.FieldType == FieldType.DateTime || field.FieldType == FieldType.SmallDateTime)

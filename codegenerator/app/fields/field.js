@@ -25,7 +25,7 @@
             if (!vm.field || vm.field.fieldType === undefined)
                 return null;
             var x = $.grep(appSettings.fieldType, function (type) { return type.id === vm.field.fieldType; })[0];
-            return x.name.toLowerCase() === "decimal";
+            return x.name.toLowerCase() === "decimal" || x.name.toLowerCase() === "money";
         };
         initPage();
         function initPage() {
