@@ -1612,9 +1612,9 @@ namespace WEB.Models
                         s.Add(t + $"        <div class=\"col-sm-6 col-md-3 col-lg-2\">");
                         s.Add(t + $"            <div class=\"form-group\" ngbTooltip=\"From Date\" container=\"body\" placement=\"top\">");
                         s.Add(t + $"                <div class=\"input-group\">");
-                        s.Add(t + $"                    <input type=\"text\" id=\"fromDate\" name=\"fromDate\" [(ngModel)]=\"searchOptions.fromDate\" #fromDate=\"ngModel\" class=\"form-control\" readonly placeholder=\"yyyy-mm-dd\" ngbDatepicker #dpFromDate=\"ngbDatepicker\" tabindex=\"-1\" (click)=\"dpFromDate.toggle()\" />");
+                        s.Add(t + $"                    <input type=\"text\" id=\"from{field.Name}\" name=\"from{field.Name}\" [(ngModel)]=\"searchOptions.from{field.Name}\" #from{field.Name}=\"ngModel\" class=\"form-control\" readonly placeholder=\"yyyy-mm-dd\" ngbDatepicker #dp{field.Name}=\"ngbDatepicker\" tabindex=\"-1\" (click)=\"dp{field.Name}.toggle()\" />");
                         s.Add(t + $"                    <div class=\"input-group-append\">");
-                        s.Add(t + $"                        <button class=\"btn btn-secondary calendar\" (click)=\"dpFromDate.toggle()\" type=\"button\"><i class=\"fas fa-calendar-alt\"></i></button>");
+                        s.Add(t + $"                        <button class=\"btn btn-secondary calendar\" (click)=\"dpFrom{field.Name}.toggle()\" type=\"button\"><i class=\"fas fa-calendar-alt\"></i></button>");
                         s.Add(t + $"                    </div>");
                         s.Add(t + $"                </div>");
                         s.Add(t + $"            </div>");
@@ -1623,9 +1623,9 @@ namespace WEB.Models
                         s.Add(t + $"        <div class=\"col-sm-6 col-md-3 col-lg-2\">");
                         s.Add(t + $"            <div class=\"form-group\" ngbTooltip=\"To Date\" container=\"body\" placement=\"top\">");
                         s.Add(t + $"                <div class=\"input-group\">");
-                        s.Add(t + $"                    <input type=\"text\" id=\"toDate\" name=\"toDate\" [(ngModel)]=\"searchOptions.toDate\" #toDate=\"ngModel\" class=\"form-control\" readonly placeholder=\"yyyy-mm-dd\" ngbDatepicker #dpToDate=\"ngbDatepicker\" tabindex=\"-1\" (click)=\"dpToDate.toggle()\" />");
+                        s.Add(t + $"                    <input type=\"text\" id=\"to{field.Name}\" name=\"to{field.Name}\" [(ngModel)]=\"searchOptions.to{field.Name}\" #to{field.Name}=\"ngModel\" class=\"form-control\" readonly placeholder=\"yyyy-mm-dd\" ngbDatepicker #dpto{field.Name}=\"ngbDatepicker\" tabindex=\"-1\" (click)=\"dpto{field.Name}.toggle()\" />");
                         s.Add(t + $"                    <div class=\"input-group-append\">");
-                        s.Add(t + $"                        <button class=\"btn btn-secondary calendar\" (click)=\"dpToDate.toggle()\" type=\"button\"><i class=\"fas fa-calendar-alt\"></i></button>");
+                        s.Add(t + $"                        <button class=\"btn btn-secondary calendar\" (click)=\"dpto{field.Name}.toggle()\" type=\"button\"><i class=\"fas fa-calendar-alt\"></i></button>");
                         s.Add(t + $"                    </div>");
                         s.Add(t + $"                </div>");
                         s.Add(t + $"            </div>");
