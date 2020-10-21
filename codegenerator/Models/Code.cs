@@ -820,8 +820,8 @@ namespace WEB.Models
                         //s.Add($"            if (from{field.Name}.HasValue) {{ var from{field.Name}Utc = from{field.Name}.Value.ToUniversalTime(); results = results.Where(o => o.{ field.Name} >= from{field.Name}Utc); }}");
                         //s.Add($"            if (to{field.Name}.HasValue) {{ var to{field.Name}Utc = to{field.Name}.Value.ToUniversalTime(); results = results.Where(o => o.{ field.Name} <= to{field.Name}Utc); }}");
                         // disabled: in covid.distribution, the date is sent as 2020-04-18, so no conversion needed, else it chops off the end date
-                        s.Add($"            if (from{field.Name}.HasValue) results = results.Where(o => o.{ field.Name} >= from{field.Name});");
-                        s.Add($"            if (to{field.Name}.HasValue) results = results.Where(o => o.{ field.Name} <= to{field.Name});");
+                        s.Add($"            if (from{field.Name}.HasValue) results = results.Where(o => o.{ field.Name} >= from{field.Name}.Value.Date);");
+                        s.Add($"            if (to{field.Name}.HasValue) results = results.Where(o => o.{ field.Name} < to{field.Name}.Value.Date.AddDays(1));");
                     }
                     else
                     {
@@ -1165,8 +1165,12 @@ namespace WEB.Models
             #endregion
 
             #region multiselect saves & deletes
+            var processedEntityIds = new List<Guid>();
             foreach (var rel in CurrentEntity.RelationshipsAsParent.Where(o => o.UseMultiSelect))
             {
+                if (processedEntityIds.Contains(rel.ChildEntityId)) continue;
+                processedEntityIds.Add(rel.ChildEntityId);
+
                 var relationshipField = rel.RelationshipFields.Single();
                 var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
                 var reverseRelationshipField = reverseRel.RelationshipFields.Single();
@@ -1508,8 +1512,12 @@ namespace WEB.Models
                 s.Add($"");
             }
 
+            var processedEntities = new List<Guid>();
             foreach (var rel in CurrentEntity.RelationshipsAsParent.Where(o => o.UseMultiSelect))
             {
+                if (processedEntities.Contains(rel.ChildEntity.EntityId)) continue;
+                processedEntities.Add(rel.ChildEntity.EntityId);
+
                 var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
 
                 s.Add($"    save{rel.ChildEntity.PluralName}({rel.RelationshipFields.First().ParentField.Name.ToCamelCase()}: {rel.RelationshipFields.First().ParentField.JavascriptType}, {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()}s: {reverseRel.RelationshipFields.First().ParentField.JavascriptType}[]): Observable<void> {{");
@@ -1612,7 +1620,7 @@ namespace WEB.Models
                         s.Add(t + $"        <div class=\"col-sm-6 col-md-3 col-lg-2\">");
                         s.Add(t + $"            <div class=\"form-group\" ngbTooltip=\"From Date\" container=\"body\" placement=\"top\">");
                         s.Add(t + $"                <div class=\"input-group\">");
-                        s.Add(t + $"                    <input type=\"text\" id=\"from{field.Name}\" name=\"from{field.Name}\" [(ngModel)]=\"searchOptions.from{field.Name}\" #from{field.Name}=\"ngModel\" class=\"form-control\" readonly placeholder=\"yyyy-mm-dd\" ngbDatepicker #dp{field.Name}=\"ngbDatepicker\" tabindex=\"-1\" (click)=\"dp{field.Name}.toggle()\" />");
+                        s.Add(t + $"                    <input type=\"text\" id=\"from{field.Name}\" name=\"from{field.Name}\" [(ngModel)]=\"searchOptions.from{field.Name}\" #from{field.Name}=\"ngModel\" class=\"form-control\" readonly placeholder=\"yyyy-mm-dd\" ngbDatepicker #dpFrom{field.Name}=\"ngbDatepicker\" tabindex=\"-1\" (click)=\"dpFrom{field.Name}.toggle()\" />");
                         s.Add(t + $"                    <div class=\"input-group-append\">");
                         s.Add(t + $"                        <button class=\"btn btn-secondary calendar\" (click)=\"dpFrom{field.Name}.toggle()\" type=\"button\"><i class=\"fas fa-calendar-alt\"></i></button>");
                         s.Add(t + $"                    </div>");
@@ -1623,9 +1631,9 @@ namespace WEB.Models
                         s.Add(t + $"        <div class=\"col-sm-6 col-md-3 col-lg-2\">");
                         s.Add(t + $"            <div class=\"form-group\" ngbTooltip=\"To Date\" container=\"body\" placement=\"top\">");
                         s.Add(t + $"                <div class=\"input-group\">");
-                        s.Add(t + $"                    <input type=\"text\" id=\"to{field.Name}\" name=\"to{field.Name}\" [(ngModel)]=\"searchOptions.to{field.Name}\" #to{field.Name}=\"ngModel\" class=\"form-control\" readonly placeholder=\"yyyy-mm-dd\" ngbDatepicker #dpto{field.Name}=\"ngbDatepicker\" tabindex=\"-1\" (click)=\"dpto{field.Name}.toggle()\" />");
+                        s.Add(t + $"                    <input type=\"text\" id=\"to{field.Name}\" name=\"to{field.Name}\" [(ngModel)]=\"searchOptions.to{field.Name}\" #to{field.Name}=\"ngModel\" class=\"form-control\" readonly placeholder=\"yyyy-mm-dd\" ngbDatepicker #dpTo{field.Name}=\"ngbDatepicker\" tabindex=\"-1\" (click)=\"dpTo{field.Name}.toggle()\" />");
                         s.Add(t + $"                    <div class=\"input-group-append\">");
-                        s.Add(t + $"                        <button class=\"btn btn-secondary calendar\" (click)=\"dpto{field.Name}.toggle()\" type=\"button\"><i class=\"fas fa-calendar-alt\"></i></button>");
+                        s.Add(t + $"                        <button class=\"btn btn-secondary calendar\" (click)=\"dpTo{field.Name}.toggle()\" type=\"button\"><i class=\"fas fa-calendar-alt\"></i></button>");
                         s.Add(t + $"                    </div>");
                         s.Add(t + $"                </div>");
                         s.Add(t + $"            </div>");
@@ -2196,121 +2204,11 @@ namespace WEB.Models
                 s.Add($"");
             }
 
-            // not really a bootstrap3 issue - old projects will be affected by this now being commented
-            //if (CurrentEntity.Project.Bootstrap3)
-            //    s.Add(t + $"        </div>");
             s.Add(t + $"        </div>");
             s.Add($"");
             s.Add(t + $"    </fieldset>");
             s.Add($"");
-            //s.Add(t + $"    <div class=\"alert alert-danger\" *ngIf=\"form.submitted && form.invalid\">");
-            //s.Add($"");
-            //s.Add(t + $"        <div>");
-            //s.Add(t + $"                Please correct the following errors:");
-            //s.Add(t + $"        </div>");
-            //s.Add($"");
-            //s.Add(t + $"        <div *ngIf=\"name.invalid\">");
-            //s.Add($"");
-            #region form validation
-            if (CurrentEntity.EntityType == EntityType.User)
-            {
-                //s.Add(t + $"            <li class=\"help-block has-error\" ng-messages=\"form.email.$error\">");
-                //s.Add(t + $"                <span ng-message=\"required\">");
-                //s.Add(t + $"                    Email address is required.");
-                //s.Add(t + $"                </span>");
-                //s.Add(t + $"                <span ng-message=\"minlength\">");
-                //s.Add(t + $"                    Email address is too short.");
-                //s.Add(t + $"                </span>");
-                //s.Add(t + $"                <span ng-message=\"email\">");
-                //s.Add(t + $"                    Email address is not valid.");
-                //s.Add(t + $"                </span>");
-                //s.Add(t + $"            </li>");
-                //s.Add($"");
-            }
-            foreach (var field in CurrentEntity.Fields
-                .Where(f => f.EditPageType != EditPageType.ReadOnly && f.EditPageType != EditPageType.Exclude && f.EditPageType != EditPageType.SortField && f.EditPageType != EditPageType.CalculatedField)
-                .OrderBy(o => o.FieldOrder))
-            {
-                //if (field.KeyField && field.CustomType != CustomType.String && !CurrentEntity.HasCompositePrimaryKey) continue;
-
-                //if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
-                //{
-                //    if (field.IsNullable) continue;
-                //    var relationship = CurrentEntity.GetParentSearchRelationship(field);
-                //    if (relationship.Hierarchy) continue;
-
-                //    s.Add(t + $"            <li class=\"help-block has-error\" ng-messages=\"form.{field.Name.ToCamelCase()}.$error\">");
-                //    s.Add(t + $"                <span ng-message=\"required\">");
-                //    s.Add(t + $"                    {field.Label} is required.");
-                //    s.Add(t + $"                </span>");
-                //    s.Add(t + $"            </li>");
-                //    s.Add($"");
-                //}
-                //else if (field.CustomType == CustomType.Enum || field.CustomType == CustomType.String || field.CustomType == CustomType.Number)
-                //{
-                //    if (field.IsNullable
-                //        && field.CustomType != CustomType.Number
-                //        && (field.MinLength ?? 0) == 0
-                //        && field.RegexValidation == null) continue;
-
-                //    s.Add(t + $"            <li class=\"help-block has-error\" ng-messages=\"form.{field.Name.ToCamelCase()}.$error\">");
-                //    if (!field.IsNullable)
-                //    {
-                //        s.Add(t + $"                <div *ngIf=\"name.errors.required\">");
-                //        s.Add(t + $"                    {field.Label} is required.");
-                //        s.Add(t + $"                </div>");
-                //    }
-                //    if (field.CustomType == CustomType.Number)
-                //    {
-                //        s.Add(t + $"                <span ng-message=\"number\">");
-                //        s.Add(t + $"                    {field.Label} is not a valid number.");
-                //        s.Add(t + $"                </span>");
-                //    }
-                //    if (field.MinLength > 0)
-                //    {
-                //        s.Add(t + $"                <span ng-message=\"minlength\">");
-                //        s.Add(t + $"                    {field.Label} is too short.");
-                //        s.Add(t + $"                </span>");
-                //    }
-                //    if (field.Length > 0)
-                //    {
-                //        s.Add(t + $"                <div *ngIf=\"name.errors.maxlength\">");
-                //        s.Add(t + $"                    {field.Label} must be at most {field.Length} characters long.");
-                //        s.Add(t + $"                </div>");
-                //    }
-                //    if (field.RegexValidation != null)
-                //    {
-                //        s.Add(t + $"                <span ng-message=\"pattern\">");
-                //        s.Add(t + $"                    {field.Label} is not valid.");
-                //        s.Add(t + $"                </span>");
-                //    }
-                //    s.Add(t + $"            </li>");
-                //    s.Add($"");
-                //}
-                //else if (field.CustomType == CustomType.Date)
-                //{
-                //    s.Add(t + $"            <li class=\"help-block has-error\" ng-messages=\"form.{field.Name.ToCamelCase()}.$error\">");
-                //    s.Add(t + $"                <span ng-message=\"date\">");
-                //    s.Add(t + $"                    {field.Label} is not a valid date.");
-                //    s.Add(t + $"                </span>");
-                //    if (!field.IsNullable)
-                //    {
-                //        s.Add(t + $"                <span ng-message=\"required\">");
-                //        s.Add(t + $"                    {field.Label} is required.");
-                //        s.Add(t + $"                </span>");
-                //    }
-                //    s.Add(t + $"            </li>");
-                //    s.Add($"");
-                //}
-                //if (field.IsNullable) continue;
-
-            }
-            #endregion
-            //s.Add(t + $"        </div>");
-            //s.Add($"");
-            //s.Add(t + $"    </div>");
-            //s.Add($"");
-
+            
             s.Add(t + $"    <fieldset>");
             s.Add(t + $"        <button type=\"submit\" class=\"btn btn-success\">Save<i class=\"fas fa-check ml-1\"></i></button>");
             s.Add(t + $"        <button type=\"button\" *ngIf=\"!isNew\" class=\"btn btn-outline-danger ml-1\" (click)=\"delete()\">Delete<i class=\"fas fa-times ml-1\"></i></button>");
@@ -2352,21 +2250,6 @@ namespace WEB.Models
                     }
                     else if (relationship.Hierarchy)
                     {
-                        //var href = "/";
-                        //foreach (var entity in childEntity.GetNavigationEntities())
-                        //{
-                        //    href += (href == "/" ? string.Empty : "/") + entity.PluralName.ToLower();
-                        //    foreach (var field in childEntity.GetNavigationFields().Where(f => f.EntityId == entity.EntityId))
-                        //    {
-                        //        if (entity == childEntity)
-                        //            href += "/{{vm.appSettings." + field.NewVariable + "}}";
-                        //        else
-                        //            href += "/{{vm." + entity.Name.ToCamelCase() + "." + field.Name.ToCamelCase() + "}}";
-                        //    }
-                        //}
-                        //s.Add(t + $"                <a class=\"btn btn-primary\" href=\"{href}\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
-
-                        // s.Add(t + $"                <a [routerLink]=\"['./{childEntity.PluralName.ToLower()}'{relationship.ChildEntity.KeyFields.Select(o => ", 'add'").Aggregate((current, next) => { return current + next; })}]\" class=\"btn btn-primary my-3\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
                         // trying to get this to work for instances like African POT Project->Team hierarchy, where I only want 1 add for the userId
                         s.Add(t + $"                <a [routerLink]=\"['./{childEntity.PluralName.ToLower()}', 'add']\" class=\"btn btn-primary my-3\">Add {childEntity.FriendlyName}<i class=\"fas fa-plus-circle ml-1\"></i></a><br />");
 
@@ -2379,9 +2262,18 @@ namespace WEB.Models
                     s.Add(t + $"                        <tr>");
                     if (relationship.Hierarchy && childEntity.HasASortField)
                         s.Add(t + $"                            <th *ngIf=\"{relationship.CollectionName.ToCamelCase()}.length > 1\" class=\"text-center fa-col-width\"><i class=\"fas fa-sort mt-1\"></i></th>");
-                    foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
+                    if (relationship.UseMultiSelect)
                     {
-                        s.Add(t + $"                            <th>{column.Header}</th>");
+                        var reverseRel = relationship.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != relationship.RelationshipId).SingleOrDefault();
+
+                        s.Add(t + $"                            <th>{reverseRel.ParentFriendlyName}</th>");
+                    }
+                    else
+                    {
+                        foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
+                        {
+                            s.Add(t + $"                            <th>{column.Header}</th>");
+                        }
                     }
                     s.Add(t + $"                            <th class=\"fa-col-width text-center\"><i class=\"fas fa-times clickable\" (click)=\"deleteAll{relationship.CollectionName}()\" ngbTooltip=\"Delete all {relationship.CollectionFriendlyName.ToLower()}\" container=\"body\" placement=\"left\"></i></th>");
                     s.Add(t + $"                        </tr>");
@@ -2397,9 +2289,19 @@ namespace WEB.Models
                         s.Add(t + $"                    <tbody>");
                         s.Add(t + $"                        <tr *ngFor=\"let {childEntity.Name.ToCamelCase()} of {relationship.CollectionName.ToCamelCase()}\" (click)=\"goTo{childEntity.Name}({childEntity.Name.ToCamelCase()})\">");
                     }
-                    foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
+                    // this was added for TrainTrack entityLinks; not sure how it will affect other projects!
+                    if (relationship.UseMultiSelect)
                     {
-                        s.Add(t + $"                            <td>{column.Value}</td>");
+                        var reverseRel = relationship.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != relationship.RelationshipId).SingleOrDefault();
+
+                        s.Add(t + $"                            <td>{{{{ {relationship.ChildEntity.Name.ToCamelCase()}.{reverseRel.ParentName.ToCamelCase()}.{reverseRel.ParentEntity.PrimaryField.Name.ToCamelCase()} }}}}</td>");
+                    }
+                    else
+                    {
+                        foreach (var column in childEntity.GetSearchResultsFields(CurrentEntity))
+                        {
+                            s.Add(t + $"                            <td>{column.Value}</td>");
+                        }
                     }
                     s.Add(t + $"                            <td class=\"text-center\"><i class=\"fas fa-times clickable p-1 text-danger\" (click)=\"delete{relationship.CollectionName}({relationship.ChildEntity.Name.ToCamelCase()}, $event)\"></i></td>");
                     s.Add(t + $"                        </tr>");
@@ -2516,8 +2418,12 @@ namespace WEB.Models
                 s.Add($"import {{ AuthService }} from '../common/auth/auth.service';");
                 s.Add($"import {{ ProfileModel }} from '../common/auth/auth.models';");
             }
+            var processedEntityIds = new List<Guid>();
             foreach (var rel in multiSelectRelationships)
             {
+                if (processedEntityIds.Contains(rel.ChildEntityId)) continue;
+                processedEntityIds.Add(rel.ChildEntityId);
+
                 var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
 
                 s.Add($"import {{ {reverseRel.ParentEntity.Name}ModalComponent }} from '../{reverseRel.ParentEntity.PluralName.ToLower()}/{reverseRel.ParentEntity.Name.ToLower()}.modal.component';");
@@ -2559,8 +2465,12 @@ namespace WEB.Models
                 s.Add($"    private {rel.CollectionName.ToCamelCase()}: {rel.ChildEntity.Name}[] = [];");
                 s.Add($"");
             }
+            processedEntityIds.Clear();
             foreach (var rel in multiSelectRelationships)
             {
+                if (processedEntityIds.Contains(rel.ChildEntityId)) continue;
+                processedEntityIds.Add(rel.ChildEntityId);
+
                 var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
                 s.Add($"    @ViewChild('{reverseRel.ParentEntity.Name.ToCamelCase()}Modal') {reverseRel.ParentEntity.Name.ToCamelCase()}Modal: {reverseRel.ParentEntity.Name}ModalComponent;");
             }
