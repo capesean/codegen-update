@@ -878,7 +878,7 @@ namespace WEB.Models
             }
             if (CurrentEntity.HasUserFilterField)
                 s.Add($"                .Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName})");
-            s.Add($"                .AsNoTracking()");
+            //s.Add($"                .AsNoTracking()");
             s.Add($"                .FirstOrDefaultAsync(o => {GetKeyFieldLinq("o")});");
             s.Add($"");
             s.Add($"            if ({CurrentEntity.CamelCaseName} == null)");
@@ -906,7 +906,7 @@ namespace WEB.Models
             s.Add($"");
             s.Add($"            if ({GetKeyFieldLinq(CurrentEntity.DTOName.ToCamelCase(), null, "!=", "||")}) return BadRequest(\"Id mismatch\");");
             s.Add($"");
-            foreach (var field in CurrentEntity.Fields.Where(f => f.IsUnique).OrderBy(f => f.FieldOrder))
+            foreach (var field in CurrentEntity.Fields.Where(f => f.IsUnique && f.EditPageType != EditPageType.Exclude).OrderBy(f => f.FieldOrder))
             {
                 if (field.EditPageType == EditPageType.ReadOnly) continue;
 
@@ -2030,7 +2030,7 @@ namespace WEB.Models
                             attributes.Add("value", $"{{{{{field.Lookup.PluralName.ToCamelCase()}[{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()}]?.label}}}}");
                         else if (field.CustomType == CustomType.Date)
                             attributes.Add("value", $"{{{{{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()} | momentPipe: '{field.DateFormatString}'}}}}");
-                        else if (field.FieldType ==  FieldType.Money)
+                        else if (field.FieldType == FieldType.Money)
                             attributes.Add("value", $"{{{{{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()} | currency }}}}");
                         else
                             attributes.Add("value", $"{{{{{CurrentEntity.Name.ToCamelCase()}.{fieldName.ToCamelCase()}}}}}");
@@ -2208,7 +2208,7 @@ namespace WEB.Models
             s.Add($"");
             s.Add(t + $"    </fieldset>");
             s.Add($"");
-            
+
             s.Add(t + $"    <fieldset>");
             s.Add(t + $"        <button type=\"submit\" class=\"btn btn-success\">Save<i class=\"fas fa-check ml-1\"></i></button>");
             s.Add(t + $"        <button type=\"button\" *ngIf=\"!isNew\" class=\"btn btn-outline-danger ml-1\" (click)=\"delete()\">Delete<i class=\"fas fa-times ml-1\"></i></button>");
@@ -2549,9 +2549,11 @@ namespace WEB.Models
             if (hasChildRoutes)
             {
                 s.Add($"            this.routerSubscription = this.router.events.subscribe(event => {{");
-                s.Add($"                if (event instanceof NavigationEnd && !this.route.firstChild && !this.isNew) {{");
+                s.Add($"                if (event instanceof NavigationEnd && !this.route.firstChild) {{");
                 // this was causing a 404 error after deleting
-                //s.Add($"                    this.load{CurrentEntity.Name}();");
+                //s.Add($"                  this.load{CurrentEntity.Name}();");
+                // 
+                s.Add($"                    // this will double-load on new save, as params change (above) + nav ends");
                 foreach (var rel in relationshipsAsParent.Where(o => o.Hierarchy))
                 {
                     s.Add($"                    this.load{rel.CollectionName}();");
@@ -2560,6 +2562,7 @@ namespace WEB.Models
                 s.Add($"            }});");
                 s.Add($"");
             }
+
             s.Add($"        }});");
             s.Add($"");
             s.Add($"    }}");
@@ -2607,15 +2610,32 @@ namespace WEB.Models
             if (CurrentEntity.ReturnOnSave)
                 s.Add($"                    {CurrentEntity.ReturnRoute}");
             else
-                s.Add($"                    if (this.isNew) this.router.navigate([\"../\", {nonHKeyFields.Select(o => $"{CurrentEntity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}], {{ relativeTo: this.route }});");
+            {
+                if (hasChildRoutes)
+                {
+                    s.Add($"                    if (this.isNew) {{");
+                    s.Add($"                        this.ngOnDestroy();");
+                    s.Add($"                        this.router.navigate([\"../\", {nonHKeyFields.Select(o => $"{CurrentEntity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}], {{ relativeTo: this.route }});");
+                    s.Add($"                    }}");
+                }
+                else
+                {
+                    s.Add($"                    if (this.isNew) this.router.navigate([\"../\", {nonHKeyFields.Select(o => $"{CurrentEntity.Name.ToCamelCase()}.{o.Name.ToCamelCase()}").Aggregate((current, next) => { return current + ", " + next; })}], {{ relativeTo: this.route }});");
+                }
+            }
             if (CurrentEntity.EntityType == EntityType.User)
             {
-                s.Add($"                    else {{");
+                s.Add($"                    else");
+                s.Add($"                    {{");
                 s.Add($"                        // reload profile if editing self");
                 s.Add($"                        if (this.user.id === this.profile.userId)");
                 s.Add($"                            this.authService.getProfile(true).subscribe();");
                 s.Add($"                    }}");
             }
+            //else if (!CurrentEntity.ReturnOnSave)
+            //{
+            //    s.Add($"                    }}");
+            //}
             s.Add($"                }},");
             s.Add($"                err => {{");
             s.Add($"                    this.errorService.handleError(err, \"{CurrentEntity.FriendlyName}\", \"Save\");");
@@ -3089,7 +3109,7 @@ namespace WEB.Models
             if (String.IsNullOrWhiteSpace(entity.IconClass)) return string.Empty;
 
             string html = $@"<span class=""input-group-prepend"" *ngIf=""!multiple && !!{entity.Name.ToCamelCase()}"">
-        <a routerLink=""{GetHierarchyString(entity)}"" class=""btn btn-secondary"" [disabled]=""disabled"">
+        <a routerLink=""{GetHierarchyString(entity)}"" class=""btn btn-secondary"" [ngClass]=""{{ 'disabled': disabled }}"">
             <i class=""fas {entity.IconClass}""></i>
         </a>
     </span>
@@ -3278,28 +3298,28 @@ namespace WEB.Models
 
             if (deploymentOptions.DbContext)
             {
-                var firstEntity = DbContext.Entities.SingleOrDefault(e => e.ProjectId == entity.ProjectId && e.PreventDbContextDeployment.Length > 0);
+                var firstEntity = DbContext.Entities.SingleOrDefault(e => !e.Exclude && e.ProjectId == entity.ProjectId && e.PreventDbContextDeployment.Length > 0);
                 if (firstEntity != null)
-                    return ("DbContext deployment is not allowed on " + firstEntity.Name + ": " + entity.PreventDbContextDeployment);
+                    return ("DbContext deployment is not allowed on " + firstEntity.Name + ": " + firstEntity.PreventDbContextDeployment);
             }
             if (deploymentOptions.BundleConfig)
             {
-                var firstEntity = DbContext.Entities.SingleOrDefault(e => e.ProjectId == entity.ProjectId && e.PreventBundleConfigDeployment.Length > 0);
+                var firstEntity = DbContext.Entities.SingleOrDefault(e => !e.Exclude && e.ProjectId == entity.ProjectId && e.PreventBundleConfigDeployment.Length > 0);
                 if (firstEntity != null)
-                    return ("BundleConfig deployment is not allowed on " + firstEntity.Name + ": " + entity.PreventBundleConfigDeployment);
+                    return ("BundleConfig deployment is not allowed on " + firstEntity.Name + ": " + firstEntity.PreventBundleConfigDeployment);
             }
             if (deploymentOptions.AppRouter)
             {
-                var firstEntity = DbContext.Entities.SingleOrDefault(e => e.ProjectId == entity.ProjectId && e.PreventAppRouterDeployment.Length > 0);
+                var firstEntity = DbContext.Entities.SingleOrDefault(e => !e.Exclude && e.ProjectId == entity.ProjectId && e.PreventAppRouterDeployment.Length > 0);
                 if (firstEntity != null)
-                    return ("AppRouter deployment is not allowed on " + firstEntity.Name + ": " + entity.PreventAppRouterDeployment);
+                    return ("AppRouter deployment is not allowed on " + firstEntity.Name + ": " + firstEntity.PreventAppRouterDeployment);
             }
-            if (deploymentOptions.ApiResource)
-            {
-                var firstEntity = DbContext.Entities.SingleOrDefault(e => e.ProjectId == entity.ProjectId && e.PreventApiResourceDeployment.Length > 0);
-                if (firstEntity != null)
-                    return ("ApiResource deployment is not allowed on " + firstEntity.Name + ": " + entity.PreventApiResourceDeployment);
-            }
+            //if (deploymentOptions.ApiResource)
+            //{
+            //    var firstEntity = DbContext.Entities.SingleOrDefault(e => !e.Exclude && e.ProjectId == entity.ProjectId && e.PreventApiResourceDeployment.Length > 0);
+            //    if (firstEntity != null)
+            //        return ("ApiResource deployment is not allowed on " + firstEntity.Name + ": " + firstEntity.PreventApiResourceDeployment);
+            //}
 
             #region model
             if (deploymentOptions.Model)

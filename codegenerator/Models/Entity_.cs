@@ -93,7 +93,7 @@ namespace WEB.Models
             //          and the team is a hierarchical child on the project: the url should be '/projects/{projectid}/team/{userid}
             //          without excluding, the url was: '/projects/{projectid}/team/{projectid}/{userid}
             //          i.e. duplicating projectid
-            if (parentRel == null) return KeyFields;
+            if (parentRel == null || parentRel.IsOneToOne) return KeyFields;
             return KeyFields.Where(o => !o.RelationshipFieldsAsChild.Any(rf => rf.ParentField.EntityId == parentRel.ParentEntityId)).ToList();
         }
 

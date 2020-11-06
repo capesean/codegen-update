@@ -2,7 +2,7 @@
     ICONLINK<input placeholder="{{placeholder}}" (click)="openModal()" type="text" tabindex="-1" class="form-control" readonly value="{{getLabel()}}" [disabled]="disabled" />
     <input type="hidden" [(ngModel)]="KEYFIELD" />
     <div class="input-group-append">
-        <button type="button" class="btn btn-secondary" (click)="openModal()">
+        <button type="button" class="btn btn-secondary" (click)="openModal()" [ngClass]="{ 'disabled': disabled}">
             <i class="fas fa-search"></i>
         </button>
     </div>

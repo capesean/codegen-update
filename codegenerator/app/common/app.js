@@ -142,7 +142,7 @@
             },
             error: function (text, title, err) {
                 console.log(title, text, err);
-                toastr.error(text, title);
+                toastr.error(text, title, { timeOut: 0 });
             }
         };
     }

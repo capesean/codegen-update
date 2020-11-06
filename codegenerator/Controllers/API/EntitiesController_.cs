@@ -55,6 +55,8 @@ namespace WEB.Controllers
             if (entity == null)
                 return NotFound();
 
+            if (entity.PrimaryFieldId == null) return BadRequest("The primary field has not been defined");
+
             var code = new Code(entity, DbContext);
 
             var error = code.Validate();
@@ -88,6 +90,7 @@ namespace WEB.Controllers
             result.ListTypeScript = code.GenerateListTypeScript();
             result.EditHtml = code.GenerateEditHtml();
             result.EditTypeScript = code.GenerateEditTypeScript();
+
             if (string.IsNullOrWhiteSpace(entity.PreventAppSelectHtmlDeployment)) result.AppSelectHtml = code.GenerateSelectHtml();
             if (string.IsNullOrWhiteSpace(entity.PreventAppSelectTypeScriptDeployment)) result.AppSelectTypeScript = code.GenerateSelectTypeScript();
             if (string.IsNullOrWhiteSpace(entity.PreventSelectModalHtmlDeployment)) result.SelectModalHtml = code.GenerateModalHtml();

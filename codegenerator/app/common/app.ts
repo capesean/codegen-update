@@ -15,21 +15,21 @@
 
     angular
         .module("app",
-        [
-            "ui.router",        			// routing (UI version)
-            "ngResource",       			// api interaction
-            "ui.bootstrap",					// modals, etc
-            "ngMessages",					// form validation messages
-            "ncy-angular-breadcrumb",		// breadcrumbs
-            "nya.bootstrap.select",			// angular bootstrap-select
-            "ngSanitize",					// for ng-bind-html
-            "LocalStorageModule",			// html storage - https://github.com/grevory/angular-local-storage
-            "ui.sortable",					// sort things
-            "appRoutes",                    // custom + standard routes
-            //"nvd3",					        // nv d3 charts
-            "angular-clipboard",			// for copying code
-            "entityRoutes"                  // generated routes
-        ])
+            [
+                "ui.router",        			// routing (UI version)
+                "ngResource",       			// api interaction
+                "ui.bootstrap",					// modals, etc
+                "ngMessages",					// form validation messages
+                "ncy-angular-breadcrumb",		// breadcrumbs
+                "nya.bootstrap.select",			// angular bootstrap-select
+                "ngSanitize",					// for ng-bind-html
+                "LocalStorageModule",			// html storage - https://github.com/grevory/angular-local-storage
+                "ui.sortable",					// sort things
+                "appRoutes",                    // custom + standard routes
+                //"nvd3",					        // nv d3 charts
+                "angular-clipboard",			// for copying code
+                "entityRoutes"                  // generated routes
+            ])
         .config(config)
         .factory("notifications", notificationFactory)
         .factory("appStarter", appStarter)
@@ -189,9 +189,9 @@
             },
             error: function (text, title, err) {
                 console.log(title, text, err);
-                toastr.error(text, title);
+                toastr.error(text, title, { timeOut: 0 });
             }
         };
     }
 
-} ());
+}());

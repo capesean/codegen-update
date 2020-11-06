@@ -17,7 +17,16 @@ namespace WEB.Controllers
             if (!System.Web.HttpContext.Current.Request.IsLocal)
                 return BadRequest("Deployment is only allowed when hosted on a local machine");
 
+            var badEntity = await DbContext.Entities.FirstOrDefaultAsync(o => !o.Exclude && o.PrimaryFieldId == null);
+            if (badEntity != null) return BadRequest(badEntity.Name + " doesn't have a Primary Field");
+
             var results = new List<DeploymentResult>();
+
+            bool enumsHasRun = false;
+            bool settingsdtoHasRun = false;
+            bool dbcontextHasRun = false;
+            bool bundleconfigHasRun = false;
+            bool approuterHasRun = false;
 
             foreach (var option in options)
             {
@@ -55,16 +64,14 @@ namespace WEB.Controllers
 
                     if (entity.Exclude) continue;
 
-                    if (entity.PrimaryField == null) return BadRequest(entity.Name + " doesn't have a Primary Field");
-
                     if (option.Model) RunDeploy(entity, CodeType.Model, results);
-                    if (option.Enums) RunDeploy(entity, CodeType.Enums, results);
+                    if (option.Enums && !enumsHasRun) { RunDeploy(entity, CodeType.Enums, results); enumsHasRun = true; }
                     if (option.DTO) RunDeploy(entity, CodeType.DTO, results);
-                    if (option.SettingsDTO) RunDeploy(entity, CodeType.SettingsDTO, results);
-                    if (option.DbContext) RunDeploy(entity, CodeType.DbContext, results);
+                    if (option.SettingsDTO && !settingsdtoHasRun) { RunDeploy(entity, CodeType.SettingsDTO, results); settingsdtoHasRun = false; }
+                    if (option.DbContext && !dbcontextHasRun) { RunDeploy(entity, CodeType.DbContext, results); dbcontextHasRun = true; }
                     if (option.Controller) RunDeploy(entity, CodeType.Controller, results);
-                    if (option.BundleConfig) RunDeploy(entity, CodeType.BundleConfig, results);
-                    if (option.AppRouter) RunDeploy(entity, CodeType.AppRouter, results);
+                    if (option.BundleConfig && !bundleconfigHasRun) { RunDeploy(entity, CodeType.BundleConfig, results); bundleconfigHasRun = true; }
+                    if (option.AppRouter && !approuterHasRun) { RunDeploy(entity, CodeType.AppRouter, results); approuterHasRun = true; }
                     if (option.ApiResource) RunDeploy(entity, CodeType.ApiResource, results);
                     if (option.ListHtml) RunDeploy(entity, CodeType.ListHtml, results);
                     if (option.ListTypeScript) RunDeploy(entity, CodeType.ListTypeScript, results);

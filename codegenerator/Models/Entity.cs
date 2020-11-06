@@ -101,7 +101,7 @@ namespace WEB.Models
 
         public Guid? PrimaryFieldId { get; set; }
 
-        [MaxLength(20)]
+        [MaxLength(30)]
         public string IconClass { get; set; }
 
         [MaxLength(100)]
