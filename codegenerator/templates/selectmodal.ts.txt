@@ -125,6 +125,7 @@ export class NAMEModalComponent implements OnInit {
 
     selectAll() {
 
+        const oldPageSize = this.searchOptions.pageSize;
         this.searchOptions.pageSize = 0;
         this.searchOptions.pageIndex = 0;
 
@@ -134,6 +135,7 @@ export class NAMEModalComponent implements OnInit {
                 response => {
                     this.modal.close(response.PLURALNAME_TOCAMELCASE);
                     this.PLURALNAME_TOCAMELCASE = response.PLURALNAME_TOCAMELCASE;
+                    this.searchOptions.pageSize = oldPageSize;
                 },
                 err => {
                     this.errorService.handleError(err, "PLURALFRIENDLYNAME", "Load");

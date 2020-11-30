@@ -437,35 +437,35 @@ namespace WEB.Models
             return RunCodeReplacements(s.ToString(), CodeType.Roles);
         }
 
-        public string GenerateSettingsDTO()
-        {
-            var s = new StringBuilder();
+        //public string GenerateSettingsDTO()
+        //{
+        //    var s = new StringBuilder();
 
-            s.Add($"using System;");
-            s.Add($"using System.Collections.Generic;");
-            s.Add($"");
-            s.Add($"namespace {CurrentEntity.Project.Namespace}.Models");
-            s.Add($"{{");
-            s.Add($"    public partial class SettingsDTO");
-            s.Add($"    {{");
-            //foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
-            //    s.Add($"        public List<EnumDTO> {lookup.Name} {{ get; set; }}");
-            s.Add($"");
-            s.Add($"        public SettingsDTO()");
-            s.Add($"        {{");
-            //foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
-            //{
-            //    s.Add($"            {lookup.Name} = new List<EnumDTO>();");
-            //    s.Add($"            foreach ({lookup.Name} type in Enum.GetValues(typeof({lookup.Name})))");
-            //    s.Add($"                {lookup.Name}.Add(new EnumDTO {{ Id = (int)type, Name = type.ToString(), Label = type.Label() }});");
-            //    s.Add($"");
-            //}
-            s.Add($"        }}");
-            s.Add($"    }}");
-            s.Add($"}}");
+        //    s.Add($"using System;");
+        //    s.Add($"using System.Collections.Generic;");
+        //    s.Add($"");
+        //    s.Add($"namespace {CurrentEntity.Project.Namespace}.Models");
+        //    s.Add($"{{");
+        //    s.Add($"    public partial class SettingsDTO");
+        //    s.Add($"    {{");
+        //    //foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
+        //    //    s.Add($"        public List<EnumDTO> {lookup.Name} {{ get; set; }}");
+        //    s.Add($"");
+        //    s.Add($"        public SettingsDTO()");
+        //    s.Add($"        {{");
+        //    //foreach (var lookup in Lookups.Where(o => !o.IsRoleList))
+        //    //{
+        //    //    s.Add($"            {lookup.Name} = new List<EnumDTO>();");
+        //    //    s.Add($"            foreach ({lookup.Name} type in Enum.GetValues(typeof({lookup.Name})))");
+        //    //    s.Add($"                {lookup.Name}.Add(new EnumDTO {{ Id = (int)type, Name = type.ToString(), Label = type.Label() }});");
+        //    //    s.Add($"");
+        //    //}
+        //    s.Add($"        }}");
+        //    s.Add($"    }}");
+        //    s.Add($"}}");
 
-            return RunCodeReplacements(s.ToString(), CodeType.SettingsDTO);
-        }
+        //    return RunCodeReplacements(s.ToString(), CodeType.SettingsDTO);
+        //}
 
         public string GenerateDTO()
         {
@@ -1761,7 +1761,7 @@ namespace WEB.Models
             s.Add($"    ngOnInit(): void {{");
             if (includeEntities)
                 s.Add($"        this.searchOptions.includeEntities = true;");
-            if (CurrentEntity.HasASortField)
+            if (CurrentEntity.HasASortField && !CurrentEntity.RelationshipsAsChild.Any(r => r.Hierarchy))
                 s.Add($"        this.searchOptions.pageSize = 0;");
             if (hasChildRoutes)
             {
@@ -2117,8 +2117,8 @@ namespace WEB.Models
                 else if (tagType == "select")
                 {
                     controlHtml += $">" + Environment.NewLine;
-                    controlHtml += $"                        <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Lookup.Name.ToCamelCase()}.value\">{{{{ {field.Lookup.Name.ToCamelCase()}.label }}}}</option>" + Environment.NewLine;
-                    controlHtml += $"                    </{tagType}>";
+                    controlHtml += t + $"                        <option *ngFor=\"let {field.Lookup.Name.ToCamelCase()} of {field.Lookup.PluralName.ToCamelCase()}\" [ngValue]=\"{field.Lookup.Name.ToCamelCase()}.value\">{{{{ {field.Lookup.Name.ToCamelCase()}.label }}}}</option>" + Environment.NewLine;
+                    controlHtml += t + $"                    </{tagType}>";
                 }
                 //";
                 else
@@ -3392,8 +3392,9 @@ namespace WEB.Models
                 if (!Directory.Exists(path))
                     return ("DTOs path does not exist");
 
-                var code = codeGenerator.GenerateSettingsDTO();
-                if (code != string.Empty) File.WriteAllText(Path.Combine(path, "SettingsDTO_.cs"), code);
+                // settings now manually done
+                //var code = codeGenerator.GenerateSettingsDTO();
+                //if (code != string.Empty) File.WriteAllText(Path.Combine(path, "SettingsDTO_.cs"), code);
             }
             #endregion
 
@@ -3404,8 +3405,8 @@ namespace WEB.Models
                 if (!Directory.Exists(path))
                     return ("DTOs path does not exist");
 
-                var code = codeGenerator.GenerateSettingsDTO();
-                if (code != string.Empty) File.WriteAllText(Path.Combine(path, "SettingsDTO_.cs"), code);
+                //var code = codeGenerator.GenerateSettingsDTO();
+                //if (code != string.Empty) File.WriteAllText(Path.Combine(path, "SettingsDTO_.cs"), code);
             }
             #endregion
 

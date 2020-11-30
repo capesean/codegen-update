@@ -80,7 +80,7 @@ namespace WEB.Controllers
             result.Model = code.GenerateModel();
             result.Enums = code.GenerateEnums();
             result.DTO = code.GenerateDTO();
-            result.SettingsDTO = code.GenerateSettingsDTO();
+            //result.SettingsDTO = code.GenerateSettingsDTO();
             result.DbContext = code.GenerateDbContext();
             result.Controller = code.GenerateController();
             result.BundleConfig = code.GenerateBundleConfig();
