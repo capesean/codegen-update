@@ -23,6 +23,9 @@ namespace WEB.Models
         //[MaxLength(250)]
         //public string RootPath { get; set; }
 
+        [NotMapped]
+        public string RootPathModels { get { return ConfigurationManager.AppSettings["RootPath"] + (String.IsNullOrWhiteSpace(ModelsPath) ? Name : ModelsPath) + @"\"; } }
+
         [Required(AllowEmptyStrings = true)]
         [MaxLength(20)]
         public string Namespace { get; set; }
@@ -41,6 +44,9 @@ namespace WEB.Models
 
         [MaxLength(50)]
         public string UserFilterFieldName { get; set; }
+
+        [MaxLength(50)]
+        public string ModelsPath { get; set; }
 
         public string Notes { get; set; }
 

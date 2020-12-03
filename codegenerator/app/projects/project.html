@@ -20,13 +20,13 @@
                     </div>
 
                     <!--<div class="col-sm-6 col-md-4">
-                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.rootPath.$invalid }">
-                            <label for="rootPath" class="control-label">
-                                Root Path:
-                            </label>
-                            <input type="text" id="rootPath" name="rootPath" ng-model="vm.project.rootPath" maxlength="250" class="form-control" ng-required="true" />
-                        </div>
-                    </div>-->
+        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.rootPath.$invalid }">
+            <label for="rootPath" class="control-label">
+                Root Path:
+            </label>
+            <input type="text" id="rootPath" name="rootPath" ng-model="vm.project.rootPath" maxlength="250" class="form-control" ng-required="true" />
+        </div>
+    </div>-->
 
                     <div class="col-sm-6 col-md-4">
                         <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.namespace.$invalid }">
@@ -61,6 +61,15 @@
                                 DbContext Variable:
                             </label>
                             <input type="text" id="dbContextVariable" name="dbContextVariable" ng-model="vm.project.dbContextVariable" maxlength="20" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6 col-md-4 col-lg-3">
+                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.modelsPath.$invalid }">
+                            <label for="modelsPath" class="control-label">
+                                Models Path:
+                            </label>
+                            <input type="text" id="modelsPath" name="modelsPath" ng-model="vm.project.modelsPath" maxlength="50" class="form-control" />
                         </div>
                     </div>
 

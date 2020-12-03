@@ -44,6 +44,9 @@ namespace WEB.Models
         [MaxLength(50)]
         public string UserFilterFieldName { get; set; }
 
+        [MaxLength(50)]
+        public string ModelsPath { get; set; }
+
         public string Notes { get; set; }
 
         [MaxLength(20)]
@@ -67,6 +70,7 @@ namespace WEB.Models
             projectDTO.AngularDirectivePrefix = project.AngularDirectivePrefix;
             projectDTO.UserFilterFieldName = project.UserFilterFieldName;
             projectDTO.DbContextVariable = project.DbContextVariable;
+            projectDTO.ModelsPath = project.ModelsPath;
             projectDTO.Notes = project.Notes;
 
             return projectDTO;
@@ -81,6 +85,7 @@ namespace WEB.Models
             project.AngularDirectivePrefix = projectDTO.AngularDirectivePrefix;
             project.UserFilterFieldName = projectDTO.UserFilterFieldName;
             project.DbContextVariable = projectDTO.DbContextVariable;
+            project.ModelsPath = projectDTO.ModelsPath;
             project.Notes = projectDTO.Notes;
         }
     }

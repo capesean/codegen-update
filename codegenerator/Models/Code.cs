@@ -3324,7 +3324,7 @@ namespace WEB.Models
             #region model
             if (deploymentOptions.Model)
             {
-                var path = Path.Combine(entity.Project.RootPath, "Models");
+                var path = Path.Combine(entity.Project.RootPathModels, "Models");
                 if (!Directory.Exists(path))
                     return ("Models path does not exist");
 
@@ -3352,7 +3352,7 @@ namespace WEB.Models
             #region dto
             if (deploymentOptions.DTO)
             {
-                var path = Path.Combine(entity.Project.RootPath, "Models\\DTOs");
+                var path = Path.Combine(entity.Project.RootPathModels, "Models\\DTOs");
                 if (!Directory.Exists(path))
                     return ("DTOs path does not exist");
 
