@@ -17,11 +17,12 @@ namespace WEB.Models
         [Index("IX_Project_Name", IsUnique = true, Order = 0)]
         public string Name { get; set; }
 
+        [Required(AllowEmptyStrings = true)]
+        [MaxLength(250)]
+        public string WebPath { get; set; }
+
         [NotMapped]
-        public string RootPath { get { return ConfigurationManager.AppSettings["RootPath"] + Name + @"\"; } }
-        //[Required(AllowEmptyStrings = true)]
-        //[MaxLength(250)]
-        //public string RootPath { get; set; }
+        public string RootPathWeb { get { return ConfigurationManager.AppSettings["RootPath"] + (String.IsNullOrWhiteSpace(WebPath) ? Name : WebPath) + @"\"; } }
 
         [NotMapped]
         public string RootPathModels { get { return ConfigurationManager.AppSettings["RootPath"] + (String.IsNullOrWhiteSpace(ModelsPath) ? Name : ModelsPath) + @"\"; } }

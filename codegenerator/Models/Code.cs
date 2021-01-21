@@ -3262,8 +3262,8 @@ namespace WEB.Models
             if (error != null)
                 return (error);
 
-            if (!Directory.Exists(entity.Project.RootPath))
-                return ("Project path does not exist");
+            if (!Directory.Exists(entity.Project.RootPathWeb))
+                return ("Web path does not exist");
 
             if (deploymentOptions.Model && !string.IsNullOrWhiteSpace(entity.PreventModelDeployment))
                 return ("Model deployment is not allowed: " + entity.PreventModelDeployment);
@@ -3340,7 +3340,7 @@ namespace WEB.Models
             #region dbcontext
             if (deploymentOptions.DbContext)
             {
-                var path = Path.Combine(entity.Project.RootPath, "Models");
+                var path = Path.Combine(entity.Project.RootPathModels, "Models");
                 if (!Directory.Exists(path))
                     return ("Models path does not exist");
 
@@ -3364,7 +3364,7 @@ namespace WEB.Models
             #region enums
             if (deploymentOptions.Enums)
             {
-                var path = Path.Combine(entity.Project.RootPath, "Models");
+                var path = Path.Combine(entity.Project.RootPathModels, "Models");
                 if (!Directory.Exists(path))
                     return ("Models path does not exist");
 
@@ -3380,7 +3380,7 @@ namespace WEB.Models
                     return ("App path does not exist");
 
                 // todo: move this to own deployment option
-                File.WriteAllText(Path.Combine(entity.Project.RootPath, "Models", "Roles.cs"), codeGenerator.GenerateRoles());
+                File.WriteAllText(Path.Combine(entity.Project.RootPathModels, "Models", "Roles.cs"), codeGenerator.GenerateRoles());
 
             }
             #endregion
@@ -3388,7 +3388,7 @@ namespace WEB.Models
             #region settings
             if (deploymentOptions.SettingsDTO)
             {
-                var path = Path.Combine(entity.Project.RootPath, "Models\\DTOs");
+                var path = Path.Combine(entity.Project.RootPathModels, "Models\\DTOs");
                 if (!Directory.Exists(path))
                     return ("DTOs path does not exist");
 
@@ -3401,7 +3401,7 @@ namespace WEB.Models
             #region settings dto
             if (deploymentOptions.SettingsDTO)
             {
-                var path = Path.Combine(entity.Project.RootPath, "Models\\DTOs");
+                var path = Path.Combine(entity.Project.RootPathModels, "Models\\DTOs");
                 if (!Directory.Exists(path))
                     return ("DTOs path does not exist");
 
@@ -3413,7 +3413,7 @@ namespace WEB.Models
             #region controller
             if (deploymentOptions.Controller)
             {
-                var path = Path.Combine(entity.Project.RootPath, "Controllers");
+                var path = Path.Combine(entity.Project.RootPathWeb, "Controllers");
                 if (!Directory.Exists(path))
                     return ("Controllers path does not exist");
 
@@ -3466,7 +3466,7 @@ namespace WEB.Models
             #region bundleconfig
             if (deploymentOptions.BundleConfig)
             {
-                var path = entity.Project.RootPath + @"ClientApp\src\app\";
+                var path = entity.Project.RootPathWeb + @"ClientApp\src\app\";
 
                 var code = codeGenerator.GenerateBundleConfig();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, "generated.module.ts"), code);
@@ -3479,7 +3479,7 @@ namespace WEB.Models
             #region app router
             if (deploymentOptions.AppRouter)
             {
-                var path = entity.Project.RootPath + @"ClientApp\src\app\";
+                var path = entity.Project.RootPathWeb + @"ClientApp\src\app\";
 
                 var code = codeGenerator.GenerateAppRouter();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, "generated.routes.ts"), code);
@@ -3525,7 +3525,7 @@ namespace WEB.Models
         {
             if (code == string.Empty) return true;
 
-            var path = Path.Combine(project.RootPath, @"ClientApp\src\app");
+            var path = Path.Combine(project.RootPathWeb, @"ClientApp\src\app");
             if (!Directory.Exists(path))
                 return false;
             path = Path.Combine(path, directoryName.ToLower());

@@ -19,15 +19,6 @@
                         </div>
                     </div>
 
-                    <!--<div class="col-sm-6 col-md-4">
-        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.rootPath.$invalid }">
-            <label for="rootPath" class="control-label">
-                Root Path:
-            </label>
-            <input type="text" id="rootPath" name="rootPath" ng-model="vm.project.rootPath" maxlength="250" class="form-control" ng-required="true" />
-        </div>
-    </div>-->
-
                     <div class="col-sm-6 col-md-4">
                         <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.namespace.$invalid }">
                             <label for="namespace" class="control-label">
@@ -61,6 +52,15 @@
                                 DbContext Variable:
                             </label>
                             <input type="text" id="dbContextVariable" name="dbContextVariable" ng-model="vm.project.dbContextVariable" maxlength="20" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6 col-md-4">
+                        <div class="form-group" ng-class="{ 'has-error':  mainForm.$submitted && mainForm.webPath.$invalid }">
+                            <label for="webPath" class="control-label">
+                                Web Path:
+                            </label>
+                            <input type="text" id="webPath" name="webPath" ng-model="vm.project.webPath" maxlength="250" class="form-control" ng-required="true" />
                         </div>
                     </div>
 
