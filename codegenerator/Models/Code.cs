@@ -2352,7 +2352,7 @@ namespace WEB.Models
 
                 //[organisation]=\"user.organisation\"   [canRemoveFilters]=\"false\"
                 s.Add($"");
-                s.Add($"<{reverseRel.ParentEntity.Name.Hyphenated()}-modal #{reverseRel.ParentEntity.Name.ToCamelCase()}Modal (change)=\"change{reverseRel.ParentEntity.Name}($event)\" [multiple]=\"true\"></{reverseRel.ParentEntity.Name.Hyphenated()}-modal>");
+                s.Add($"<{reverseRel.ParentEntity.Name.Hyphenated()}-modal #{reverseRel.ParentEntity.Name.ToCamelCase()}Modal (changes)=\"change{reverseRel.ParentEntity.Name}($event)\" [multiple]=\"true\"></{reverseRel.ParentEntity.Name.Hyphenated()}-modal>");
             }
 
             if (hasChildRoutes)
@@ -2461,8 +2461,8 @@ namespace WEB.Models
             foreach (var rel in relationshipsAsParent)
             {
                 s.Add($"    private {rel.CollectionName.ToCamelCase()}SearchOptions = new {rel.ChildEntity.Name}SearchOptions();");
-                s.Add($"    private {rel.CollectionName.ToCamelCase()}Headers = new PagingOptions();");
-                s.Add($"    private {rel.CollectionName.ToCamelCase()}: {rel.ChildEntity.Name}[] = [];");
+                s.Add($"    public {rel.CollectionName.ToCamelCase()}Headers = new PagingOptions();");
+                s.Add($"    public {rel.CollectionName.ToCamelCase()}: {rel.ChildEntity.Name}[] = [];");
                 s.Add($"");
             }
             processedEntityIds.Clear();
@@ -2895,7 +2895,7 @@ namespace WEB.Models
             if (CurrentEntity.PrimaryField == null) throw new Exception("Entity " + CurrentEntity.Name + " does not have a Primary Field defined for AppSelect label");
 
             var LABEL_OUTPUT_MULTI = $"{CurrentEntity.CamelCaseName}.{CurrentEntity.PrimaryField.Name.ToCamelCase()}";
-            var LABEL_OUTPUT_SINGLE = $"(this.{CurrentEntity.CamelCaseName} as {CurrentEntity.Name}).{CurrentEntity.PrimaryField.Name.ToCamelCase()}";
+            var LABEL_OUTPUT_SINGLE = $"this.{CurrentEntity.CamelCaseName}?.{CurrentEntity.PrimaryField.Name.ToCamelCase()}";
 
             if (CurrentEntity.PrimaryField.CustomType == CustomType.Date)
             {
@@ -2935,6 +2935,7 @@ namespace WEB.Models
             var fieldList = string.Empty;
             var appSelectFilters = string.Empty;
             var filterAlerts = string.Empty;
+            var appTextFilter = string.Empty;
 
             foreach (var field in CurrentEntity.Fields.Where(f => f.ShowInSearchResults).OrderBy(f => f.FieldOrder))
             {
@@ -2959,6 +2960,16 @@ namespace WEB.Models
                 fieldList += $"                    <td{ngIf}>{field.ListFieldHtml}</td>";
             }
 
+            if(CurrentEntity.Fields.Any(o => o.SearchType == SearchType.Text))
+            {
+                appTextFilter += $"                    <div class=\"col-sm-6 col-md-6 col-lg-4\">" + Environment.NewLine;
+                appTextFilter += $"                        <div class=\"form-group\">" + Environment.NewLine;
+                appTextFilter += $"                            <input type=\"search\" ngbAutofocus name=\"q\" id=\"q\" [(ngModel)]=\"searchOptions.q\" max=\"100\" class=\"form-control\" placeholder=\"Search PLURALFRIENDLYNAME_TOLOWER\" />" + Environment.NewLine;
+                appTextFilter += $"                        </div>" + Environment.NewLine;
+                appTextFilter += $"                    </div>" + Environment.NewLine;
+                appTextFilter += Environment.NewLine;
+            }
+
             foreach (var field in CurrentEntity.Fields.Where(f => f.SearchType == SearchType.Exact).OrderBy(f => f.FieldOrder))
             {
                 Relationship relationship = null;
@@ -2967,7 +2978,6 @@ namespace WEB.Models
 
                 if (field.FieldType == FieldType.Enum || relationship != null)
                 {
-                    appSelectFilters += Environment.NewLine;
                     if (field.FieldType == FieldType.Enum)
                     {
                         appSelectFilters += $"                    <div class=\"col-sm-6 col-md-6 col-lg-4\" *ngIf=\"!{field.Name.ToCamelCase()}\">" + Environment.NewLine;
@@ -2984,6 +2994,7 @@ namespace WEB.Models
                         appSelectFilters += $"                        </div>" + Environment.NewLine;
                         appSelectFilters += $"                    </div>" + Environment.NewLine;
                     }
+                    appSelectFilters += Environment.NewLine;
 
                     if (filterAlerts == string.Empty) filterAlerts = Environment.NewLine;
 
@@ -2994,7 +3005,7 @@ namespace WEB.Models
                 }
             }
 
-            file = RunTemplateReplacements(file)
+            file = RunTemplateReplacements(file.Replace("APP_TEXT_FILTER", appTextFilter))
                 .Replace("FIELD_HEADERS", fieldHeaders)
                 .Replace("FIELD_LIST", fieldList)
                 .Replace("APP_SELECT_FILTERS", appSelectFilters)
@@ -3127,7 +3138,7 @@ namespace WEB.Models
             {
                 parents = GetHierarchyString(hierarchyRelationship.ParentEntity, (prefix == null ? "" : prefix + ".") + entity.Name.ToCamelCase());
             }
-            return parents + "/" + entity.PluralName.ToLower() + "/{{" + (prefix == null ? "" : prefix + ".") + entity.Name.ToCamelCase() + "." + entity.KeyFields.Single().Name.ToCamelCase() + "}}";
+            return parents + "/" + entity.PluralName.ToLower() + "/{{$any(" + (prefix == null ? "" : prefix + ".") + entity.Name.ToCamelCase() + ")." + entity.KeyFields.Single().Name.ToCamelCase() + "}}";
         }
 
         private string ClimbHierarchy(Relationship relationship, string result)

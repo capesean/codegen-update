@@ -16,9 +16,10 @@ import { Enum/*ENUMS*/ } from '../common/models/enums.model';
 })
 export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
-    @Input() KEYFIELD: KEYFIELDTYPE | KEYFIELDTYPE[];
-    @Input() CAMELCASENAME: NAME | NAME[];
-    @Output() CAMELCASENAMEChange = new EventEmitter<NAME | NAME[]>();
+    @Input() CAMELCASENAME: NAME;
+    @Input() PLURALNAME_TOCAMELCASE: NAME[];
+    @Output() CAMELCASENAMEChange = new EventEmitter<NAME>();
+    @Output() PLURALNAME_TOCAMELCASEChange = new EventEmitter<NAME[]>();
     @Input() canRemoveFilters = false;
     @Input() multiple = false;
     @Input() showAddNew = false;
@@ -39,8 +40,7 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
     writeValue(KEYFIELD: KEYFIELDTYPE | KEYFIELDTYPE[]): void {
         if (KEYFIELD !== undefined) {
-            this.KEYFIELD = KEYFIELD;
-            this.propagateChange(this.KEYFIELD);
+            this.propagateChange(KEYFIELD);
         }
     }
 
@@ -57,25 +57,22 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
 
     changed(CAMELCASENAME: NAME | NAME[]) {
         if (this.disabled) return;
-        this.CAMELCASENAME = CAMELCASENAME;
-        this.CAMELCASENAMEChange.emit(CAMELCASENAME);
-        if (this.multiple)
+        if (this.multiple){
             this.writeValue(CAMELCASENAME ? (CAMELCASENAME as NAME[]).map(o => o.KEYFIELD) : null);
-        else
+            this.PLURALNAME_TOCAMELCASE = (CAMELCASENAME as NAME[]);
+            this.PLURALNAME_TOCAMELCASEChange.emit((CAMELCASENAME as NAME[]));
+        } else {
             this.writeValue(CAMELCASENAME ? (CAMELCASENAME as NAME).KEYFIELD : null);
+            this.CAMELCASENAME = (CAMELCASENAME as NAME);
+            this.CAMELCASENAMEChange.emit((CAMELCASENAME as NAME));
+        }
     }
 
     getLabel() {
-        if (this.multiple) {
-            let label = "";
-            (this.CAMELCASENAME as NAME[]).forEach(CAMELCASENAME => label += (label === "" ? "" : ", ") + LABEL_OUTPUT_MULTI);
-            return label;
-        }
-        return this.CAMELCASENAME ? LABEL_OUTPUT_SINGLE : "";
+        return this.multiple ? this.PLURALNAME_TOCAMELCASE.map(CAMELCASENAME => LABEL_OUTPUT_MULTI).join(", ") : LABEL_OUTPUT_SINGLE ?? "";
     }
 
     openModal() {
-        if (this.disabled) return;
-        this.modal.open();
+        if (!this.disabled) this.modal.open();
     }
 }
