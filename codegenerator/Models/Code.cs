@@ -2011,8 +2011,11 @@ namespace WEB.Models
                     }
                     else
                     {
-                        if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
-                        if (field.MinLength > 0) attributes.Add("minlength", field.MinLength.ToString());
+                        if (!CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId) && r.UseSelectorDirective))
+                        {
+                            if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
+                            if (field.MinLength > 0) attributes.Add("minlength", field.MinLength.ToString());
+                        }
                     }
                 }
                 else
@@ -2167,8 +2170,11 @@ namespace WEB.Models
                 {
                     var validationErrors = new Dictionary<string, string>();
                     if (!field.IsNullable && field.CustomType != CustomType.Boolean && field.EditPageType != EditPageType.ReadOnly) validationErrors.Add("required", $"{field.Label} is required");
-                    if (field.MinLength > 0) validationErrors.Add("minlength", $"{field.Label} must be at least {field.MinLength} characters long");
-                    if (field.Length > 0) validationErrors.Add("maxlength", $"{field.Label} must be at most {field.Length} characters long");
+                    if (!CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId) && r.UseSelectorDirective))
+                    {
+                        if (field.MinLength > 0) validationErrors.Add("minlength", $"{field.Label} must be at least {field.MinLength} characters long");
+                        if (field.Length > 0) validationErrors.Add("maxlength", $"{field.Label} must be at most {field.Length} characters long");
+                    }
 
                     foreach (var validationError in validationErrors)
                     {
