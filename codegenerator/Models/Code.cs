@@ -98,7 +98,7 @@ namespace WEB.Models
 
             var s = new StringBuilder();
             s.Add($"using System;");
-            if (CurrentEntity.RelationshipsAsParent.Any())
+            if (CurrentEntity.RelationshipsAsParent.Any(o => !o.ChildEntity.Exclude))
                 s.Add($"using System.Collections.Generic;");
             s.Add($"using System.ComponentModel.DataAnnotations;");
             s.Add($"using System.ComponentModel.DataAnnotations.Schema;"); // decimals
@@ -1166,7 +1166,7 @@ namespace WEB.Models
 
             #region multiselect saves & deletes
             var processedEntityIds = new List<Guid>();
-            foreach (var rel in CurrentEntity.RelationshipsAsParent.Where(o => o.UseMultiSelect))
+            foreach (var rel in CurrentEntity.RelationshipsAsParent.Where(o => o.UseMultiSelect && !o.ChildEntity.Exclude))
             {
                 if (processedEntityIds.Contains(rel.ChildEntityId)) continue;
                 processedEntityIds.Add(rel.ChildEntityId);
@@ -1379,7 +1379,7 @@ namespace WEB.Models
 
             s.Add($"export const GeneratedRoutes: Route[] = [");
 
-            foreach (var entity in allEntities.OrderBy(o => o.Name))
+            foreach (var entity in allEntities.Where(o => !o.Exclude).OrderBy(o => o.Name))
             {
                 var editOnRoot = !entity.RelationshipsAsChild.Any(r => r.Hierarchy);
                 var childRelationships = entity.RelationshipsAsParent.Where(r => r.Hierarchy);
@@ -1423,7 +1423,7 @@ namespace WEB.Models
             var tabs = String.Concat(Enumerable.Repeat("        ", level));
 
             s.Add(tabs + $"                children: [");
-            foreach (var relationship in relationships.OrderBy(o => o.ChildEntity.Name))
+            foreach (var relationship in relationships.Where(o => !o.ChildEntity.Exclude).OrderBy(o => o.ChildEntity.Name))
             {
                 var entity = relationship.ChildEntity;
                 var childRelationships = entity.RelationshipsAsParent.Where(r => r.Hierarchy);
@@ -1513,7 +1513,7 @@ namespace WEB.Models
             }
 
             var processedEntities = new List<Guid>();
-            foreach (var rel in CurrentEntity.RelationshipsAsParent.Where(o => o.UseMultiSelect))
+            foreach (var rel in CurrentEntity.RelationshipsAsParent.Where(o => o.UseMultiSelect && !o.ChildEntity.Exclude))
             {
                 if (processedEntities.Contains(rel.ChildEntity.EntityId)) continue;
                 processedEntities.Add(rel.ChildEntity.EntityId);
@@ -2352,7 +2352,7 @@ namespace WEB.Models
                 s.Add($"</div>");
             }
 
-            foreach (var rel in CurrentEntity.RelationshipsAsParent.Where(o => o.UseMultiSelect))
+            foreach (var rel in CurrentEntity.RelationshipsAsParent.Where(o => o.UseMultiSelect && !o.ChildEntity.Exclude))
             {
                 var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
 
@@ -2966,7 +2966,7 @@ namespace WEB.Models
                 fieldList += $"                    <td{ngIf}>{field.ListFieldHtml}</td>";
             }
 
-            if(CurrentEntity.Fields.Any(o => o.SearchType == SearchType.Text))
+            if (CurrentEntity.Fields.Any(o => o.SearchType == SearchType.Text))
             {
                 appTextFilter += $"                    <div class=\"col-sm-6 col-md-6 col-lg-4\">" + Environment.NewLine;
                 appTextFilter += $"                        <div class=\"form-group\">" + Environment.NewLine;
