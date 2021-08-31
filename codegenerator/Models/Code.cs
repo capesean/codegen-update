@@ -2910,8 +2910,8 @@ namespace WEB.Models
             }
             else if (CurrentEntity.PrimaryField.FieldType == FieldType.Enum)
             {
-                LABEL_OUTPUT_MULTI = $"Enums.{CurrentEntity.PrimaryField.Lookup.PluralName}[{LABEL_OUTPUT_MULTI}].label";
-                LABEL_OUTPUT_SINGLE = $"Enums.{CurrentEntity.PrimaryField.Lookup.PluralName}[{LABEL_OUTPUT_SINGLE}].label";
+                LABEL_OUTPUT_MULTI = $"Enums.{CurrentEntity.PrimaryField.Lookup.PluralName}[{LABEL_OUTPUT_MULTI}]?.label";
+                LABEL_OUTPUT_SINGLE = $"Enums.{CurrentEntity.PrimaryField.Lookup.PluralName}[{LABEL_OUTPUT_SINGLE}]?.label";
             }
 
             var enums = CurrentEntity.PrimaryField.FieldType == FieldType.Enum ? ", Enums" : string.Empty;
