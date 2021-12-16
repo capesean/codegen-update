@@ -37,7 +37,7 @@
     </compilation>
   </system.web>
   <system.webServer>
-    <modules>
+    <modules runAllManagedModulesForAllRequests="true">
       <remove name="FormsAuthentication" />
     </modules>
     <rewrite>
