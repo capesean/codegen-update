@@ -81,6 +81,7 @@ namespace WEB.Controllers
             }
 
             ModelFactory.Hydrate(project, projectDTO);
+            project.WebPath = project.WebPath ?? "";
 
             await DbContext.SaveChangesAsync();
 
