@@ -1927,7 +1927,7 @@ namespace WEB.Models
                 s.Add(t + $"                        Email:");
                 s.Add(t + $"                    </label>");
                 s.Add($"");
-                s.Add(t + $"                    <input type=\"email\" id=\"email\" name=\"email\" [(ngModel)]=\"user.email\" #email=\"ngModel\" maxlength=\"256\" class=\"form-control\" required />");
+                s.Add(t + $"                    <input type=\"email\" id=\"email\" name=\"email\" [(ngModel)]=\"user.email\" #email=\"ngModel\" maxlength=\"256\" class=\"form-control\" pattern=\"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$\" required />");
                 s.Add($"");
                 s.Add(t + $"                    <div *ngIf=\"email.errors?.required\" class=\"invalid-feedback\">");
                 s.Add(t + $"                        Email is required");
@@ -1935,6 +1935,10 @@ namespace WEB.Models
                 s.Add($"");
                 s.Add(t + $"                    <div *ngIf=\"email.errors?.maxlength\" class=\"invalid-feedback\">");
                 s.Add(t + $"                        Email must be at most 50 characters long");
+                s.Add(t + $"                    </div>");
+                s.Add($"");
+                s.Add(t + $"                    <div *ngIf=\"email.errors?.pattern\" class=\"invalid-feedback\">");
+                s.Add(t + $"                        Email must be a valid email address");
                 s.Add(t + $"                    </div>");
                 s.Add($"");
                 s.Add(t + $"                </div>");
