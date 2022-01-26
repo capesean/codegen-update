@@ -26,7 +26,7 @@
         return $resource(appSettings.apiServiceBaseUri + appSettings.apiPrefix + "entities/:entityId", {
             entityId: "@entityId"
         }, {
-            getCode: {
+            generate: {
                 method: "GET",
                 url: appSettings.apiServiceBaseUri + appSettings.apiPrefix + "entities/:entityId/code",
                 isArray: false

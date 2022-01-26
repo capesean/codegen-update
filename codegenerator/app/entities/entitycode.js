@@ -26,7 +26,7 @@
             selectModalTypeScript: false
         };
         vm.loading = true;
-        vm.getCode = getCode;
+        vm.generate = generate;
         vm.copy = copy;
         vm.deploy = deploy;
         vm.toggle = toggle;
@@ -47,7 +47,9 @@
                 }
                 vm.goToProject();
             }).$promise);
-            $q.all(promises).finally(function () { return getCode(); });
+            $q.all(promises).finally(function () {
+                vm.loading = false;
+            });
         }
         function copy(item) {
             if (vm.code[item]) {
@@ -81,10 +83,10 @@
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
         }
-        function getCode() {
+        function generate() {
             vm.loading = true;
             vm.code = undefined;
-            entityResource.getCode({ entityId: $stateParams.entityId }, function (data) {
+            entityResource.generate({ entityId: $stateParams.entityId }, function (data) {
                 setCode(data);
             }, function (err) {
                 errorService.handleApiError(err, "code", "generate");

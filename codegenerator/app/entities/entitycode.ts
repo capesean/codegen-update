@@ -31,7 +31,7 @@
             selectModalTypeScript: false
         };
         vm.loading = true;
-        vm.getCode = getCode;
+        vm.generate = generate;
         vm.copy = copy;
         vm.deploy = deploy;
         vm.toggle = toggle;
@@ -63,7 +63,10 @@
 
                     }).$promise);
 
-            $q.all(promises).finally(() => getCode());
+            $q.all(promises).finally(() => {
+                /*generate();*/
+                vm.loading = false;
+            });
         }
 
         function copy(item) {
@@ -91,7 +94,7 @@
                 if (vm.deploymentOptions.hasOwnProperty(k) && k.substring(0, 1) !== "$" && $scope.mainForm[k]) {
                     vm.deploymentOptions[k] = checkedCount < uncheckedCount;
                 }
-            
+
         }
 
         function htmlEscape(str) {
@@ -103,22 +106,22 @@
                 .replace(/>/g, '&gt;');
         }
 
-        function getCode() {
+        function generate() {
             vm.loading = true;
             vm.code = undefined;
-            entityResource.getCode(
+            entityResource.generate(
                 { entityId: $stateParams.entityId },
                 data => {
 
                     setCode(data);
                     //toastr.success("Code has been regenerated");
                 },
-                err=> {
+                err => {
                     errorService.handleApiError(err, "code", "generate");
                 }
             ).$promise.finally(
                 () => {
-                vm.loading = false
+                    vm.loading = false
                 }
             );
         }
@@ -172,7 +175,7 @@
                         notifications.success("Deployment was successful.", "Code Deployment");
 
                     },
-                    err=> {
+                    err => {
 
                         errorService.handleApiError(err, "code", "deploy");
 
@@ -183,4 +186,4 @@
 
     };
 
-} ()); 
+}());
