@@ -128,7 +128,6 @@
                     return;
                 }
                 entityResource.deploy(data, function (data) {
-                    setCode(data);
                     notifications.success("Deployment was successful.", "Code Deployment");
                 }, function (err) {
                     errorService.handleApiError(err, "code", "deploy");

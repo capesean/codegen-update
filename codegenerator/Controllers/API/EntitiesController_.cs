@@ -124,7 +124,7 @@ namespace WEB.Controllers
 
             if (result != null) return BadRequest(result);
 
-            return Code(id);
+            return Ok();
         }
 
         public class ApiCodeResult

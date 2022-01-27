@@ -171,7 +171,6 @@
                     data,
                     data => {
 
-                        setCode(data);
                         notifications.success("Deployment was successful.", "Code Deployment");
 
                     },
