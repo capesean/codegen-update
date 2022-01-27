@@ -172,7 +172,7 @@ namespace WEB.Models
             }
 
             // child entities
-            foreach (var relationship in CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude).OrderBy(o => o.SortOrder))
+            foreach (var relationship in CurrentEntity.RelationshipsAsParent.Where(r => !r.ChildEntity.Exclude && !r.ParentEntity.Exclude).OrderBy(o => o.SortOrder))
             {
                 if (!relationship.IsOneToOne)
                     s.Add($"        public virtual ICollection<{GetEntity(relationship.ChildEntityId).Name}> {relationship.CollectionName} {{ get; set; }} = new List<{GetEntity(relationship.ChildEntityId).Name}>();");
@@ -182,7 +182,7 @@ namespace WEB.Models
             }
 
             // parent entities
-            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(r => !r.ParentEntity.Exclude).OrderBy(o => o.ParentEntity.Name).ThenBy(o => o.CollectionName))
+            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(r => !r.ChildEntity.Exclude && !r.ParentEntity.Exclude).OrderBy(o => o.ParentEntity.Name).ThenBy(o => o.CollectionName))
             {
                 if (relationship.RelationshipFields.Count() == 1)
                     s.Add($"        [ForeignKey(\"" + relationship.RelationshipFields.Single().ChildField.Name + "\")]");
@@ -3189,7 +3189,7 @@ namespace WEB.Models
 
             foreach (var replacement in replacements.OrderBy(o => o.SortOrder))
             {
-                var findCode = replacement.FindCode.Replace("(", "\\(").Replace(")", "\\)").Replace("[", "\\[").Replace("]", "\\]").Replace("?", "\\?").Replace("*", "\\*").Replace("$", "\\$").Replace("+", "\\+").Replace("{", "\\{").Replace("}", "\\}").Replace("|", "\\|").Replace("\n", "\r\n").Replace("\r\r", "\r");
+                var findCode = replacement.FindCode.Replace("\\", @"\\").Replace("(", "\\(").Replace(")", "\\)").Replace("[", "\\[").Replace("]", "\\]").Replace("?", "\\?").Replace("*", "\\*").Replace("$", "\\$").Replace("+", "\\+").Replace("{", "\\{").Replace("}", "\\}").Replace("|", "\\|").Replace("^", "\\^").Replace("\n", "\r\n").Replace("\r\r", "\r");
                 var re = new Regex(findCode);
                 if (replacement.CodeType != CodeType.Global && !re.IsMatch(code))
                     throw new Exception($"{CurrentEntity.Name} failed to replace {replacement.Purpose} in {replacement.Entity.Name}.{type.ToString()}");
