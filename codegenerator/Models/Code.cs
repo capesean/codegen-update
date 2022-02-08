@@ -1173,7 +1173,8 @@ namespace WEB.Models
 
                 var relationshipField = rel.RelationshipFields.Single();
                 var reverseRel = rel.ChildEntity.RelationshipsAsChild.Where(o => o.RelationshipId != rel.RelationshipId).SingleOrDefault();
-                var reverseRelationshipField = reverseRel.RelationshipFields.Single();
+                var reverseRelationshipField = reverseRel.RelationshipFields.SingleOrDefault();
+                if (reverseRelationshipField == null) throw new Exception($"{reverseRel.ParentEntity.Name} does not have a relationship field");
 
                 s.Add($"        [HttpPost(\"{CurrentEntity.RoutePath}/{rel.ChildEntity.PluralName.ToLower()}\"){ (CurrentEntity.AuthorizationType == AuthorizationType.None ? "" : ", AuthorizeRoles(Roles.Administrator)")}]");
                 s.Add($"        public async Task<IActionResult> Save{rel.ChildEntity.PluralName}({CurrentEntity.ControllerParameters}, [FromBody] {rel.RelationshipFields.First().ParentField.NetType}[] {reverseRel.RelationshipFields.First().ParentField.Name.ToCamelCase()}s)");
@@ -2020,6 +2021,8 @@ namespace WEB.Models
                             if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
                             if (field.MinLength > 0) attributes.Add("minlength", field.MinLength.ToString());
                         }
+                        if(field.RegexValidation != null)
+                            attributes.Add("pattern", field.RegexValidation);
                     }
                 }
                 else
@@ -2081,7 +2084,6 @@ namespace WEB.Models
 
 
 
-                //(field.RegexValidation != null ? " ng-pattern=\"/" + field.RegexValidation + "/\"" : "") + " 
 
                 if (CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == field.FieldId)))
                 {
@@ -2179,6 +2181,7 @@ namespace WEB.Models
                         if (field.MinLength > 0) validationErrors.Add("minlength", $"{field.Label} must be at least {field.MinLength} characters long");
                         if (field.Length > 0) validationErrors.Add("maxlength", $"{field.Label} must be at most {field.Length} characters long");
                     }
+                    if (field.RegexValidation != null) validationErrors.Add("pattern", $"{field.Label} does not match the specified pattern");
 
                     foreach (var validationError in validationErrors)
                     {

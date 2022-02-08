@@ -21,6 +21,7 @@
         vm.setCheckBoxesByRow = setCheckBoxesByRow;
         vm.selectAll = selectAll;
         vm.runMultiDeploy = runMultiDeploy;
+        vm.showMore = false;
         initPage();
         function initPage() {
             var promises = [];
@@ -34,6 +35,7 @@
                     vm.project.angularModuleName = "app";
                     vm.project.angularDirectivePrefix = "app";
                     vm.project.dbContextVariable = "db";
+                    vm.showMore = true;
                     vm.loading = false;
                 }
                 else {
