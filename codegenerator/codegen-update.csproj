@@ -652,6 +652,10 @@
     <Compile Include="Migrations\202102110709239_WebPath.Designer.cs">
       <DependentUpon>202102110709239_WebPath.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202202081538259_UpdateKey.cs" />
+    <Compile Include="Migrations\202202081538259_UpdateKey.Designer.cs">
+      <DependentUpon>202202081538259_UpdateKey.cs</DependentUpon>
+    </Compile>
     <Compile Include="Models\Relationship_.cs" />
     <Compile Include="Startup.cs" />
     <Compile Include="Utilities\ApiException.cs" />
@@ -765,6 +769,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Migrations\202102110709239_WebPath.resx">
       <DependentUpon>202102110709239_WebPath.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202202081538259_UpdateKey.resx">
+      <DependentUpon>202202081538259_UpdateKey.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>
