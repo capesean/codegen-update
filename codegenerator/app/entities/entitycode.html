@@ -20,6 +20,20 @@
                 </div>
             </div>
 
+            <div class="col-sm-4 col-md-3 col-lg-2" ng-if="!vm.entity.preventTypeScriptModelDeployment">
+                <div class="form-group">
+                    <label for="typeScriptModel" class="control-label">
+                        TypeScript Model:
+                    </label>
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" id="typeScriptModel" name="typeScriptModel" ng-model="vm.deploymentOptions.typeScriptModel" />
+                            TypeScript Model
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <div class="col-sm-4 col-md-3 col-lg-2">
                 <div class="form-group">
                     <label for="enums" class="control-label">
@@ -261,6 +275,7 @@
         <!-- Nav tabs -->
         <ul class="nav nav-tabs" role="tablist">
             <li role="presentation" xng-if="vm.entity.preventModelDeployment === ''" class="active"><a href="##modelTab" aria-controls="model" role="tab" data-toggle="tab">Model</a></li>
+            <li role="presentation" xng-if="vm.entity.preventTypeScriptModelDeployment === ''"><a href="##selectTypeScriptModelTab" aria-controls="selectModalTypeScript" role="tab" data-toggle="tab">TypeScript Model</a></li>
             <li role="presentation"><a href="##enumsTab" aria-controls="enums" role="tab" data-toggle="tab">Enums</a></li>
             <li role="presentation" xng-if="vm.entity.preventDTODeployment === ''"><a href="##dtoTab" aria-controls="dto" role="tab" data-toggle="tab">DTO</a></li>
             <li role="presentation"><a href="##settingsDTOTab" aria-controls="settingsDTO" role="tab" data-toggle="tab">Settings DTO</a></li>
@@ -290,6 +305,17 @@
                 <div class="row"><div class="col-sm-12"><button class="btn btn-default copyButton" ng-click="vm.copy('model')">Copy<i class="fa fa-copy"></i></button></div></div>
 
                 <pre><code class="csharp" ng-bind-html="vm.escapedCode.model"></code></pre>
+
+            </div>
+            <div role="tabpanel" class="tab-pane" id="selectTypeScriptModelTab">
+
+                <br />
+
+                <div class="alert alert-info" ng-if="vm.entity.preventTypeScriptModelDeployment">Deployment disabled</div>
+
+                <div class="row"><div class="col-sm-12"><button class="btn btn-default copyButton" ng-click="vm.copy('typeScriptModel')">Copy<i class="fa fa-copy"></i></button></div></div>
+
+                <pre><code class="typescript" ng-bind-html="vm.escapedCode.typeScriptModel"></code></pre>
 
             </div>
             <div role="tabpanel" class="tab-pane" id="enumsTab">

@@ -3354,8 +3354,16 @@ namespace WEB.Models
 
                 var code = codeGenerator.GenerateModel();
                 if (code != string.Empty) File.WriteAllText(Path.Combine(path, entity.Name + ".cs"), code);
+            }
+            #endregion
 
-                // todo: move this to own deployment option
+            #region typescript model
+            if (deploymentOptions.TypeScriptModel)
+            {
+                var path = Path.Combine(entity.Project.RootPathModels, "Models");
+                if (!Directory.Exists(path))
+                    return ("Models path does not exist");
+
                 if (!CreateAppDirectory(entity.Project, "common\\models", codeGenerator.GenerateTypeScriptModel(), entity.Name.ToLower() + ".model.ts"))
                     return ("App path does not exist");
             }
@@ -3564,6 +3572,7 @@ namespace WEB.Models
     public class DeploymentOptions
     {
         public bool Model { get; set; }
+        public bool TypeScriptModel { get; set; }
         public bool Enums { get; set; }
         public bool DTO { get; set; }
         public bool SettingsDTO { get; set; }

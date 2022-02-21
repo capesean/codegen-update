@@ -90,6 +90,7 @@ namespace WEB.Controllers
             result.ListTypeScript = code.GenerateListTypeScript();
             result.EditHtml = code.GenerateEditHtml();
             result.EditTypeScript = code.GenerateEditTypeScript();
+            result.TypeScriptModel = code.GenerateTypeScriptModel();
 
             if (string.IsNullOrWhiteSpace(entity.PreventAppSelectHtmlDeployment)) result.AppSelectHtml = code.GenerateSelectHtml();
             if (string.IsNullOrWhiteSpace(entity.PreventAppSelectTypeScriptDeployment)) result.AppSelectTypeScript = code.GenerateSelectTypeScript();
@@ -146,6 +147,7 @@ namespace WEB.Controllers
             public string AppSelectTypeScript { get; set; }
             public string SelectModalHtml { get; set; }
             public string SelectModalTypeScript { get; set; }
+            public string TypeScriptModel { get; set; }
         }
     }
 
