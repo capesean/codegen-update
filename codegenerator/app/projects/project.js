@@ -135,6 +135,7 @@
                 var item = {
                     entityId: entity.entityId,
                     model: !!vm.multideploy[entity.entityId].model,
+                    typeScriptModel: !!vm.multideploy[entity.entityId].typeScriptModel,
                     enums: !!vm.multideploy[entity.entityId].enums,
                     dto: !!vm.multideploy[entity.entityId].dto,
                     settingsDTO: !!vm.multideploy[entity.entityId].settingsDTO,
@@ -181,6 +182,8 @@
             angular.forEach(vm.entities, function (entity) {
                 if (item === "model" && entity.preventModelDeployment)
                     vm.multideploy[entity.entityId][item] = false;
+                else if (item === "typeScriptModel" && entity.preventTypeScriptModelDeployment)
+                    vm.multideploy[entity.entityId][item] = false;
                 else if (item === "dto" && entity.preventDTODeployment)
                     vm.multideploy[entity.entityId][item] = false;
                 else if (item === "dbContext" && entity.preventDbContextDeployment)
@@ -224,6 +227,8 @@
                 checked = force;
             if (!checked || !entity.preventModelDeployment)
                 vm.multideploy[entity.entityId]["model"] = checked;
+            if (!checked || !entity.preventTypeScriptModelDeployment)
+                vm.multideploy[entity.entityId]["typeScriptModel"] = checked;
             vm.multideploy[entity.entityId]["enums"] = checked;
             if (!checked || !entity.preventDTODeployment)
                 vm.multideploy[entity.entityId]["dto"] = checked;

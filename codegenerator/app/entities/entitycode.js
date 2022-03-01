@@ -8,6 +8,7 @@
         var vm = this;
         vm.deploymentOptions = {
             model: false,
+            typeScriptModel: false,
             enums: false,
             dto: false,
             settingsDTO: false,

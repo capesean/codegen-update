@@ -188,6 +188,7 @@
                 <tr>
                     <th scope="col">Name</th>
                     <th class="text-center rotate-90" scope="col"><div ng-click="vm.setCheckBoxes('model')" class="clickable">Model</div></th>
+                    <th class="text-center rotate-90" scope="col"><div ng-click="vm.setCheckBoxes('typeScriptModel')" class="clickable">TypeScriptModel</div></th>
                     <th class="text-center rotate-90" scope="col"><div ng-click="vm.setCheckBoxes('enums')" class="clickable">Enums</div></th>
                     <th class="text-center rotate-90" scope="col"><div ng-click="vm.setCheckBoxes('dto')" class="clickable">DTO</div></th>
                     <th class="text-center rotate-90" scope="col"><div ng-click="vm.setCheckBoxes('settingsDTO')" class="clickable">SettingsDTO</div></th>
@@ -210,6 +211,7 @@
                 <tr ng-repeat="entity in vm.entities" ng-click="vm.goToEntity(entity.project.projectId, entity.entityId)">
                     <td ng-click="$event.stopPropagation();vm.setCheckBoxesByRow(entity);"><a ng-click="$event.stopPropagation();$event.preventDefault();vm.goToEntity(entity.project.projectId, entity.entityId);" href="/projects/{{vm.project.projectId}}/entities/{{entity.entityId}}">{{ entity.name }}</a></td>
                     <td class="text-center" ng-click="$event.stopPropagation()" uib-tooltip="{{entity.preventModelDeployment}}"><input type="checkbox" ng-disabled="!!entity.preventModelDeployment" ng-model="vm.multideploy[entity.entityId].model" /></td>
+                    <td class="text-center" ng-click="$event.stopPropagation()" uib-tooltip="{{entity.preventTypeScriptModelDeployment}}"><input type="checkbox" ng-disabled="!!entity.preventTypeScriptModelDeployment" ng-model="vm.multideploy[entity.entityId].typeScriptModel" /></td>
                     <td class="text-center" ng-click="$event.stopPropagation()"><input type="checkbox" ng-model="vm.multideploy[entity.entityId].enums" /></td>
                     <td class="text-center" ng-click="$event.stopPropagation()" uib-tooltip="{{entity.preventDTODeployment}}"><input type="checkbox" ng-disabled="!!entity.preventDTODeployment" ng-model="vm.multideploy[entity.entityId].dto" /></td>
                     <td class="text-center" ng-click="$event.stopPropagation()"><input type="checkbox" ng-model="vm.multideploy[entity.entityId].settingsDTO" /></td>

@@ -42,6 +42,7 @@ namespace WEB.Controllers
                     || option.ListHtml
                     || option.ListTypeScript
                     || option.Model
+                    || option.TypeScriptModel
                     || option.SettingsDTO
                     || option.AppSelectHtml
                     || option.AppSelectTypeScript
@@ -65,6 +66,7 @@ namespace WEB.Controllers
                     if (entity.Exclude) continue;
 
                     if (option.Model) RunDeploy(entity, CodeType.Model, results);
+                    if (option.TypeScriptModel) RunDeploy(entity, CodeType.TypeScriptModel, results);
                     if (option.Enums && !enumsHasRun) { RunDeploy(entity, CodeType.Enums, results); enumsHasRun = true; }
                     if (option.DTO) RunDeploy(entity, CodeType.DTO, results);
                     if (option.SettingsDTO && !settingsdtoHasRun) { RunDeploy(entity, CodeType.SettingsDTO, results); settingsdtoHasRun = false; }
@@ -91,6 +93,7 @@ namespace WEB.Controllers
         {
             var options = new DeploymentOptions();
             options.Model = codeType == CodeType.Model;
+            options.TypeScriptModel = codeType == CodeType.TypeScriptModel;
             options.Enums = codeType == CodeType.Enums;
             options.DTO = codeType == CodeType.DTO;
             options.SettingsDTO = codeType == CodeType.SettingsDTO;
@@ -131,6 +134,7 @@ namespace WEB.Controllers
     {
         public Guid EntityId { get; set; }
         public bool Model { get; set; } = false;
+        public bool TypeScriptModel { get; set; } = false;
         public bool Enums { get; set; } = false;
         public bool DTO { get; set; } = false;
         public bool SettingsDTO { get; set; } = false;
