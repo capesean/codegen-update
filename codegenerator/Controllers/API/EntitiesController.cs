@@ -105,14 +105,18 @@ namespace WEB.Controllers
             if (await DbContext.Relationships.AnyAsync(o => o.ParentEntityId == entity.EntityId))
                 return BadRequest("Unable to delete the entity as it has related relationships");
 
-            if (await DbContext.Fields.AnyAsync(o => o.EntityId == entity.EntityId))
-                return BadRequest("Unable to delete the entity as it has related fields");
-
             if (await DbContext.Relationships.AnyAsync(o => o.ChildEntityId == entity.EntityId))
                 return BadRequest("Unable to delete the entity as it has related relationships");
 
-            if (await DbContext.CodeReplacements.AnyAsync(o => o.EntityId == entity.EntityId))
-                return BadRequest("Unable to delete the entity as it has related code replacements");
+            entity.PrimaryFieldId = null;
+            DbContext.Entry(entity).State = EntityState.Modified;
+            await DbContext.SaveChangesAsync();
+
+            foreach (var field in DbContext.Fields.Where(o => o.EntityId == entityId).ToList())
+                DbContext.Entry(field).State = EntityState.Deleted;
+
+            foreach (var codeReplacement in DbContext.CodeReplacements.Where(o => o.EntityId == entityId).ToList())
+                DbContext.Entry(codeReplacement).State = EntityState.Deleted;
 
             DbContext.Entry(entity).State = EntityState.Deleted;
 

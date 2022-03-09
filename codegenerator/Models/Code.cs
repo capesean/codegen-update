@@ -240,8 +240,6 @@ namespace WEB.Models
                 var lookups = CurrentEntity.Fields.Where(o => o.FieldType == FieldType.Enum).Select(o => o.Lookup.PluralName).OrderBy(o => o).Distinct().Aggregate((current, next) => { return current + ", " + next; });
                 s.Add($"import {{ {lookups} }} from './enums.model';");
             }
-            if (CurrentEntity.EntityType == EntityType.User)
-                s.Add($"import {{ Role }} from './roles.model';");
             s.Add($"");
 
             s.Add($"export class {CurrentEntity.Name} {{");
@@ -289,6 +287,10 @@ namespace WEB.Models
             {
                 s.Add($"    from{field.Name}: {field.JavascriptType};");
                 s.Add($"    to{field.Name}: {field.JavascriptType};");
+            }
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                s.Add($"    roleName: string;");
             }
 
             s.Add($"}}");
@@ -520,7 +522,7 @@ namespace WEB.Models
                 s.Add($"");
             }
             // sort order on relationships is for parents. for childre, just use name
-            foreach (var relationship in CurrentEntity.RelationshipsAsChild.OrderBy(r => r.ParentEntity.Name).ThenBy(o => o.ParentName))
+            foreach (var relationship in CurrentEntity.RelationshipsAsChild.Where(o => !o.ParentEntity.Exclude).OrderBy(r => r.ParentEntity.Name).ThenBy(o => o.ParentName))
             {
                 // using exclude to avoid circular references. example: KTU-PACK: version => localisation => contentset => version (UpdateFromVersion)
                 // changed: allow DTO model, so the value can come UP from the browser. example: RURA bankbalance - allow save of documents but not get/search
@@ -757,6 +759,10 @@ namespace WEB.Models
             s.Add($"        [HttpGet{ (CurrentEntity.AuthorizationType == AuthorizationType.ProtectAll ? ", AuthorizeRoles(Roles.Administrator)" : string.Empty)}]");
 
             var fieldsToSearch = new List<Field>();
+            var roleSearch = string.Empty;
+            if (CurrentEntity.EntityType == EntityType.User)
+                roleSearch = ", string roleName = null";
+
             foreach (var relationship in CurrentEntity.RelationshipsAsChild.OrderBy(r => r.RelationshipFields.Min(f => f.ChildField.FieldOrder)))
                 foreach (var relationshipField in relationship.RelationshipFields)
                     fieldsToSearch.Add(relationshipField.ChildField);
@@ -766,7 +772,7 @@ namespace WEB.Models
             foreach (var field in CurrentEntity.RangeSearchFields)
                 fieldsToSearch.Add(field);
 
-            s.Add($"        public async Task<IActionResult> Search([FromQuery] PagingOptions pagingOptions{(CurrentEntity.TextSearchFields.Count > 0 ? ", [FromQuery] string q = null" : "")}{(fieldsToSearch.Count > 0 ? $", {fieldsToSearch.Select(f => f.ControllerSearchParams).Aggregate((current, next) => current + ", " + next)}" : "") + (CurrentEntity.EntityType == EntityType.User ? ", Guid? roleId = null" : "")})");
+            s.Add($"        public async Task<IActionResult> Search([FromQuery] PagingOptions pagingOptions{(CurrentEntity.TextSearchFields.Count > 0 ? ", [FromQuery] string q = null" : "")}{roleSearch}{(fieldsToSearch.Count > 0 ? $", {fieldsToSearch.Select(f => f.ControllerSearchParams).Aggregate((current, next) => current + ", " + next)}" : "")})");
             s.Add($"        {{");
             s.Add($"            if (pagingOptions == null) pagingOptions = new PagingOptions();");
             s.Add($"");
@@ -778,7 +784,7 @@ namespace WEB.Models
                     s.Add($"            results = results.Where(o => o.{CurrentEntity.UserFilterFieldPath} == CurrentUser.{CurrentEntity.Project.UserFilterFieldName});");
                 s.Add($"            results = results.Include(o => o.Roles);");
                 s.Add($"");
-                s.Add($"            if (roleId != null) results = results.Where(o => o.Roles.Any(r => r.RoleId == roleId));");
+                s.Add($"            if (roleName != null) results = results.Where(o => o.Roles.Any(r => r.Role.Name == roleName));");
                 s.Add($"");
             }
             else
@@ -2021,7 +2027,7 @@ namespace WEB.Models
                             if (field.Length > 0) attributes.Add("maxlength", field.Length.ToString());
                             if (field.MinLength > 0) attributes.Add("minlength", field.MinLength.ToString());
                         }
-                        if(field.RegexValidation != null)
+                        if (field.RegexValidation != null)
                             attributes.Add("pattern", field.RegexValidation);
                     }
                 }
@@ -2844,6 +2850,9 @@ namespace WEB.Models
 
             var filterFields = string.Empty;
 
+            if (CurrentEntity.EntityType == EntityType.User)
+                filterFields += $" [role]=\"role\"";
+
             foreach (var field in CurrentEntity.Fields.Where(f => f.SearchType == SearchType.Exact).OrderBy(f => f.FieldOrder))
             {
                 Relationship relationship = null;
@@ -2874,6 +2883,12 @@ namespace WEB.Models
             var filterOptions = string.Empty;
             var inputs = string.Empty;
             var imports = string.Empty;
+
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                imports += $"import {{ Role }} from '../common/models/roles.model';" + Environment.NewLine;
+                inputs += $"    @Input() role: Role;" + Environment.NewLine;
+            }
 
             var imported = new List<string>();
             foreach (var field in CurrentEntity.Fields.Where(o => o.SearchType == SearchType.Exact && (o.FieldType == FieldType.Enum || CurrentEntity.RelationshipsAsChild.Any(r => r.RelationshipFields.Any(f => f.ChildFieldId == o.FieldId)))).OrderBy(f => f.FieldOrder))
@@ -2983,6 +2998,9 @@ namespace WEB.Models
                 appTextFilter += Environment.NewLine;
             }
 
+            if (CurrentEntity.EntityType == EntityType.User)
+                filterAlerts += Environment.NewLine + $"                <div class=\"alert alert-info alert-dismissible\" *ngIf=\"role!=undefined\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" (click)=\"searchOptions.roleName=undefined;role=undefined;runSearch();\"><span aria-hidden=\"true\" *ngIf=\"canRemoveFilters\">&times;</span></button>Filtered by role: {{{{role.label}}}}</div>" + Environment.NewLine;
+
             foreach (var field in CurrentEntity.Fields.Where(f => f.SearchType == SearchType.Exact).OrderBy(f => f.FieldOrder))
             {
                 Relationship relationship = null;
@@ -3040,6 +3058,13 @@ namespace WEB.Models
             var imports = string.Empty;
             var properties = string.Empty;
             var searchOptions = string.Empty;
+
+            if (CurrentEntity.EntityType == EntityType.User)
+            {
+                imports += $"import {{ Role }} from '../common/models/roles.model';" + Environment.NewLine;
+                inputs += $"    @Input() role: Role;" + Environment.NewLine;
+                searchOptions += $"        this.searchOptions.roleName = this.role ? this.role.name : undefined;" + Environment.NewLine;
+            }
 
             var lookups = CurrentEntity.Fields.Where(f => f.SearchType == SearchType.Exact && f.FieldType == FieldType.Enum).Select(f => f.Lookup).Distinct().OrderBy(o => o.Name);
             if (lookups.Any())

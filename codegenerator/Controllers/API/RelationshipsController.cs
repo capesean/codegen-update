@@ -103,8 +103,8 @@ namespace WEB.Controllers
             if (relationship == null)
                 return NotFound();
 
-            if (await DbContext.RelationshipFields.AnyAsync(o => o.RelationshipId == relationship.RelationshipId))
-                return BadRequest("Unable to delete the relationship as it has related relationship fields");
+            foreach (var relationshipField in DbContext.RelationshipFields.Where(o => o.RelationshipId == relationship.RelationshipId).ToList())
+                DbContext.Entry(relationshipField).State = EntityState.Deleted;
 
             DbContext.Entry(relationship).State = EntityState.Deleted;
 
