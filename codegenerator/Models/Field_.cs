@@ -35,6 +35,7 @@ namespace WEB.Models
                 if (FieldType == FieldType.Date) return "DateTime.MinValue";
                 if (FieldType == FieldType.DateTime) return "DateTime.MinValue";
                 if (CustomType == CustomType.String) return "string.Empty";
+                if (CustomType == CustomType.Enum) return "0"; // not correct
                 throw new NotImplementedException("EmptyValue for Type: " + FieldType);
             }
         }
@@ -137,6 +138,8 @@ namespace WEB.Models
                     case FieldType.Text:
                     case FieldType.Varchar:
                         return "string";
+                    case FieldType.Enum:
+                        return "int";
                 }
                 throw new NotImplementedException("ControllerConstraintType: " + FieldType.ToString());
             }
