@@ -744,9 +744,9 @@ namespace WEB.Models
             if (CurrentEntity.EntityType == EntityType.User)
             {
                 s.Add($"        private RoleManager<AppRole> rm;");
-                s.Add($"        private IOptions<PasswordOptions> opts;");
+                s.Add($"        private IOptions<IdentityOptions> opts;");
                 s.Add($"");
-                s.Add($"        public UsersController(ApplicationDbContext db, UserManager<User> um, Settings settings, RoleManager<AppRole> rm, IOptions<PasswordOptions> opts)");
+                s.Add($"        public UsersController(ApplicationDbContext db, UserManager<User> um, Settings settings, RoleManager<AppRole> rm, IOptions<IdentityOptions> opts)");
                 s.Add($"            : base(db, um, settings) {{ this.rm = rm; this.opts = opts; }}");
             }
             else
@@ -991,7 +991,7 @@ namespace WEB.Models
                 s.Add($"            {{");
                 s.Add($"                {CurrentEntity.CamelCaseName} = new {CurrentEntity.Name}();");
                 if (CurrentEntity.EntityType == EntityType.User)
-                    s.Add($"                password = Utilities.General.GenerateRandomPassword(opts.Value);");
+                    s.Add($"                password = Utilities.General.GenerateRandomPassword(opts.Value.Password);");
                 s.Add($"");
                 foreach (var field in CurrentEntity.Fields.Where(f => !string.IsNullOrWhiteSpace(f.ControllerInsertOverride)).OrderBy(f => f.FieldOrder))
                 {
