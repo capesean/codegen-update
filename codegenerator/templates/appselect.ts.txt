@@ -58,13 +58,13 @@ export class NAMESelectComponent implements OnInit, ControlValueAccessor {
     changed(CAMELCASENAME: NAME | NAME[]) {
         if (this.disabled) return;
         if (this.multiple){
-            this.writeValue(CAMELCASENAME ? (CAMELCASENAME as NAME[]).map(o => o.KEYFIELD) : null);
             this.PLURALNAME_TOCAMELCASE = (CAMELCASENAME as NAME[]);
             this.PLURALNAME_TOCAMELCASEChange.emit((CAMELCASENAME as NAME[]));
+            this.writeValue(CAMELCASENAME ? (CAMELCASENAME as NAME[]).map(o => o.KEYFIELD) : null);
         } else {
-            this.writeValue(CAMELCASENAME ? (CAMELCASENAME as NAME).KEYFIELD : null);
             this.CAMELCASENAME = (CAMELCASENAME as NAME);
             this.CAMELCASENAMEChange.emit((CAMELCASENAME as NAME));
+            this.writeValue(CAMELCASENAME ? (CAMELCASENAME as NAME).KEYFIELD : null);
         }
     }
 
